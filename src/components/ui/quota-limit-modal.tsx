@@ -16,6 +16,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { SubscriptionPlan } from '@/lib/types';
 import { CheckoutModal } from './checkout-modal';
 
 interface QuotaLimitModalProps {
@@ -29,9 +30,9 @@ export function QuotaLimitModal({
   onClose,
   actionAttempted = 'INTEREST',
 }: QuotaLimitModalProps) {
-  const { currentUser, connectionQuota } = useAuth();
+  const { currentUser, connectionQuota, plans } = useAuth();
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [selectedPlanForUpgrade, setSelectedPlanForUpgrade] = useState<string>('PREMIUM');
+  const [selectedPlanForUpgrade, setSelectedPlanForUpgrade] = useState<SubscriptionPlan | null>(null);
 
   if (!isOpen) return null;
 
@@ -43,7 +44,8 @@ export function QuotaLimitModal({
   }[actionAttempted];
 
   const handleUpgradeClick = (planSlug: string) => {
-    setSelectedPlanForUpgrade(planSlug);
+    const plan = (plans && plans.find(p => p.slug.toUpperCase() === planSlug.toUpperCase())) || plans?.[1] || null;
+    setSelectedPlanForUpgrade(plan);
     setIsCheckoutOpen(true);
   };
 
@@ -180,16 +182,15 @@ export function QuotaLimitModal({
       </div>
 
       {/* Checkout Modal with Multi-Payment Options */}
-      {isCheckoutOpen && (
+      {isCheckoutOpen && selectedPlanForUpgrade && (
         <CheckoutModal
           isOpen={isCheckoutOpen}
           onClose={() => {
             setIsCheckoutOpen(false);
+            setSelectedPlanForUpgrade(null);
             onClose();
           }}
-          planSlug={selectedPlanForUpgrade}
-          planName={selectedPlanForUpgrade === 'VIP' ? 'VIP Bespoke Matchmaking' : 'Elite Executive Plan'}
-          pricePKR={selectedPlanForUpgrade === 'VIP' ? 35000 : 15000}
+          plan={selectedPlanForUpgrade}
         />
       )}
     </>

@@ -565,7 +565,7 @@ export function AdminUserDossierModal({
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Designation / Role:</span>
-                          <span className="font-semibold text-white">{profile.educationCareer?.designation || profile.educationCareer?.jobTitle || 'Executive'}</span>
+                          <span className="font-semibold text-white">{profile.educationCareer?.jobTitle || 'Executive'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Monthly Income:</span>
