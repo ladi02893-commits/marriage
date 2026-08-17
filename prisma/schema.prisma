@@ -1,0 +1,565 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  PREMIUM
+  PREMIUM_PLUS
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+  DELETED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum MaritalStatus {
+  NEVER_MARRIED
+  DIVORCED
+  WIDOWED
+  AWAITING_DIVORCE
+}
+
+enum Religion {
+  ISLAM
+  HINDUISM
+  SIKHISM
+  CHRISTIANITY
+  JUDAISM
+  BUDDHISM
+  JAINISM
+  ZOROASTRIANISM
+  SPIRITUAL
+  OTHER
+}
+
+enum DietType {
+  HALAL_ONLY
+  VEGETARIAN
+  NON_VEGETARIAN
+  EGGETARIAN
+  VEGAN
+  JAIN
+}
+
+enum HabitFrequency {
+  NO
+  OCCASIONALLY
+  SOCIALLY
+  REGULARLY
+}
+
+enum FamilyType {
+  NUCLEAR
+  JOINT
+  OTHER
+}
+
+enum FamilyValues {
+  TRADITIONAL
+  MODERATE
+  LIBERAL
+}
+
+enum InterestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum VerificationDocType {
+  PASSPORT
+  DRIVING_LICENSE
+  NATIONAL_ID
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum PhotoVisibility {
+  ALL
+  MEMBERS_ONLY
+  APPROVED_INTERESTS_ONLY
+}
+
+enum ContactVisibility {
+  ONLY_ACCEPTED_INTERESTS
+  PREMIUM_ONLY
+  HIDDEN
+}
+
+model User {
+  id               String           @id @default(uuid())
+  email            String           @unique
+  passwordHash     String?
+  name             String
+  role             Role             @default(USER)
+  isVerified       Boolean          @default(false)
+  subscriptionTier SubscriptionTier @default(FREE)
+  accountStatus    AccountStatus    @default(ACTIVE)
+  avatarUrl        String?
+  phone            String?
+  lastLoginAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  profile               MatrimonialProfile?
+  sentInterests         InterestRequest[]     @relation("SentInterests")
+  receivedInterests     InterestRequest[]     @relation("ReceivedInterests")
+  favorites             Favorite[]
+  messagesSent          Message[]             @relation("UserSentMessages")
+  conversationsAsA      Conversation[]        @relation("ParticipantA")
+  conversationsAsB      Conversation[]        @relation("ParticipantB")
+  notifications         Notification[]
+  subscriptions         UserSubscription[]
+  invoices              Invoice[]
+  verificationRequests  VerificationRequest[]
+  reportsFiled          AbuseReport[]         @relation("ReporterUser")
+  reportsReceived       AbuseReport[]         @relation("ReportedUser")
+  supportTickets        SupportTicket[]
+
+  @@map("users")
+}
+
+model MatrimonialProfile {
+  id                   String        @id @default(uuid())
+  userId               String        @unique
+  user                 User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profileCreatedFor    String        @default("SELF")
+  fullName             String
+  displayName          String
+  gender               Gender
+  dateOfBirth          DateTime
+  maritalStatus        MaritalStatus
+  religion             Religion
+  sectOrCommunity      String?
+  casteOrSubClan       String?
+  motherTongue         String
+  country              String
+  stateProvince        String?
+  city                 String
+  bioHeadline          String
+  aboutMe              String
+  completionPercentage Int           @default(30)
+  viewCount            Int           @default(0)
+  likeCount            Int           @default(0)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  photos             ProfilePhoto[]
+  educationCareer    EducationCareer?
+  lifestyle          Lifestyle?
+  familyInfo         FamilyInfo?
+  partnerPreferences PartnerPreferences?
+  privacySettings    PrivacySettings?
+  favoritedBy        Favorite[]          @relation("ProfileFavorites")
+
+  @@map("matrimonial_profiles")
+}
+
+model ProfilePhoto {
+  id         String             @id @default(uuid())
+  profileId  String
+  profile    MatrimonialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  url        String
+  isPrimary  Boolean            @default(false)
+  isApproved Boolean            @default(true)
+  order      Int                @default(1)
+  createdAt  DateTime           @default(now())
+
+  @@map("profile_photos")
+}
+
+model EducationCareer {
+  id            String             @id @default(uuid())
+  profileId     String             @unique
+  profile       MatrimonialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  highestDegree String
+  fieldOfStudy  String?
+  institution   String?
+  profession    String
+  jobTitle      String?
+  companyName   String?
+  annualIncome  String?
+  currency      String             @default("USD")
+
+  @@map("education_careers")
+}
+
+model Lifestyle {
+  id              String             @id @default(uuid())
+  profileId       String             @unique
+  profile         MatrimonialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  height          String
+  weight          String?
+  bodyType        String?
+  complexion      String?
+  diet            DietType           @default(HALAL_ONLY)
+  smoking         HabitFrequency     @default(NO)
+  drinking        HabitFrequency     @default(NO)
+  motherTongue    String             @default("Urdu")
+  languagesSpoken String[]           @default(["English"])
+
+  @@map("lifestyles")
+}
+
+model FamilyInfo {
+  id               String             @id @default(uuid())
+  profileId        String             @unique
+  profile          MatrimonialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  familyType       FamilyType         @default(NUCLEAR)
+  familyValues     FamilyValues       @default(MODERATE)
+  familyStatus     String?
+  fatherOccupation String?
+  motherOccupation String?
+  brothersCount    Int                @default(0)
+  sistersCount     Int                @default(0)
+  brothersMarried  Int                @default(0)
+  sistersMarried   Int                @default(0)
+  familyLocation   String?
+  aboutFamily      String?
+
+  @@map("family_infos")
+}
+
+model PartnerPreferences {
+  id                String             @id @default(uuid())
+  profileId         String             @unique
+  profile           MatrimonialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  minAge            Int                @default(20)
+  maxAge            Int                @default(38)
+  minHeight         String?
+  maxHeight         String?
+  maritalStatuses   MaritalStatus[]
+  religions         Religion[]
+  motherTongues     String[]
+  countries         String[]
+  educationLevels   String[]
+  professions       String[]
+  diets             DietType[]
+  expectationsNotes String?
+
+  @@map("partner_preferences")
+}
+
+model PrivacySettings {
+  id                     String             @id @default(uuid())
+  profileId              String             @unique
+  profile                MatrimonialProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  photoVisibility        PhotoVisibility    @default(ALL)
+  contactVisibility      ContactVisibility  @default(ONLY_ACCEPTED_INTERESTS)
+  showAge                Boolean            @default(true)
+  showIncome             Boolean            @default(true)
+  showLastSeen           Boolean            @default(true)
+  searchEngineIndex      Boolean            @default(false)
+  hideProfileTemporarily Boolean            @default(false)
+
+  @@map("privacy_settings")
+}
+
+model InterestRequest {
+  id                String         @id @default(uuid())
+  senderId          String
+  sender            User           @relation("SentInterests", fields: [senderId], references: [id], onDelete: Cascade)
+  senderProfileId   String
+  receiverId        String
+  receiver          User           @relation("ReceivedInterests", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiverProfileId String
+  message           String?
+  status            InterestStatus @default(PENDING)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@map("interest_requests")
+}
+
+model Favorite {
+  id              String             @id @default(uuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetProfileId String
+  targetProfile   MatrimonialProfile @relation("ProfileFavorites", fields: [targetProfileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime           @default(now())
+
+  @@unique([userId, targetProfileId])
+  @@map("favorites")
+}
+
+model Conversation {
+  id              String    @id @default(uuid())
+  participantAId  String
+  participantA    User      @relation("ParticipantA", fields: [participantAId], references: [id], onDelete: Cascade)
+  participantBId  String
+  participantB    User      @relation("ParticipantB", fields: [participantBId], references: [id], onDelete: Cascade)
+  lastMessageText String?
+  lastMessageTime DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  messages Message[]
+
+  @@unique([participantAId, participantBId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("UserSentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  text           String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@map("messages")
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  type        String   @default("GENERAL")
+  isRead      Boolean  @default(false)
+  linkUrl     String?
+  createdAt   DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model SubscriptionPlan {
+  id                      String   @id @default(uuid())
+  slug                    String   @unique
+  name                    String
+  description             String
+  monthlyPrice            Float
+  yearlyPrice             Float
+  features                String[]
+  badge                   String?
+  maxInterestsPerMonth    Int      @default(15)
+  canViewContactDirectly  Boolean  @default(false)
+  canMessageDirectly      Boolean  @default(false)
+  isFeatured              Boolean  @default(false)
+  createdAt               DateTime @default(now())
+
+  subscriptions UserSubscription[]
+
+  @@map("subscription_plans")
+}
+
+model UserSubscription {
+  id                 String           @id @default(uuid())
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               SubscriptionPlan @relation(fields: [planId], references: [id])
+  status             String           @default("ACTIVE")
+  currentPeriodStart DateTime         @default(now())
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@map("user_subscriptions")
+}
+
+model Invoice {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoiceNumber String   @unique
+  amount        Float
+  currency      String   @default("USD")
+  status        String   @default("PAID")
+  date          DateTime @default(now())
+  paymentMethod String   @default("Credit Card (•••• 4242)")
+  planName      String
+
+  @@map("invoices")
+}
+
+model VerificationRequest {
+  id                String              @id @default(uuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType      VerificationDocType
+  documentFrontUrl  String
+  documentBackUrl   String?
+  selfieUrl         String
+  status            VerificationStatus  @default(PENDING)
+  reviewerNotes     String?
+  submittedAt       DateTime            @default(now())
+  reviewedAt        DateTime?
+
+  @@map("verification_requests")
+}
+
+model AbuseReport {
+  id               String       @id @default(uuid())
+  reporterId       String
+  reporter         User         @relation("ReporterUser", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUserId   String
+  reportedUser     User         @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  category         String
+  description      String
+  evidenceUrl      String?
+  status           ReportStatus @default(OPEN)
+  adminActionTaken String?
+  createdAt        DateTime     @default(now())
+
+  @@map("abuse_reports")
+}
+
+model SupportTicket {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  category  String       @default("GENERAL")
+  status    TicketStatus @default(OPEN)
+  priority  String       @default("NORMAL")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  messages TicketMessage[]
+
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id         String        @id @default(uuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender     String        @default("USER")
+  senderName String
+  text       String
+  createdAt  DateTime      @default(now())
+
+  @@map("ticket_messages")
+}
+
+model Coupon {
+  id              String    @id @default(uuid())
+  code            String    @unique
+  discountPercent Int?
+  fixedDiscount   Float?
+  usageLimit      Int       @default(100)
+  timesUsed       Int       @default(0)
+  expiresAt       DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  @@map("coupons")
+}
+
+model CMSContent {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  @@map("cms_contents")
+}
+
+model AdminAuditLog {
+  id         String   @id @default(uuid())
+  adminId    String
+  adminName  String
+  action     String
+  targetType String
+  targetId   String
+  details    String
+  ipAddress  String   @default("127.0.0.1")
+  timestamp  DateTime @default(now())
+
+  @@map("admin_audit_logs")
+}
+
+model SystemSettings {
+  id                           String   @id @default(uuid())
+  siteName                     String   @default("TRUEPAIR Marriage Bureau")
+  minAge                       Int      @default(20)
+  requireEmailVerification     Boolean  @default(true)
+  freeTierMonthlyInterestLimit Int      @default(5)
+  matchingWeights              Json
+  updatedAt                    DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model PaymentProof {
+  id                  String    @id @default(uuid())
+  userId              String
+  userName            String
+  userEmail           String
+  userPhone           String
+  planSlug            String
+  planName            String
+  amount              Float
+  currency            String    @default("PKR")
+  paymentMethod       String
+  transactionId       String
+  senderAccountNumber String?
+  screenshotUrl       String
+  status              String    @default("PENDING")
+  rejectionReason     String?
+  reviewedBy          String?
+  reviewedAt          DateTime?
+  submittedAt         DateTime  @default(now())
+
+  @@map("payment_proofs")
+}
+
+model ReceivingAccount {
+  id            String   @id @default(uuid())
+  provider      String
+  bankName      String
+  accountTitle  String
+  accountNumber String
+  iban          String?
+  branchName    String?
+  instructions  String?
+  isActive      Boolean  @default(true)
+  isPrimary     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("receiving_accounts")
+}

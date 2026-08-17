@@ -1,26 +1,144 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #fafaf9;
+    --foreground: #1c1917;
+    --card: #ffffff;
+    --card-foreground: #1c1917;
+    --border: #f2e8e5;
+    --muted: #f5f5f4;
+    --muted-foreground: #78716c;
+  }
+
+  .dark {
+    --background: #0c0a09;
+    --foreground: #f5f5f4;
+    --card: #171412;
+    --card-foreground: #f5f5f4;
+    --border: #292524;
+    --muted: #1c1917;
+    --muted-foreground: #a8a29e;
   }
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+/* Premium gradient backgrounds */
+.bg-gradient-royal {
+  background: linear-gradient(135deg, #881337 0%, #be123c 50%, #4c0519 100%);
+}
+
+.bg-gradient-gold {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%);
+}
+
+.bg-gradient-subtle {
+  background: linear-gradient(180deg, #fff1f2 0%, #fafaf9 100%);
+}
+
+.dark .bg-gradient-subtle {
+  background: linear-gradient(180deg, #1c1014 0%, #0c0a09 100%);
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(254, 205, 211, 0.4);
+}
+
+.dark .glass-panel {
+  background: rgba(23, 20, 18, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(136, 19, 55, 0.3);
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg, #881337 0%, #e11d48 30%, #d97706 70%, #881337 100%);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer 6s linear infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+/* Page speed, animations & hardware acceleration */
+@keyframes progress {
+  0% {
+    width: 0%;
+    margin-left: 0%;
+  }
+  50% {
+    width: 70%;
+    margin-left: 30%;
+  }
+  100% {
+    width: 100%;
+    margin-left: 100%;
+  }
+}
+
+.animate-progress {
+  animation: progress 1.5s ease-in-out infinite;
+}
+
+/* Performance and smoothness optimizations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Instant smooth rendering */
+.page-fade-in {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Optimizes image decoding and offscreen layout */
+img {
+  content-visibility: auto;
 }
