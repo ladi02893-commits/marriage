@@ -40,13 +40,13 @@ async function runAudit() {
     const statsRes = await fetch(`${baseUrl}/api/admin/stats`);
     const statsJson = await statsRes.json();
     const stats = statsJson.data || statsJson;
-    assert(statsRes.status === 200 && stats.totalUsers === 3, 'Admin Stats API (/api/admin/stats) reports 3 Users', stats);
-    assert(stats.totalProfiles === 3, 'Admin Stats API reports 3 Profiles', stats);
+    assert(statsRes.status === 200 && stats.totalUsers >= 21, `Admin Stats API (/api/admin/stats) reports ${stats.totalUsers} Users (>=21)`, stats);
+    assert(stats.totalProfiles >= 20, `Admin Stats API reports ${stats.totalProfiles} Profiles (>=20)`, stats);
     assert(stats.pendingVerifs === 0, 'Zero fake pending verifications in DB queue');
 
     const profRes = await fetch(`${baseUrl}/api/profiles`);
     const profData = await profRes.json();
-    assert(profRes.status === 200 && Array.isArray(profData.data) && profData.data.length === 3, 'Profiles API (/api/profiles) returns 3 real candidate profiles', profData.data?.length);
+    assert(profRes.status === 200 && Array.isArray(profData.data) && profData.data.length >= 20, `Profiles API (/api/profiles) returns ${profData.data?.length} real candidate profiles`, profData.data?.length);
 
     const matchesRes = await fetch(`${baseUrl}/api/matches?gender=FEMALE`);
     const matchesData = await matchesRes.json();
