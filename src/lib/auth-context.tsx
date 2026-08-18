@@ -201,17 +201,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const savedInvoicesStr = typeof window !== 'undefined' ? localStorage.getItem('truepair_live_invoices') : null;
         if (savedInvoicesStr && isMounted) {
-          setInvoices(JSON.parse(savedInvoicesStr));
+          const parsedInvoices = JSON.parse(savedInvoicesStr);
+          if (Array.isArray(parsedInvoices) && parsedInvoices.length > 0) {
+            setInvoices(parsedInvoices);
+          }
         }
 
         const savedProofsStr = typeof window !== 'undefined' ? localStorage.getItem('truepair_live_payment_proofs') : null;
         if (savedProofsStr && isMounted) {
-          setPaymentProofs(JSON.parse(savedProofsStr));
+          const parsedProofs = JSON.parse(savedProofsStr);
+          if (Array.isArray(parsedProofs) && parsedProofs.length > 0) {
+            setPaymentProofs(parsedProofs);
+          }
         }
 
         const savedAccountsStr = typeof window !== 'undefined' ? localStorage.getItem('truepair_live_receiving_accounts') : null;
         if (savedAccountsStr && isMounted) {
-          setReceivingAccounts(JSON.parse(savedAccountsStr));
+          const parsedAccounts = JSON.parse(savedAccountsStr);
+          if (Array.isArray(parsedAccounts) && parsedAccounts.length > 0) {
+            setReceivingAccounts(parsedAccounts);
+          }
         }
 
         const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('truepair_active_user_id') : null;
@@ -328,13 +337,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (savedFavorites) setFavorites(JSON.parse(savedFavorites));
 
       const savedInvoices = localStorage.getItem('truepair_live_invoices');
-      if (savedInvoices) setInvoices(JSON.parse(savedInvoices));
+      if (savedInvoices) {
+        const parsed = JSON.parse(savedInvoices);
+        if (Array.isArray(parsed) && parsed.length > 0) setInvoices(parsed);
+      }
 
       const savedProofs = localStorage.getItem('truepair_live_payment_proofs');
-      if (savedProofs) setPaymentProofs(JSON.parse(savedProofs));
+      if (savedProofs) {
+        const parsed = JSON.parse(savedProofs);
+        if (Array.isArray(parsed) && parsed.length > 0) setPaymentProofs(parsed);
+      }
 
       const savedAccounts = localStorage.getItem('truepair_live_receiving_accounts');
-      if (savedAccounts) setReceivingAccounts(JSON.parse(savedAccounts));
+      if (savedAccounts) {
+        const parsed = JSON.parse(savedAccounts);
+        if (Array.isArray(parsed) && parsed.length > 0) setReceivingAccounts(parsed);
+      }
     } catch (e) {
       console.error('Error loading stored live interactions:', e);
     }
