@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   User,
   MatrimonialProfile,
@@ -93,6 +93,9 @@ interface AuthContextType {
   updateReceivingAccount: (id: string, data: Partial<ReceivingAccount>) => void;
   deleteReceivingAccount: (id: string) => void;
   toggleReceivingAccountStatus: (id: string) => void;
+  updateCoupon: (couponId: string, updates: Partial<Coupon>) => void;
+  deleteCoupon: (couponId: string) => void;
+  refreshDatabase: () => Promise<void>;
   
   // Connection Quota & Access
   connectionQuota: {
@@ -166,6 +169,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentProfile, setCurrentProfile] = useState<MatrimonialProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
+
+  const refreshDatabase = useCallback(async () => {
+    try {
+      const [userRes, profRes, intRes, proofRes, invRes, accRes, verifRes, repRes] = await Promise.allSettled([
+        fetch('/api/users', { cache: 'no-store' }),
+        fetch('/api/profiles', { cache: 'no-store' }),
+        fetch('/api/interests', { cache: 'no-store' }),
+        fetch('/api/payments/proofs', { cache: 'no-store' }),
+        fetch('/api/invoices', { cache: 'no-store' }),
+        fetch('/api/receiving-accounts', { cache: 'no-store' }),
+        fetch('/api/verifications', { cache: 'no-store' }),
+        fetch('/api/reports', { cache: 'no-store' }),
+      ]);
+
+      if (userRes.status === 'fulfilled' && userRes.value.ok) {
+        const uData = await userRes.value.json();
+        if (uData.data?.length) setUsers(uData.data);
+      }
+      if (profRes.status === 'fulfilled' && profRes.value.ok) {
+        const profData = await profRes.value.json();
+        if (profData.data?.length) setProfiles(profData.data);
+      }
+      if (intRes.status === 'fulfilled' && intRes.value.ok) {
+        const intData = await intRes.value.json();
+        if (intData.data?.length) setInterests(intData.data);
+      }
+      if (proofRes.status === 'fulfilled' && proofRes.value.ok) {
+        const pData = await proofRes.value.json();
+        if (pData.data?.length) setPaymentProofs(pData.data);
+      }
+      if (invRes.status === 'fulfilled' && invRes.value.ok) {
+        const invData = await invRes.value.json();
+        if (invData.data?.length) setInvoices(invData.data);
+      }
+      if (accRes.status === 'fulfilled' && accRes.value.ok) {
+        const accData = await accRes.value.json();
+        if (accData.data?.length) setReceivingAccounts(accData.data);
+      }
+      if (verifRes.status === 'fulfilled' && verifRes.value.ok) {
+        const vData = await verifRes.value.json();
+        if (vData.data?.length) setVerifications(vData.data);
+      }
+      if (repRes.status === 'fulfilled' && repRes.value.ok) {
+        const rData = await repRes.value.json();
+        if (rData.data?.length) setReports(rData.data);
+      }
+    } catch (apiSyncErr) {
+      console.warn('Live database sync notice:', apiSyncErr);
+    }
+  }, []);
 
   // Sync session on mount
   useEffect(() => {
@@ -271,53 +324,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // 3. Live real-time sync with Prisma PostgreSQL Database API endpoints
-        try {
-          const [userRes, profRes, intRes, proofRes, invRes, accRes, verifRes, repRes] = await Promise.allSettled([
-            fetch('/api/users', { cache: 'no-store' }),
-            fetch('/api/profiles', { cache: 'no-store' }),
-            fetch('/api/interests', { cache: 'no-store' }),
-            fetch('/api/payments/proofs', { cache: 'no-store' }),
-            fetch('/api/invoices', { cache: 'no-store' }),
-            fetch('/api/receiving-accounts', { cache: 'no-store' }),
-            fetch('/api/verifications', { cache: 'no-store' }),
-            fetch('/api/reports', { cache: 'no-store' }),
-          ]);
-
-          if (userRes.status === 'fulfilled' && userRes.value.ok && isMounted) {
-            const uData = await userRes.value.json();
-            if (uData.data?.length) setUsers(uData.data);
-          }
-          if (profRes.status === 'fulfilled' && profRes.value.ok && isMounted) {
-            const profData = await profRes.value.json();
-            if (profData.data?.length) setProfiles(profData.data);
-          }
-          if (intRes.status === 'fulfilled' && intRes.value.ok && isMounted) {
-            const intData = await intRes.value.json();
-            if (intData.data?.length) setInterests(intData.data);
-          }
-          if (proofRes.status === 'fulfilled' && proofRes.value.ok && isMounted) {
-            const pData = await proofRes.value.json();
-            if (pData.data?.length) setPaymentProofs(pData.data);
-          }
-          if (invRes.status === 'fulfilled' && invRes.value.ok && isMounted) {
-            const invData = await invRes.value.json();
-            if (invData.data?.length) setInvoices(invData.data);
-          }
-          if (accRes.status === 'fulfilled' && accRes.value.ok && isMounted) {
-            const accData = await accRes.value.json();
-            if (accData.data?.length) setReceivingAccounts(accData.data);
-          }
-          if (verifRes.status === 'fulfilled' && verifRes.value.ok && isMounted) {
-            const vData = await verifRes.value.json();
-            if (vData.data?.length) setVerifications(vData.data);
-          }
-          if (repRes.status === 'fulfilled' && repRes.value.ok && isMounted) {
-            const rData = await repRes.value.json();
-            if (rData.data?.length) setReports(rData.data);
-          }
-        } catch (apiSyncErr) {
-          console.warn('Live database sync notice:', apiSyncErr);
-        }
+        await refreshDatabase();
       } catch (err) {
         console.error('Session load error:', err);
       } finally {
@@ -1677,6 +1684,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateReceivingAccount,
         deleteReceivingAccount,
         toggleReceivingAccountStatus,
+        updateCoupon,
+        deleteCoupon,
+        refreshDatabase,
         connectionQuota,
         canAccessProfile,
         sendInterest,

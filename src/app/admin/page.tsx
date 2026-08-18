@@ -41,14 +41,20 @@ export default function AdminDashboardPage() {
   } | null>(null);
 
   React.useEffect(() => {
-    fetch('/api/admin/stats')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.data) {
-          setLiveStats(data.data);
-        }
-      })
-      .catch((err) => console.error('Error fetching live admin stats', err));
+    const fetchStats = () => {
+      fetch('/api/admin/stats')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.data) {
+            setLiveStats(data.data);
+          }
+        })
+        .catch((err) => console.error('Error fetching live admin stats', err));
+    };
+
+    fetchStats();
+    const intervalId = setInterval(fetchStats, 10000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const totalUsers = liveStats?.totalUsers ?? users.length;

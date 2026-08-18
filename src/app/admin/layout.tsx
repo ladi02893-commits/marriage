@@ -28,8 +28,21 @@ import { cn } from '@/lib/utils';
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, verifications, reports, paymentProofs } = useAuth();
+  const { currentUser, verifications, reports, paymentProofs, refreshDatabase } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Real-time polling for the admin panel
+  React.useEffect(() => {
+    // Initial fetch on mount
+    refreshDatabase();
+    
+    // Poll every 10 seconds
+    const intervalId = setInterval(() => {
+      refreshDatabase();
+    }, 10000);
+    
+    return () => clearInterval(intervalId);
+  }, [refreshDatabase]);
 
   const pendingVerifsCount = verifications.filter((v) => v.status === 'PENDING').length;
   const pendingPaymentsCount = (paymentProofs || []).filter((p) => p.status === 'PENDING').length;
