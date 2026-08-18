@@ -1508,7 +1508,10 @@ async function seedProfiles() {
     avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
   };
 
-  await withRetry(() => insforgeAdmin.database.from('users').upsert([superAdminUser]));
+  await withRetry(async () => {
+    const { error } = await insforgeAdmin.database.from('users').upsert([superAdminUser]);
+    if (error) throw new Error(error.message);
+  });
   console.log('✓ Super Admin verified in InsForge DB.');
 
   // 2. Iterate through all 20 Profiles

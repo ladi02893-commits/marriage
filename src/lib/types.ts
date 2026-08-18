@@ -35,7 +35,7 @@ export interface ProfilePhoto {
   url: string;
   isPrimary: boolean;
   isApproved: boolean;
-  order: number;
+  order?: number;
 }
 
 export interface EducationCareer {
@@ -47,6 +47,7 @@ export interface EducationCareer {
   company?: string;
   annualIncome?: string;
   monthlyIncome?: string;
+  currency?: string;
   employmentSector?: 'PRIVATE' | 'GOVERNMENT' | 'BUSINESS' | 'SELF_EMPLOYED' | 'NOT_WORKING';
   workingLocation?: string;
 }
@@ -68,7 +69,7 @@ export interface Lifestyle {
 
 export interface FamilyInfo {
   familyType?: 'NUCLEAR' | 'JOINT' | 'EXTENDED';
-  familyValues?: 'TRADITIONAL' | 'MODERATE' | 'LIBERAL';
+  familyValues?: 'TRADITIONAL' | 'MODERATE' | 'LIBERAL' | 'MODERATE_TRADITIONAL' | 'MODERATE_RELIGIOUS' | 'RELIGIOUS_EDUCATED' | 'RELIGIOUS_MODERN' | 'MODERATE_EDUCATED' | string;
   fatherOccupation?: string;
   motherOccupation?: string;
   brothersCount?: number;
@@ -80,8 +81,11 @@ export interface FamilyInfo {
 
 export interface PartnerPreferences {
   ageRange?: { min: number; max: number };
+  minAge?: number;
+  maxAge?: number;
   heightRange?: { min: string; max: string };
   maritalStatus?: MaritalStatus[];
+  maritalStatuses?: MaritalStatus[];
   religions?: Religion[];
   sects?: string[];
   caste?: string[];
@@ -261,20 +265,26 @@ export interface SubscriptionPlan {
   slug: string;
   badge?: string;
   description: string;
+  price?: number;
   monthlyPrice: number;
   yearlyPrice: number;
   currency: string;
+  durationMonths?: number;
   features: string[];
   limits: {
     monthlyInterests: number;
-    dailyDirectMessages: number;
-    canViewVisitors: boolean;
-    hasPriorityMatching: boolean;
-    hasFeaturedBadge: boolean;
+    dailyDirectMessages?: number;
+    canViewVisitors?: boolean;
+    hasPriorityMatching?: boolean;
+    hasFeaturedBadge?: boolean;
     directContactAccess: boolean;
+    viewProfileLimit?: number;
+    canChat?: boolean;
+    isFeatured?: boolean;
   };
-  isActive: boolean;
+  isActive?: boolean;
   isPopular?: boolean;
+  popular?: boolean;
 }
 
 export interface Invoice {
@@ -392,13 +402,13 @@ export interface AdminAuditLog {
 }
 
 export interface SystemSettings {
-  siteName: string;
-  tagline: string;
-  contactEmail: string;
-  supportPhone: string;
-  minAge: number;
-  requireEmailVerification: boolean;
-  requireAdminProfileApproval: boolean;
+  siteName?: string;
+  tagline?: string;
+  contactEmail?: string;
+  supportPhone?: string;
+  minAge?: number;
+  requireEmailVerification?: boolean;
+  requireAdminProfileApproval?: boolean;
   freeTierMonthlyInterestLimit: number;
   matchingWeights: {
     ageWeight: number;
@@ -409,4 +419,10 @@ export interface SystemSettings {
     familyWeight: number;
     maritalWeight: number;
   };
+  maintenanceMode?: boolean;
+  requireVerificationForContact?: boolean;
+  allowNewRegistrations?: boolean;
+  whatsappSupportNumber?: string;
+  supportEmail?: string;
+  currency?: string;
 }

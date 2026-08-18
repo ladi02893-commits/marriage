@@ -353,7 +353,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 45,
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: "Master's in Computer Science",
       institution: 'LUMS Lahore',
@@ -432,7 +432,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 10,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'MBBS, FCPS Cardiology',
       institution: 'King Edward Medical University (KEMU)',
@@ -511,7 +511,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 12,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'MS Computer Science & AI',
       institution: 'NUST Islamabad',
@@ -590,7 +590,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 14,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BBA & MBA Finance (IBA), CFA',
       institution: 'Institute of Business Administration (IBA Karachi)',
@@ -669,7 +669,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 16,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BSc Accounting & Finance (LUMS), ACA',
       institution: 'LUMS & ICAP',
@@ -748,7 +748,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 18,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BS Industrial Engg (FAST), MSc Supply Chain (UK)',
       institution: 'FAST-NUCES & University of Manchester',
@@ -827,7 +827,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 20,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BSc Civil Engineering (UET Lahore)',
       institution: 'UET Lahore',
@@ -906,7 +906,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 22,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'MBBS, MS Orthopedic Surgery',
       institution: 'Khyber Medical College (KMC)',
@@ -985,7 +985,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 24,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BSc Management Sciences (LUMS)',
       institution: 'LUMS Lahore',
@@ -1064,7 +1064,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 26,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'MPhil Public Policy (QAU), CSS (PAS)',
       institution: 'Quaid-i-Azam University Islamabad (QAU)',
@@ -1143,7 +1143,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 28,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BS Computer Systems Engg (GIKI)',
       institution: 'GIK Institute of Engineering Sciences and Technology',
@@ -1222,7 +1222,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 10,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'MSc Clinical Psychology, MS Child Psychology',
       institution: 'King Edward Medical University (KEMU)',
@@ -1301,7 +1301,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 12,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'MBBS (Shifa College of Medicine)',
       institution: 'Shifa Tameer-e-Millat University',
@@ -1380,7 +1380,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 14,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BSc Computer Science (LUMS)',
       institution: 'LUMS Lahore',
@@ -1459,7 +1459,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 16,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'LLB (Hons), LLM Commercial Law (London)',
       institution: 'Queen Mary University of London',
@@ -1538,7 +1538,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 18,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BS & MPhil English Literature (Gold Medalist)',
       institution: 'GC University Faisalabad',
@@ -1617,7 +1617,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 20,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'ACCA Member, BSc Applied Accounting (Oxford Brookes)',
       institution: 'ACCA UK & Oxford Brookes University',
@@ -1696,7 +1696,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 22,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BS Political Science & International Relations (Gold Medalist)',
       institution: 'Bahauddin Zakariya University Multan',
@@ -1775,7 +1775,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 24,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'MPhil Food and Clinical Nutrition',
       institution: 'University of Veterinary and Animal Sciences (UVAS Lahore)',
@@ -1854,7 +1854,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 26,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'BDS (Dental Surgery), RDS PMDC Verified',
       institution: 'de\'Montmorency College of Dentistry Lahore',
@@ -1933,7 +1933,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 28,
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: 'Bachelor of Architecture (B.Arch NCA)',
       institution: 'National College of Arts (NCA Lahore)',
@@ -1995,6 +1995,8 @@ export const INITIAL_PLANS: SubscriptionPlan[] = [
     slug: 'FREE',
     price: 0,
     monthlyPrice: 0,
+    yearlyPrice: 0,
+    currency: 'PKR',
     durationMonths: 12,
     description: 'Essential rishta discovery for genuine Pakistani families.',
     features: [
@@ -2019,6 +2021,8 @@ export const INITIAL_PLANS: SubscriptionPlan[] = [
     slug: 'PREMIUM',
     price: 12000,
     monthlyPrice: 12000,
+    yearlyPrice: 144000,
+    currency: 'PKR',
     durationMonths: 1,
     description: 'Active matchmaking with direct chat & full contact details.',
     features: [
@@ -2043,6 +2047,8 @@ export const INITIAL_PLANS: SubscriptionPlan[] = [
     slug: 'PREMIUM_PLUS',
     price: 35000,
     monthlyPrice: 35000,
+    yearlyPrice: 420000,
+    currency: 'PKR',
     durationMonths: 3,
     description: 'Exclusive 1-on-1 personalized matchmaking concierge by senior consultants.',
     features: [
@@ -2067,14 +2073,19 @@ export const INITIAL_PLANS: SubscriptionPlan[] = [
 export const INITIAL_INTERESTS: InterestRequest[] = [];
 export const INITIAL_FAVORITES: FavoriteItem[] = [];
 export const INITIAL_CONVERSATIONS: Conversation[] = [];
-export const INITIAL_MESSAGES: ChatMessage[] = [];
+export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {};
 export const INITIAL_NOTIFICATIONS: NotificationItem[] = [];
 export const INITIAL_INVOICES: Invoice[] = [];
 export const INITIAL_VERIFICATIONS: VerificationRequest[] = [];
 export const INITIAL_REPORTS: AbuseReport[] = [];
-export const INITIAL_SUPPORT_TICKETS: SupportTicket[] = [];
+export const INITIAL_TICKETS: SupportTicket[] = [];
 export const INITIAL_COUPONS: Coupon[] = [];
-export const INITIAL_CMS: CMSContent[] = [];
+export const INITIAL_CMS: CMSContent = {
+  announcementBanner: { enabled: false, text: '' },
+  successStories: [],
+  faqs: [],
+  testimonials: [],
+};
 export const INITIAL_AUDIT_LOGS: AdminAuditLog[] = [];
 export const INITIAL_PAYMENT_PROOFS: PaymentProof[] = [];
 export const INITIAL_RECEIVING_ACCOUNTS: ReceivingAccount[] = [];
@@ -2087,4 +2098,13 @@ export const INITIAL_SETTINGS: SystemSettings = {
   whatsappSupportNumber: '+92 300 1234567',
   supportEmail: 'support@compatiblematrimonials.pk',
   currency: 'PKR',
+  matchingWeights: {
+    ageWeight: 10,
+    locationWeight: 10,
+    educationWeight: 10,
+    professionWeight: 10,
+    lifestyleWeight: 10,
+    familyWeight: 10,
+    maritalWeight: 10,
+  }
 };

@@ -50,7 +50,7 @@ export default function HomePage() {
       <Navbar />
 
       {/* Announcement Banner */}
-      {cms.announcementBanner.enabled && (
+      {cms?.announcementBanner?.enabled && (
         <div className="bg-gradient-to-r from-brand-900 via-brand-800 to-rose-900 px-4 py-2.5 text-center text-xs font-medium text-white shadow-inner">
           <div className="mx-auto max-w-7xl flex items-center justify-center gap-2">
             <span>{cms.announcementBanner.text}</span>

@@ -71,7 +71,7 @@ export const INITIAL_PROFILES: MatrimonialProfile[] = [
     likeCount: 45,
     createdAt: '2025-01-01T00:00:00Z',
     updatedAt: '2025-01-01T00:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: "Master's in Computer Science",
       institution: 'LUMS Lahore',
@@ -150,7 +150,7 @@ ${ALL_20_PROFILES_DATA.map(p => `  // [${p.gender} #${p.num}] ${p.name}
     likeCount: ${8 + p.num * 2},
     createdAt: '2025-02-01T10:00:00Z',
     updatedAt: '2025-02-01T10:00:00Z',
-    verificationBadge: 'GOVERNMENT_ID',
+    verificationBadge: 'APPROVED',
     educationCareer: {
       highestDegree: '${p.education.degree.replace(/'/g, "\\'")}',
       institution: '${p.education.institution.replace(/'/g, "\\'")}',
@@ -284,14 +284,23 @@ export const INITIAL_PLANS: SubscriptionPlan[] = [
 export const INITIAL_INTERESTS: InterestRequest[] = [];
 export const INITIAL_FAVORITES: FavoriteItem[] = [];
 export const INITIAL_CONVERSATIONS: Conversation[] = [];
-export const INITIAL_MESSAGES: ChatMessage[] = [];
+export const INITIAL_MESSAGES: Record<string, ChatMessage[]> = {};
 export const INITIAL_NOTIFICATIONS: NotificationItem[] = [];
 export const INITIAL_INVOICES: Invoice[] = [];
 export const INITIAL_VERIFICATIONS: VerificationRequest[] = [];
 export const INITIAL_REPORTS: AbuseReport[] = [];
-export const INITIAL_SUPPORT_TICKETS: SupportTicket[] = [];
+export const INITIAL_TICKETS: SupportTicket[] = [];
+export const INITIAL_SUPPORT_TICKETS: SupportTicket[] = INITIAL_TICKETS;
 export const INITIAL_COUPONS: Coupon[] = [];
-export const INITIAL_CMS: CMSContent[] = [];
+export const INITIAL_CMS: CMSContent = {
+  announcementBanner: {
+    enabled: false,
+    text: 'Welcome to Compatible Matrimonials - Pakistan’s Trusted Matrimonial Network',
+    link: '/pricing',
+  },
+  successStories: [],
+  faqs: [],
+};
 export const INITIAL_AUDIT_LOGS: AdminAuditLog[] = [];
 export const INITIAL_PAYMENT_PROOFS: PaymentProof[] = [];
 export const INITIAL_RECEIVING_ACCOUNTS: ReceivingAccount[] = [];
