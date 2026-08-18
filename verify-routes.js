@@ -39,6 +39,12 @@ const routes = [
   '/admin/settings',
   '/admin/audit-logs',
   '/api/profiles',
+  '/api/users',
+  '/api/verifications',
+  '/api/reports',
+  '/api/payments/proofs',
+  '/api/invoices',
+  '/api/receiving-accounts',
   '/api/matches',
   '/api/admin/stats'
 ];
@@ -64,3 +70,4 @@ async function run() {
 }
 
 run();
+

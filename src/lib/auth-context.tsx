@@ -270,16 +270,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // 3. Background sync with Prisma Database API endpoints
+        // 3. Live real-time sync with Prisma PostgreSQL Database API endpoints
         try {
-          const [profRes, intRes, proofRes, invRes, accRes] = await Promise.allSettled([
+          const [userRes, profRes, intRes, proofRes, invRes, accRes, verifRes, repRes] = await Promise.allSettled([
+            fetch('/api/users', { cache: 'no-store' }),
             fetch('/api/profiles', { cache: 'no-store' }),
             fetch('/api/interests', { cache: 'no-store' }),
             fetch('/api/payments/proofs', { cache: 'no-store' }),
             fetch('/api/invoices', { cache: 'no-store' }),
             fetch('/api/receiving-accounts', { cache: 'no-store' }),
+            fetch('/api/verifications', { cache: 'no-store' }),
+            fetch('/api/reports', { cache: 'no-store' }),
           ]);
 
+          if (userRes.status === 'fulfilled' && userRes.value.ok && isMounted) {
+            const uData = await userRes.value.json();
+            if (uData.data?.length) setUsers(uData.data);
+          }
           if (profRes.status === 'fulfilled' && profRes.value.ok && isMounted) {
             const profData = await profRes.value.json();
             if (profData.data?.length) setProfiles(profData.data);
@@ -300,8 +307,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const accData = await accRes.value.json();
             if (accData.data?.length) setReceivingAccounts(accData.data);
           }
+          if (verifRes.status === 'fulfilled' && verifRes.value.ok && isMounted) {
+            const vData = await verifRes.value.json();
+            if (vData.data?.length) setVerifications(vData.data);
+          }
+          if (repRes.status === 'fulfilled' && repRes.value.ok && isMounted) {
+            const rData = await repRes.value.json();
+            if (rData.data?.length) setReports(rData.data);
+          }
         } catch (apiSyncErr) {
-          console.warn('Background database sync notice:', apiSyncErr);
+          console.warn('Live database sync notice:', apiSyncErr);
         }
       } catch (err) {
         console.error('Session load error:', err);
@@ -1032,6 +1047,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     setVerifications((prev) => [newReq, ...prev]);
+
+    // Sync to Prisma Database
+    fetch('/api/verifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newReq),
+    }).catch((err) => console.warn('Prisma verification sync notice:', err));
   };
 
   const approveVerification = (verifId: string, notes?: string) => {
@@ -1047,6 +1069,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : v
       )
     );
+
+    // Sync to Prisma Database
+    fetch('/api/verifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: verifId, status: 'APPROVED', reviewerNotes: notes }),
+    }).catch((err) => console.warn('Prisma approve verification sync notice:', err));
 
     const verif = verifications.find((v) => v.id === verifId);
     if (verif) {
@@ -1074,6 +1103,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
+    // Sync to Prisma Database
+    fetch('/api/verifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: verifId, status: 'REJECTED', reviewerNotes: notes }),
+    }).catch((err) => console.warn('Prisma reject verification sync notice:', err));
+
     const verif = verifications.find((v) => v.id === verifId);
     if (verif) {
       verifyUserBadge(verif.userId, false);
@@ -1091,6 +1127,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUsers((prev) =>
       prev.map((u) => (u.id === userId ? { ...u, accountStatus: status } : u))
     );
+
+    // Sync to Prisma Database
+    fetch('/api/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: userId, accountStatus: status }),
+    }).catch((err) => console.warn('Prisma user status sync notice:', err));
+
     logAdminAction('UPDATED_USER_STATUS', 'USER', userId, `Changed account status to ${status}`);
   };
 
@@ -1105,6 +1149,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : p
       )
     );
+
+    // Sync to Prisma Database
+    fetch('/api/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: userId, isVerified }),
+    }).catch((err) => console.warn('Prisma user badge sync notice:', err));
   };
 
   const submitReport = (reportedUserId: string, category: any, description: string) => {
@@ -1124,6 +1175,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       timestamp: new Date().toISOString(),
     };
     setReports((prev) => [newReport, ...prev]);
+
+    // Sync to Prisma Database
+    fetch('/api/reports', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newReport),
+    }).catch((err) => console.warn('Prisma report sync notice:', err));
   };
 
   const resolveReport = (reportId: string, actionTaken: string) => {
@@ -1134,6 +1192,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : r
       )
     );
+
+    // Sync to Prisma Database
+    fetch('/api/reports', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: reportId, status: 'RESOLVED', adminActionTaken: actionTaken }),
+    }).catch((err) => console.warn('Prisma resolve report sync notice:', err));
+
     logAdminAction('RESOLVED_REPORT', 'REPORT', reportId, `Resolved report: ${actionTaken}`);
   };
 
