@@ -176,9 +176,9 @@ export default function PricingPage() {
 
             const isCurrent =
               currentUser &&
-              ((p.slug === 'BASIC' && currentUser.subscriptionTier === 'FREE') ||
+              (((p.slug === 'BASIC' || p.slug === 'FREE') && currentUser.subscriptionTier === 'FREE') ||
                 (p.slug === 'PREMIUM' && currentUser.subscriptionTier === 'PREMIUM') ||
-                (p.slug === 'VIP' && currentUser.subscriptionTier === 'PREMIUM_PLUS'));
+                ((p.slug === 'VIP' || p.slug === 'PREMIUM_PLUS') && currentUser.subscriptionTier === 'PREMIUM_PLUS'));
 
             return (
               <div

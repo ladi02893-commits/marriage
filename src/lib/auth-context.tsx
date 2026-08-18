@@ -183,7 +183,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (userRes.status === 'fulfilled' && userRes.value.ok) {
         const uData = await userRes.value.json();
-        if (Array.isArray(uData.data)) setUsers(uData.data);
+        if (Array.isArray(uData.data)) {
+          setUsers(uData.data);
+          // Real-time update for currently active user state
+          setCurrentUser((prev) => {
+            if (!prev) return prev;
+            const fresh = uData.data.find((u: any) => u.id === prev.id || u.email?.toLowerCase() === prev.email?.toLowerCase());
+            if (fresh) {
+              return {
+                ...prev,
+                ...fresh,
+                subscriptionTier: fresh.subscriptionTier || prev.subscriptionTier,
+                isVerified: fresh.isVerified !== undefined ? fresh.isVerified : prev.isVerified,
+                accountStatus: fresh.accountStatus || prev.accountStatus,
+              };
+            }
+            return prev;
+          });
+        }
       }
       if (profRes.status === 'fulfilled' && profRes.value.ok) {
         const profData = await profRes.value.json();
@@ -303,9 +320,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (res.ok && isMounted) {
           const data = await res.json();
           if (data.authenticated && data.user) {
-            // Check if local storage had a later subscription update for this user
+            // Database is source of truth for subscriptionTier
+            const dbTier = data.user.subscriptionTier;
             const localUser = liveUsers.find((u) => u.id === data.user.id);
-            const mergedUser = localUser ? { ...data.user, subscriptionTier: localUser.subscriptionTier } : data.user;
+            const effectiveTier = (dbTier && dbTier !== 'FREE')
+              ? dbTier
+              : (localUser?.subscriptionTier || dbTier || 'FREE');
+            const mergedUser = { ...data.user, subscriptionTier: effectiveTier };
 
             setCurrentUser(mergedUser);
             setCurrentUserId(mergedUser.id);
@@ -689,6 +710,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUsers((prev) =>
       prev.map((u) => (u.id === currentUser.id ? updated : u))
     );
+
+    // Sync to InsForge Database
+    fetch('/api/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: currentUser.id,
+        subscriptionTier: tier,
+        isVerified: true,
+        accountStatus: 'ACTIVE',
+      }),
+    }).catch((err) => console.warn('InsForge user tier sync notice:', err));
   };
 
   // Connection / Interest Quota Tracking
@@ -1259,14 +1292,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     if (hasAcceptedInterest) return true;
 
-    // VIP Plan with direct contact access — map tier to plan slug correctly
-    const tierToSlug: Record<string, string> = {
-      FREE: 'BASIC',
-      PREMIUM: 'PREMIUM',
-      PREMIUM_PLUS: 'VIP',
-    };
-    const planSlug = tierToSlug[currentUser.subscriptionTier] || 'BASIC';
-    const userPlan = plans.find((p) => p.slug.toUpperCase() === planSlug);
+    // VIP / Royal Plan has direct contact access
+    if (currentUser.subscriptionTier === 'PREMIUM_PLUS') {
+      return true;
+    }
+
+    const userPlan = (plans || []).find((p) => {
+      const s = p.slug.toUpperCase();
+      if (currentUser.subscriptionTier === 'PREMIUM_PLUS') return s === 'VIP' || s === 'PREMIUM_PLUS' || s.includes('VIP') || s.includes('ROYAL');
+      if (currentUser.subscriptionTier === 'PREMIUM') return s === 'PREMIUM' || s.includes('ELITE');
+      return s === 'BASIC' || s === 'FREE';
+    });
     if (userPlan?.limits?.directContactAccess) {
       return true;
     }
@@ -1343,12 +1379,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     billingCycle?: 'MONTHLY' | 'ANNUAL';
     cardLast4?: string;
   }): Promise<{ success: boolean; invoice: Invoice }> => {
-    const tierMap: Record<string, SubscriptionTier> = {
-      BASIC: 'FREE',
-      PREMIUM: 'PREMIUM',
-      VIP: 'PREMIUM_PLUS',
-    };
-    const targetTier = tierMap[params.planSlug.toUpperCase()] || 'PREMIUM';
+    const rawSlug = (params.planSlug || params.planName || '').toUpperCase();
+    let targetTier: SubscriptionTier = 'PREMIUM';
+    if (
+      rawSlug.includes('VIP') ||
+      rawSlug.includes('ROYAL') ||
+      rawSlug.includes('PREMIUM_PLUS') ||
+      rawSlug.includes('PLUS') ||
+      rawSlug === 'PLAN-VIP'
+    ) {
+      targetTier = 'PREMIUM_PLUS';
+    } else if (
+      rawSlug.includes('PREMIUM') ||
+      rawSlug.includes('ELITE') ||
+      rawSlug.includes('EXECUTIVE') ||
+      rawSlug === 'PLAN-PREMIUM'
+    ) {
+      targetTier = 'PREMIUM';
+    } else if (rawSlug.includes('FREE') || rawSlug.includes('BASIC')) {
+      targetTier = 'FREE';
+    }
+
     const now = new Date().toISOString();
     const invoiceNum = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
@@ -1398,6 +1449,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setCurrentUser(updatedUser);
       setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updatedUser : u)));
+
+      // Sync updated subscription tier to database
+      fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentUser.id,
+          subscriptionTier: targetTier,
+          isVerified: true,
+          accountStatus: 'ACTIVE',
+        }),
+      }).catch((err) => console.warn('InsForge instant user tier sync notice:', err));
     }
 
     setInvoices((prev) => [newInvoice, ...prev]);
@@ -1469,13 +1532,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }),
     }).catch((err) => console.warn('InsForge approve proof sync notice:', err));
 
-    const targetTier = (proof.planSlug.toUpperCase() as SubscriptionTier) || 'PREMIUM';
+    const rawSlug = (proof.planSlug || proof.planName || '').toUpperCase();
+    let targetTier: SubscriptionTier = 'PREMIUM';
+    if (
+      rawSlug.includes('VIP') ||
+      rawSlug.includes('ROYAL') ||
+      rawSlug.includes('PREMIUM_PLUS') ||
+      rawSlug.includes('PLUS') ||
+      rawSlug === 'PLAN-VIP'
+    ) {
+      targetTier = 'PREMIUM_PLUS';
+    } else if (
+      rawSlug.includes('PREMIUM') ||
+      rawSlug.includes('ELITE') ||
+      rawSlug.includes('EXECUTIVE') ||
+      rawSlug === 'PLAN-PREMIUM'
+    ) {
+      targetTier = 'PREMIUM';
+    }
+
     const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
+
+    // Explicitly update user subscription in InsForge DB
+    fetch('/api/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: proof.userId,
+        subscriptionTier: targetTier,
+        isVerified: true,
+        accountStatus: 'ACTIVE',
+      }),
+    }).catch((err) => console.warn('InsForge user tier sync notice:', err));
 
     // Upgrade target user subscription & verify badge
     setUsers((prev) =>
       prev.map((u) => {
-        if (u.id === proof.userId) {
+        if (u.id === proof.userId || (proof.userEmail && u.email?.toLowerCase() === proof.userEmail.toLowerCase())) {
           const updated: User = {
             ...u,
             subscriptionTier: targetTier,
@@ -1490,7 +1583,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    if (currentUser && currentUser.id === proof.userId) {
+    if (currentUser && (currentUser.id === proof.userId || (proof.userEmail && currentUser.email?.toLowerCase() === proof.userEmail.toLowerCase()))) {
       setCurrentUser((prev) =>
         prev
           ? {

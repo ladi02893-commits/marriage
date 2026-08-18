@@ -190,11 +190,21 @@ export function getPackagePriceForCountry(
   // Standard PKR defaults if no custom PKR price is passed
   const defaultBasePrices: Record<string, number> = {
     BASIC: 0,
+    FREE: 0,
     PREMIUM: 15000,
     VIP: 35000,
+    PREMIUM_PLUS: 35000,
   };
 
-  const pkrPrice = customBasePKR !== undefined ? customBasePKR : (defaultBasePrices[planSlug.toUpperCase()] ?? 0);
+  const rawKey = (planSlug || '').toUpperCase();
+  let defaultPrice = defaultBasePrices[rawKey];
+  if (defaultPrice === undefined) {
+    if (rawKey.includes('VIP') || rawKey.includes('ROYAL') || rawKey.includes('PLUS')) defaultPrice = 35000;
+    else if (rawKey.includes('PREMIUM') || rawKey.includes('ELITE')) defaultPrice = 15000;
+    else defaultPrice = 0;
+  }
+
+  const pkrPrice = customBasePKR !== undefined ? customBasePKR : defaultPrice;
 
   if (pkrPrice === 0) {
     return {

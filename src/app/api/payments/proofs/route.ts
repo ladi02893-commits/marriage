@@ -139,23 +139,71 @@ export async function PATCH(req: NextRequest) {
     // If approved, upgrade the user's tier in InsForge if user exists
     if (status === 'VERIFIED' && updated) {
       try {
-        const targetTier = updated.plan_slug === 'VIP' ? 'PREMIUM_PLUS' : 'PREMIUM';
-        await insforgeAdmin.database
-          .from('users')
-          .update({ subscription_tier: targetTier })
-          .eq('id', updated.user_id);
+        const rawSlug = (updated.plan_slug || updated.plan_name || '').toUpperCase();
+        let targetTier: 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS' = 'PREMIUM';
+        if (
+          rawSlug.includes('VIP') ||
+          rawSlug.includes('ROYAL') ||
+          rawSlug.includes('PREMIUM_PLUS') ||
+          rawSlug.includes('PLUS') ||
+          rawSlug === 'PLAN-VIP'
+        ) {
+          targetTier = 'PREMIUM_PLUS';
+        } else if (
+          rawSlug.includes('PREMIUM') ||
+          rawSlug.includes('ELITE') ||
+          rawSlug.includes('EXECUTIVE') ||
+          rawSlug === 'PLAN-PREMIUM'
+        ) {
+          targetTier = 'PREMIUM';
+        }
 
-        // Record a PAID Invoice in InsForge
+        // 1. Update user record
+        if (updated.user_id) {
+          await insforgeAdmin.database
+            .from('users')
+            .update({ 
+              subscription_tier: targetTier,
+              is_verified: true,
+              account_status: 'ACTIVE'
+            })
+            .eq('id', updated.user_id);
+        }
+
+        // 2. Also try matching by email if user_email is present
+        if (updated.user_email) {
+          await insforgeAdmin.database
+            .from('users')
+            .update({ 
+              subscription_tier: targetTier,
+              is_verified: true,
+              account_status: 'ACTIVE'
+            })
+            .eq('email', updated.user_email);
+        }
+
+        // 3. Mark profile as featured & boosted for VIP
+        if (updated.user_id) {
+          await insforgeAdmin.database
+            .from('matrimonial_profiles')
+            .update({
+              is_featured: true,
+              is_boosted: targetTier === 'PREMIUM_PLUS',
+            })
+            .eq('user_id', updated.user_id);
+        }
+
+        // 4. Record a PAID Invoice in InsForge
         await insforgeAdmin.database
           .from('invoices')
           .insert([{
-            user_id: updated.user_id,
+            user_id: updated.user_id || 'user-ladi',
             invoice_number: `INV-${Date.now().toString().slice(-6)}`,
             amount: updated.amount,
-            currency: updated.currency,
+            currency: updated.currency || 'PKR',
             status: 'PAID',
-            payment_method: updated.payment_method,
-            plan_name: updated.plan_name,
+            payment_method: updated.payment_method || 'BANK_TRANSFER',
+            plan_name: updated.plan_name || (targetTier === 'PREMIUM_PLUS' ? 'VIP Royal Matchmaking' : 'Elite Executive'),
           }]);
       } catch (userUpErr) {
         console.warn('User subscription auto-upgrade error in DB:', userUpErr);

@@ -34,12 +34,12 @@ export default function SubscriptionBillingPage() {
   const currentTier = currentUser?.subscriptionTier || 'FREE';
 
   const currentPlan =
-    plans.find(
-      (p) =>
-        (currentTier === 'FREE' && p.slug.toUpperCase() === 'BASIC') ||
-        (currentTier === 'PREMIUM' && p.slug.toUpperCase() === 'PREMIUM') ||
-        (currentTier === 'PREMIUM_PLUS' && p.slug.toUpperCase() === 'VIP')
-    ) || plans[0];
+    plans.find((p) => {
+      const s = p.slug.toUpperCase();
+      if (currentTier === 'PREMIUM_PLUS') return s === 'VIP' || s === 'PREMIUM_PLUS' || s.includes('VIP') || s.includes('ROYAL');
+      if (currentTier === 'PREMIUM') return s === 'PREMIUM' || s.includes('ELITE') || s.includes('EXECUTIVE');
+      return s === 'BASIC' || s === 'FREE';
+    }) || plans[0];
 
   // Check if current user has a pending payment proof in queue
   const userPendingProof = paymentProofs.find(
@@ -256,11 +256,11 @@ export default function SubscriptionBillingPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((p) => {
             const isSelected =
-              (p.slug.toUpperCase() === 'BASIC' && currentTier === 'FREE') ||
+              ((p.slug.toUpperCase() === 'BASIC' || p.slug.toUpperCase() === 'FREE') && currentTier === 'FREE') ||
               (p.slug.toUpperCase() === 'PREMIUM' && currentTier === 'PREMIUM') ||
-              (p.slug.toUpperCase() === 'VIP' && currentTier === 'PREMIUM_PLUS');
+              ((p.slug.toUpperCase() === 'VIP' || p.slug.toUpperCase() === 'PREMIUM_PLUS') && currentTier === 'PREMIUM_PLUS');
+            const isVipPlan = p.slug.toUpperCase() === 'VIP' || p.slug.toUpperCase() === 'PREMIUM_PLUS';
 
             return (
               <div
@@ -305,7 +305,7 @@ export default function SubscriptionBillingPage() {
                     className={`w-full rounded-2xl py-3 text-center text-xs font-bold transition shadow-xs cursor-pointer ${
                       isSelected
                         ? 'bg-muted text-muted-foreground cursor-default'
-                        : p.slug.toUpperCase() === 'VIP'
+                        : isVipPlan
                         ? 'bg-gradient-to-r from-amber-500 via-gold-500 to-amber-600 text-stone-950 shadow-md hover:from-amber-400'
                         : 'bg-gradient-to-r from-brand-600 to-rose-600 text-white shadow-brand-600/20 hover:from-brand-700'
                     }`}
