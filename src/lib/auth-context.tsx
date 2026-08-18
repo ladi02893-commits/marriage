@@ -93,8 +93,6 @@ interface AuthContextType {
   updateReceivingAccount: (id: string, data: Partial<ReceivingAccount>) => void;
   deleteReceivingAccount: (id: string) => void;
   toggleReceivingAccountStatus: (id: string) => void;
-  updateCoupon: (couponId: string, updates: Partial<Coupon>) => void;
-  deleteCoupon: (couponId: string) => void;
   refreshDatabase: () => Promise<void>;
   
   // Connection Quota & Access
@@ -1684,8 +1682,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateReceivingAccount,
         deleteReceivingAccount,
         toggleReceivingAccountStatus,
-        updateCoupon,
-        deleteCoupon,
         refreshDatabase,
         connectionQuota,
         canAccessProfile,
