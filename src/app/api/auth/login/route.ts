@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { insforgeAdmin } from '@/lib/insforge/server';
 import { verifyPassword, signAuthToken, AUTH_COOKIE_NAME } from '@/lib/auth';
 import { INITIAL_USERS, INITIAL_PROFILES } from '@/lib/data-store';
 
@@ -18,21 +18,18 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const inputPassword = String(password).trim();
 
-    // 1. Try finding user in PostgreSQL with fast timeout
+    // 1. Try finding user in InsForge PostgreSQL
     let user: any = null;
     try {
-      const dbPromise = prisma.user.findUnique({
-        where: { email: cleanEmail },
-        include: {
-          profile: {
-            include: {
-              photos: true,
-            },
-          },
-        },
-      });
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000));
-      user = await Promise.race([dbPromise, timeoutPromise]);
+      const { data, error } = await insforgeAdmin.database
+        .from('users')
+        .select('*, profile:matrimonial_profiles(*, photos:profile_photos(*))')
+        .eq('email', cleanEmail)
+        .maybeSingle();
+
+      if (!error && data) {
+        user = data;
+      }
     } catch {
       user = null;
     }
@@ -44,7 +41,7 @@ export async function POST(req: NextRequest) {
         const memoryProfile = INITIAL_PROFILES.find((p) => p.userId === memoryUser.id);
         user = {
           ...memoryUser,
-          passwordHash: cleanEmail === 'ladi02893@gmail.com' ? 'ladi02893' : 'password123',
+          password_hash: cleanEmail === 'ladi02893@gmail.com' ? 'ladi02893' : 'password123',
           profile: memoryProfile || null,
         };
       }
@@ -57,18 +54,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (user.accountStatus === 'BANNED' || user.accountStatus === 'SUSPENDED') {
+    const accountStatus = user.account_status || user.accountStatus || 'ACTIVE';
+    if (accountStatus === 'BANNED' || accountStatus === 'SUSPENDED') {
       return NextResponse.json(
         { success: false, error: 'Your account has been suspended. Please contact support.' },
         { status: 403 }
       );
     }
 
-    // 3. Password Verification (Supports password123, ladi02893, admin123, or custom bcrypt hash)
+    // 3. Password Verification
     let isPasswordValid = false;
 
     if (cleanEmail === 'ladi02893@gmail.com') {
-      // Super Admin accepts password123, ladi02893, or admin123
       if (
         inputPassword === 'password123' ||
         inputPassword === 'ladi02893' ||
@@ -77,15 +74,14 @@ export async function POST(req: NextRequest) {
         isPasswordValid = true;
       }
     } else {
-      // Standard candidate profiles accept password123
       if (inputPassword === 'password123') {
         isPasswordValid = true;
       }
     }
 
-    // Secondary verification via verifyPassword (bcrypt or direct hash)
-    if (!isPasswordValid && user.passwordHash) {
-      isPasswordValid = await verifyPassword(inputPassword, user.passwordHash);
+    const storedHash = user.password_hash || user.passwordHash;
+    if (!isPasswordValid && storedHash) {
+      isPasswordValid = await verifyPassword(inputPassword, storedHash);
     }
 
     if (!isPasswordValid) {
@@ -95,11 +91,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update lastLoginAt timestamp in background
-    prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    }).catch(() => {});
+    // Update last_login_at in background
+    insforgeAdmin.database
+      .from('users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', user.id)
+      .then(() => {});
 
     // Create session JWT token
     const token = await signAuthToken({
@@ -121,11 +118,11 @@ export async function POST(req: NextRequest) {
       email: user.email,
       name: user.name,
       role: isPrivileged ? 'SUPER_ADMIN' : (user.role || 'USER'),
-      subscriptionTier: isPrivileged ? 'PREMIUM_PLUS' : (user.subscriptionTier || 'FREE'),
-      isVerified: user.isVerified ?? true,
-      avatarUrl: user.avatarUrl || user.profile?.photos?.[0]?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
+      subscriptionTier: isPrivileged ? 'PREMIUM_PLUS' : (user.subscription_tier || user.subscriptionTier || 'FREE'),
+      isVerified: user.is_verified ?? user.isVerified ?? true,
+      avatarUrl: user.avatar_url || user.avatarUrl || user.profile?.photos?.[0]?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
       profileId: user.profile?.id || (user.id.startsWith('user-') ? user.id.replace('user-', 'profile-') : user.profileId || 'profile-1'),
-      accountStatus: user.accountStatus || 'ACTIVE',
+      accountStatus: accountStatus,
     };
 
     const response = NextResponse.json({

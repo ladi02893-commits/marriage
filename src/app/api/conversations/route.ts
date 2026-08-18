@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { insforgeAdmin } from '@/lib/insforge/server';
 import { INITIAL_CONVERSATIONS } from '@/lib/data-store';
 
 export async function GET(req: NextRequest) {
@@ -9,22 +9,21 @@ export async function GET(req: NextRequest) {
 
     let dbConversations: any[] = [];
     try {
-      const where: any = {};
+      let query = insforgeAdmin.database
+        .from('conversations')
+        .select('*, participantA:users!participant_a_id(id, name, avatar_url), participantB:users!participant_b_id(id, name, avatar_url), messages(id, text, created_at, sender_id, is_read)');
+
       if (userId) {
-        where.OR = [{ participantAId: userId }, { participantBId: userId }];
+        query = query.or(`participant_a_id.eq.${userId},participant_b_id.eq.${userId}`);
       }
 
-      dbConversations = await prisma.conversation.findMany({
-        where,
-        include: {
-          participantA: { select: { id: true, name: true, avatarUrl: true } },
-          participantB: { select: { id: true, name: true, avatarUrl: true } },
-          messages: { orderBy: { createdAt: 'desc' }, take: 1 },
-        },
-        orderBy: { updatedAt: 'desc' },
-      });
+      const { data, error } = await query.order('updated_at', { ascending: false });
+
+      if (!error && data) {
+        dbConversations = data;
+      }
     } catch (err) {
-      console.warn('Prisma conversations fallback:', err);
+      console.warn('InsForge conversations fallback:', err);
     }
 
     const data = dbConversations.length > 0 ? dbConversations : INITIAL_CONVERSATIONS;
@@ -33,7 +32,7 @@ export async function GET(req: NextRequest) {
       success: true,
       data,
       total: data.length,
-      source: dbConversations.length > 0 ? 'PRISMA_DATABASE' : 'DATA_STORE',
+      source: dbConversations.length > 0 ? 'INSFORGE_DATABASE' : 'DATA_STORE',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -56,33 +55,36 @@ export async function POST(req: NextRequest) {
     }
 
     // Try to find existing conversation first
-    const existing = await prisma.conversation.findFirst({
-      where: {
-        OR: [
-          { participantAId, participantBId },
-          { participantAId: participantBId, participantBId: participantAId },
-        ],
-      },
-    });
+    const { data: existing } = await insforgeAdmin.database
+      .from('conversations')
+      .select('*')
+      .or(`and(participant_a_id.eq.${participantAId},participant_b_id.eq.${participantBId}),and(participant_a_id.eq.${participantBId},participant_b_id.eq.${participantAId})`)
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json({ success: true, data: existing, created: false });
     }
 
-    const conversation = await prisma.conversation.create({
-      data: {
-        participantAId,
-        participantBId,
-        lastMessageText: 'Conversation started',
-        lastMessageTime: new Date(),
-      },
-    });
+    const { data: conversation, error } = await insforgeAdmin.database
+      .from('conversations')
+      .insert([{
+        participant_a_id: participantAId,
+        participant_b_id: participantBId,
+        last_message_text: 'Conversation started',
+        last_message_time: new Date().toISOString(),
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
       data: conversation,
       created: true,
-      message: 'Conversation created in Prisma database.',
+      message: 'Conversation created in InsForge database.',
     });
   } catch (error: any) {
     return NextResponse.json(

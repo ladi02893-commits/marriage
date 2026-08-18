@@ -1,16 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { insforgeAdmin } from '@/lib/insforge/server';
 import { INITIAL_RECEIVING_ACCOUNTS } from '@/lib/data-store';
 
 export async function GET() {
   try {
     let dbAccounts: any[] = [];
     try {
-      dbAccounts = await prisma.receivingAccount.findMany({
-        orderBy: { createdAt: 'asc' },
-      });
+      const { data, error } = await insforgeAdmin.database
+        .from('receiving_accounts')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (!error && data) {
+        dbAccounts = data.map((acc: any) => ({
+          ...acc,
+          bankName: acc.bank_name || acc.bankName,
+          accountTitle: acc.account_title || acc.accountTitle,
+          accountNumber: acc.account_number || acc.accountNumber,
+          branchName: acc.branch_name || acc.branchName,
+          isActive: acc.is_active ?? acc.isActive ?? true,
+          isPrimary: acc.is_primary ?? acc.isPrimary ?? false,
+          createdAt: acc.created_at || acc.createdAt,
+        }));
+      }
     } catch (err) {
-      console.warn('Prisma receiving accounts fetch fallback:', err);
+      console.warn('InsForge receiving accounts fetch fallback:', err);
     }
 
     const data = dbAccounts.length > 0 ? dbAccounts : INITIAL_RECEIVING_ACCOUNTS;
@@ -19,7 +33,7 @@ export async function GET() {
       success: true,
       data,
       total: data.length,
-      source: dbAccounts.length > 0 ? 'PRISMA_DATABASE' : 'DATA_STORE',
+      source: dbAccounts.length > 0 ? 'INSFORGE_DATABASE' : 'DATA_STORE',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -34,24 +48,30 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { provider, bankName, accountTitle, accountNumber, iban, branchName, instructions, isActive, isPrimary } = body;
 
-    const created = await prisma.receivingAccount.create({
-      data: {
+    const { data: created, error } = await insforgeAdmin.database
+      .from('receiving_accounts')
+      .insert([{
         provider: provider || 'BANK_TRANSFER',
-        bankName: bankName || 'Meezan Bank',
-        accountTitle: accountTitle || 'Compatible Matrimonials',
-        accountNumber: accountNumber || '0101-0101010101',
+        bank_name: bankName || 'Meezan Bank',
+        account_title: accountTitle || 'Compatible Matrimonials',
+        account_number: accountNumber || '0101-0101010101',
         iban: iban || null,
-        branchName: branchName || null,
+        branch_name: branchName || null,
         instructions: instructions || null,
-        isActive: isActive !== undefined ? isActive : true,
-        isPrimary: isPrimary !== undefined ? isPrimary : false,
-      },
-    });
+        is_active: isActive !== undefined ? isActive : true,
+        is_primary: isPrimary !== undefined ? isPrimary : false,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
       data: created,
-      message: 'Receiving account added to Prisma database.',
+      message: 'Receiving account added to InsForge database.',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -70,13 +90,18 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'id parameter is required.' }, { status: 400 });
     }
 
-    await prisma.receivingAccount.delete({
-      where: { id },
-    });
+    const { error } = await insforgeAdmin.database
+      .from('receiving_accounts')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Receiving account deleted from Prisma database.',
+      message: 'Receiving account deleted from InsForge database.',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -96,25 +121,31 @@ export async function PATCH(req: NextRequest) {
     }
 
     const updateData: any = {};
-    if (isActive !== undefined) updateData.isActive = isActive;
-    if (isPrimary !== undefined) updateData.isPrimary = isPrimary;
+    if (isActive !== undefined) updateData.is_active = isActive;
+    if (isPrimary !== undefined) updateData.is_primary = isPrimary;
     if (provider !== undefined) updateData.provider = provider;
-    if (bankName !== undefined) updateData.bankName = bankName;
-    if (accountTitle !== undefined) updateData.accountTitle = accountTitle;
-    if (accountNumber !== undefined) updateData.accountNumber = accountNumber;
+    if (bankName !== undefined) updateData.bank_name = bankName;
+    if (accountTitle !== undefined) updateData.account_title = accountTitle;
+    if (accountNumber !== undefined) updateData.account_number = accountNumber;
     if (iban !== undefined) updateData.iban = iban;
-    if (branchName !== undefined) updateData.branchName = branchName;
+    if (branchName !== undefined) updateData.branch_name = branchName;
     if (instructions !== undefined) updateData.instructions = instructions;
 
-    const updated = await prisma.receivingAccount.update({
-      where: { id },
-      data: updateData,
-    });
+    const { data: updated, error } = await insforgeAdmin.database
+      .from('receiving_accounts')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
       data: updated,
-      message: 'Receiving account updated in Prisma database.',
+      message: 'Receiving account updated in InsForge database.',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -123,4 +154,3 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
-

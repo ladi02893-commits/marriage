@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { insforgeAdmin } from '@/lib/insforge/server';
 import { signAuthToken, AUTH_COOKIE_NAME } from '@/lib/auth';
-import { INITIAL_USERS, INITIAL_PROFILES } from '@/lib/data-store';
+import { INITIAL_USERS } from '@/lib/data-store';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,11 +12,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
     }
 
-    // Try find in PostgreSQL or INITIAL_USERS
+    // Try find in InsForge or INITIAL_USERS
     let targetUser: any = INITIAL_USERS.find((u) => u.id === userId);
     if (!targetUser) {
       try {
-        targetUser = await prisma.user.findUnique({ where: { id: userId } });
+        const { data, error } = await insforgeAdmin.database
+          .from('users')
+          .select('*, profile:matrimonial_profiles(*)')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (!error && data) {
+          targetUser = data;
+        }
       } catch {
         // fallback
       }

@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { prisma } from './prisma';
+import { insforgeAdmin } from './insforge/server';
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'truepair-matrimonial-super-secret-production-jwt-key-2026'
@@ -62,24 +62,15 @@ export async function getCurrentUserFromCookies() {
     const payload = await verifyAuthToken(token);
     if (!payload?.userId) return null;
 
-    const dbPromise = prisma.user.findUnique({
-      where: { id: payload.userId },
-      include: {
-        profile: {
-          include: {
-            photos: true,
-            educationCareer: true,
-            lifestyle: true,
-            familyInfo: true,
-            partnerPreferences: true,
-            privacySettings: true,
-          },
-        },
-      },
-    });
+    const { data: user, error } = await insforgeAdmin.database
+      .from('users')
+      .select('*, profile:matrimonial_profiles(*, photos:profile_photos(*), educationCareer:education_careers(*), lifestyle:lifestyles(*), familyInfo:family_infos(*), partnerPreferences:partner_preferences(*), privacySettings:privacy_settings(*))')
+      .eq('id', payload.userId)
+      .maybeSingle();
 
-    const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1200));
-    const user = await Promise.race([dbPromise, timeoutPromise]);
+    if (error || !user) {
+      return null;
+    }
 
     return user;
   } catch (err) {

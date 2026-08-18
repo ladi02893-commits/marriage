@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { insforgeAdmin } from '@/lib/insforge/server';
 import { hashPassword, signAuthToken, AUTH_COOKIE_NAME } from '@/lib/auth';
-import { Gender, MaritalStatus, Religion, DietType, HabitFrequency, FamilyType, FamilyValues, Role, SubscriptionTier } from '@prisma/client';
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,10 +42,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
     // Check if user already exists
-    const existing = await prisma.user.findUnique({
-      where: { email: email.trim().toLowerCase() },
-    });
+    const { data: existing } = await insforgeAdmin.database
+      .from('users')
+      .select('id')
+      .eq('email', cleanEmail)
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json(
@@ -56,122 +59,112 @@ export async function POST(req: NextRequest) {
     }
 
     const hashedPassword = await hashPassword(password);
+    const parsedGender = gender === 'FEMALE' ? 'FEMALE' : 'MALE';
+    const parsedMarital = maritalStatus || 'NEVER_MARRIED';
+    const parsedReligion = religion || 'ISLAM';
 
-    // Map Gender & Enum helpers safely
-    const parsedGender = gender === 'FEMALE' ? Gender.FEMALE : Gender.MALE;
-    const parsedMarital =
-      maritalStatus === 'DIVORCED'
-        ? MaritalStatus.DIVORCED
-        : maritalStatus === 'WIDOWED'
-        ? MaritalStatus.WIDOWED
-        : maritalStatus === 'AWAITING_DIVORCE'
-        ? MaritalStatus.AWAITING_DIVORCE
-        : MaritalStatus.NEVER_MARRIED;
+    const defaultAvatar =
+      avatarUrl ||
+      (parsedGender === 'FEMALE'
+        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'
+        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400');
 
-    const parsedReligion =
-      religion === 'CHRISTIANITY'
-        ? Religion.CHRISTIANITY
-        : religion === 'HINDUISM'
-        ? Religion.HINDUISM
-        : religion === 'SIKHISM'
-        ? Religion.SIKHISM
-        : religion === 'JUDAISM'
-        ? Religion.JUDAISM
-        : religion === 'OTHER'
-        ? Religion.OTHER
-        : Religion.ISLAM;
-
-    // Create User and Matrimonial Profile in a single database transaction
-    const newUser = await prisma.user.create({
-      data: {
-        email: email.trim().toLowerCase(),
-        passwordHash: hashedPassword,
+    // 1. Create User
+    const { data: newUser, error: userError } = await insforgeAdmin.database
+      .from('users')
+      .insert([{
+        email: cleanEmail,
+        password_hash: hashedPassword,
         name: fullName.trim(),
-        role: Role.USER,
-        subscriptionTier: SubscriptionTier.FREE,
-        isVerified: false,
-        avatarUrl:
-          avatarUrl ||
-          (parsedGender === Gender.FEMALE
-            ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'
-            : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=400'),
-        profile: {
-          create: {
-            fullName: fullName.trim(),
-            displayName: fullName.trim().split(' ')[0],
-            gender: parsedGender,
-            dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : new Date('1998-01-01'),
-            maritalStatus: parsedMarital,
-            religion: parsedReligion,
-            sectOrCommunity: sectOrCommunity || 'Sunni',
-            motherTongue: motherTongue || 'Urdu',
-            country: country || 'Pakistan',
-            stateProvince: stateProvince || 'Punjab',
-            city: city || 'Lahore',
-            bioHeadline: bioHeadline || 'Ambitious professional seeking life companion.',
-            aboutMe: aboutMe || 'Looking for an understanding partner with strong moral and family values.',
-            completionPercentage: 85,
-            photos: avatarUrl
-              ? {
-                  create: [
-                    {
-                      url: avatarUrl,
-                      isPrimary: true,
-                      isApproved: true,
-                      order: 1,
-                    },
-                  ],
-                }
-              : undefined,
-            educationCareer: {
-              create: {
-                highestDegree: highestDegree || 'Bachelors Degree',
-                institution: institution || 'Recognized University',
-                profession: profession || 'Professional',
-                annualIncome: annualIncome || '$30,000 - $60,000',
-              },
-            },
-            lifestyle: {
-              create: {
-                height: height || "5' 8\"",
-                diet: DietType.HALAL_ONLY,
-                smoking: HabitFrequency.NO,
-                drinking: HabitFrequency.NO,
-                motherTongue: motherTongue || 'Urdu',
-                languagesSpoken: ['English', motherTongue || 'Urdu'],
-              },
-            },
-            familyInfo: {
-              create: {
-                familyType: FamilyType.NUCLEAR,
-                familyValues: FamilyValues.MODERATE,
-                familyLocation: `${city || 'Lahore'}, ${country || 'Pakistan'}`,
-              },
-            },
-            partnerPreferences: {
-              create: {
-                minAge: 20,
-                maxAge: 35,
-                religions: [parsedReligion],
-                maritalStatuses: [parsedMarital],
-                expectationsNotes: 'Seeking a kind, sincere, and compatible partner.',
-              },
-            },
-            privacySettings: {
-              create: {
-                photoVisibility: 'ALL',
-                contactVisibility: 'ONLY_ACCEPTED_INTERESTS',
-                showAge: true,
-                showIncome: true,
-              },
-            },
-          },
-        },
-      },
-      include: {
-        profile: true,
-      },
-    });
+        role: 'USER',
+        subscription_tier: 'FREE',
+        is_verified: false,
+        avatar_url: defaultAvatar,
+        account_status: 'ACTIVE',
+      }])
+      .select()
+      .single();
+
+    if (userError || !newUser) {
+      console.error('User creation error:', userError);
+      return NextResponse.json({ success: false, error: 'Failed to create user.' }, { status: 500 });
+    }
+
+    // 2. Create Matrimonial Profile
+    const { data: profile, error: profileError } = await insforgeAdmin.database
+      .from('matrimonial_profiles')
+      .insert([{
+        user_id: newUser.id,
+        profile_created_for: 'SELF',
+        full_name: fullName.trim(),
+        display_name: fullName.trim().split(' ')[0],
+        gender: parsedGender,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth).toISOString() : new Date('1998-01-01').toISOString(),
+        marital_status: parsedMarital,
+        religion: parsedReligion,
+        sect_or_community: sectOrCommunity || 'Sunni',
+        mother_tongue: motherTongue || 'Urdu',
+        country: country || 'Pakistan',
+        state_province: stateProvince || 'Punjab',
+        city: city || 'Lahore',
+        bio_headline: bioHeadline || 'Ambitious professional seeking life companion.',
+        about_me: aboutMe || 'Looking for an understanding partner with strong moral and family values.',
+        completion_percentage: 85,
+      }])
+      .select()
+      .single();
+
+    if (profileError || !profile) {
+      console.error('Profile creation error:', profileError);
+    } else {
+      // 3. Create Child Tables
+      await Promise.all([
+        insforgeAdmin.database.from('profile_photos').insert([{
+          profile_id: profile.id,
+          url: defaultAvatar,
+          is_primary: true,
+          is_approved: true,
+          order_num: 1,
+        }]),
+        insforgeAdmin.database.from('education_careers').insert([{
+          profile_id: profile.id,
+          highest_degree: highestDegree || 'Bachelors Degree',
+          institution: institution || 'Recognized University',
+          profession: profession || 'Professional',
+          annual_income: annualIncome || '$30,000 - $60,000',
+        }]),
+        insforgeAdmin.database.from('lifestyles').insert([{
+          profile_id: profile.id,
+          height: height || "5' 8\"",
+          diet: 'HALAL_ONLY',
+          smoking: 'NO',
+          drinking: 'NO',
+          mother_tongue: motherTongue || 'Urdu',
+          languages_spoken: ['English', motherTongue || 'Urdu'],
+        }]),
+        insforgeAdmin.database.from('family_infos').insert([{
+          profile_id: profile.id,
+          family_type: 'NUCLEAR',
+          family_values: 'MODERATE',
+          family_location: `${city || 'Lahore'}, ${country || 'Pakistan'}`,
+        }]),
+        insforgeAdmin.database.from('partner_preferences').insert([{
+          profile_id: profile.id,
+          min_age: 20,
+          max_age: 35,
+          religions: [parsedReligion],
+          marital_statuses: [parsedMarital],
+          expectations_notes: 'Seeking a kind, sincere, and compatible partner.',
+        }]),
+        insforgeAdmin.database.from('privacy_settings').insert([{
+          profile_id: profile.id,
+          photo_visibility: 'ALL',
+          contact_visibility: 'ONLY_ACCEPTED_INTERESTS',
+          show_age: true,
+          show_income: true,
+        }]),
+      ]);
+    }
 
     // Create session JWT token
     const token = await signAuthToken({
@@ -185,11 +178,11 @@ export async function POST(req: NextRequest) {
       email: newUser.email,
       name: newUser.name,
       role: newUser.role,
-      subscriptionTier: newUser.subscriptionTier,
-      isVerified: newUser.isVerified,
-      avatarUrl: newUser.avatarUrl,
-      profileId: newUser.profile?.id || null,
-      accountStatus: newUser.accountStatus,
+      subscriptionTier: newUser.subscription_tier || 'FREE',
+      isVerified: newUser.is_verified || false,
+      avatarUrl: newUser.avatar_url,
+      profileId: profile?.id || null,
+      accountStatus: newUser.account_status || 'ACTIVE',
     };
 
     const response = NextResponse.json({

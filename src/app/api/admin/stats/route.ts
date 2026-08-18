@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { insforgeAdmin } from '@/lib/insforge/server';
 import {
   INITIAL_USERS,
   INITIAL_PROFILES,
@@ -11,29 +11,35 @@ import {
 export async function GET() {
   try {
     const [
-      totalUsers,
-      verifiedUsers,
-      premiumUsers,
-      pendingVerifs,
-      openReports,
-      pendingPayments,
-      verifiedProofs,
-      totalProfiles,
+      totalUsersRes,
+      verifiedUsersRes,
+      premiumUsersRes,
+      pendingVerifsRes,
+      openReportsRes,
+      pendingPaymentsRes,
+      verifiedProofsRes,
+      totalProfilesRes,
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { isVerified: true } }),
-      prisma.user.count({ where: { subscriptionTier: { not: 'FREE' } } }),
-      prisma.verificationRequest.count({ where: { status: 'PENDING' } }),
-      prisma.abuseReport.count({ where: { status: 'OPEN' } }),
-      prisma.paymentProof.count({ where: { status: 'PENDING' } }),
-      prisma.paymentProof.findMany({
-        where: { status: 'VERIFIED' },
-        select: { amount: true },
-      }),
-      prisma.matrimonialProfile.count(),
+      insforgeAdmin.database.from('users').select('id', { count: 'exact', head: true }),
+      insforgeAdmin.database.from('users').select('id', { count: 'exact', head: true }).eq('is_verified', true),
+      insforgeAdmin.database.from('users').select('id', { count: 'exact', head: true }).neq('subscription_tier', 'FREE'),
+      insforgeAdmin.database.from('verification_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+      insforgeAdmin.database.from('abuse_reports').select('id', { count: 'exact', head: true }).eq('status', 'OPEN'),
+      insforgeAdmin.database.from('payment_proofs').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
+      insforgeAdmin.database.from('payment_proofs').select('amount').eq('status', 'VERIFIED'),
+      insforgeAdmin.database.from('matrimonial_profiles').select('id', { count: 'exact', head: true }),
     ]);
 
-    const totalRevenue = verifiedProofs.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalUsers = totalUsersRes.count ?? 0;
+    const verifiedUsers = verifiedUsersRes.count ?? 0;
+    const premiumUsers = premiumUsersRes.count ?? 0;
+    const pendingVerifs = pendingVerifsRes.count ?? 0;
+    const openReports = openReportsRes.count ?? 0;
+    const pendingPayments = pendingPaymentsRes.count ?? 0;
+    const totalProfiles = totalProfilesRes.count ?? 0;
+    const verifiedProofs = verifiedProofsRes.data || [];
+
+    const totalRevenue = verifiedProofs.reduce((acc: number, curr: any) => acc + (Number(curr.amount) || 0), 0);
 
     return NextResponse.json({
       success: true,
@@ -47,13 +53,12 @@ export async function GET() {
         pendingPayments,
         totalRevenue,
       },
-      source: 'PRISMA_POSTGRES_REALTIME',
-      message: 'Live database statistics loaded.',
+      source: 'INSFORGE_POSTGRES_REALTIME',
+      message: 'Live InsForge database statistics loaded.',
     });
   } catch (error: any) {
     console.warn('Admin stats DB fallback to INITIAL data:', error?.message);
 
-    // Fallback to INITIAL data store counts when DB is unavailable
     const initialTotalUsers = INITIAL_USERS.length;
     const initialVerifiedUsers = INITIAL_USERS.filter((u) => u.isVerified).length;
     const initialPremiumUsers = INITIAL_USERS.filter((u) => u.subscriptionTier !== 'FREE').length;
@@ -81,4 +86,3 @@ export async function GET() {
     });
   }
 }
-

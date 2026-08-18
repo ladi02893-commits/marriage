@@ -183,35 +183,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (userRes.status === 'fulfilled' && userRes.value.ok) {
         const uData = await userRes.value.json();
-        if (uData.data?.length) setUsers(uData.data);
+        if (Array.isArray(uData.data)) setUsers(uData.data);
       }
       if (profRes.status === 'fulfilled' && profRes.value.ok) {
         const profData = await profRes.value.json();
-        if (profData.data?.length) setProfiles(profData.data);
+        if (Array.isArray(profData.data)) setProfiles(profData.data);
       }
       if (intRes.status === 'fulfilled' && intRes.value.ok) {
         const intData = await intRes.value.json();
-        if (intData.data?.length) setInterests(intData.data);
+        if (Array.isArray(intData.data)) setInterests(intData.data);
       }
       if (proofRes.status === 'fulfilled' && proofRes.value.ok) {
         const pData = await proofRes.value.json();
-        if (pData.data?.length) setPaymentProofs(pData.data);
+        if (Array.isArray(pData.data)) setPaymentProofs(pData.data);
       }
       if (invRes.status === 'fulfilled' && invRes.value.ok) {
         const invData = await invRes.value.json();
-        if (invData.data?.length) setInvoices(invData.data);
+        if (Array.isArray(invData.data)) setInvoices(invData.data);
       }
       if (accRes.status === 'fulfilled' && accRes.value.ok) {
         const accData = await accRes.value.json();
-        if (accData.data?.length) setReceivingAccounts(accData.data);
+        if (Array.isArray(accData.data)) setReceivingAccounts(accData.data);
       }
       if (verifRes.status === 'fulfilled' && verifRes.value.ok) {
         const vData = await verifRes.value.json();
-        if (vData.data?.length) setVerifications(vData.data);
+        if (Array.isArray(vData.data)) setVerifications(vData.data);
       }
       if (repRes.status === 'fulfilled' && repRes.value.ok) {
         const rData = await repRes.value.json();
-        if (rData.data?.length) setReports(rData.data);
+        if (Array.isArray(rData.data)) setReports(rData.data);
       }
     } catch (apiSyncErr) {
       console.warn('Live database sync notice:', apiSyncErr);
@@ -321,7 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // 3. Live real-time sync with Prisma PostgreSQL Database API endpoints
+        // 3. Live real-time sync with InsForge PostgreSQL Database API endpoints
         await refreshDatabase();
       } catch (err) {
         console.error('Session load error:', err);
@@ -666,13 +666,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    // Sync profile update to Prisma Database in background
+    // Sync profile update to InsForge Database in background
     if (currentProfile.id && !currentProfile.id.startsWith('profile-')) {
       fetch('/api/profiles', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: currentProfile.id, ...data }),
-      }).catch((err) => console.warn('Prisma profile update sync notice:', err));
+      }).catch((err) => console.warn('InsForge profile update sync notice:', err));
     }
   };
 
@@ -704,11 +704,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userSentInterestsCount = userSentInterests.length;
 
   const currentPlan =
-    plans.find((p) => {
+    (plans || []).find((p) => {
       if (currentUser?.subscriptionTier === 'PREMIUM') return p.slug === 'PREMIUM';
-      if (currentUser?.subscriptionTier === 'PREMIUM_PLUS') return p.slug === 'VIP';
-      return p.slug === 'BASIC';
-    }) || plans[0];
+      if (currentUser?.subscriptionTier === 'PREMIUM_PLUS') return p.slug === 'VIP' || p.slug === 'PREMIUM_PLUS';
+      return p.slug === 'BASIC' || p.slug === 'FREE';
+    }) || (plans || [])[0] || (INITIAL_PLANS || [])[0];
 
   const planLimit = isPrivilegedUser
     ? 99999
@@ -786,12 +786,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setInterests((prev) => [newInterest, ...prev]);
 
-    // Background sync to Prisma Database
+    // Background sync to InsForge Database
     fetch('/api/interests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newInterest),
-    }).catch((err) => console.warn('Prisma interest sync notice:', err));
+    }).catch((err) => console.warn('InsForge interest sync notice:', err));
 
     // Send notification to receiver
     const newNotif: NotificationItem = {
@@ -818,12 +818,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/interests', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: interestId, status: 'ACCEPTED' }),
-    }).catch((err) => console.warn('Prisma accept interest sync notice:', err));
+    }).catch((err) => console.warn('InsForge accept interest sync notice:', err));
 
     const intReq = interests.find((i) => i.id === interestId);
     if (intReq) {
@@ -854,12 +854,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/interests', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: interestId, status: 'DECLINED' }),
-    }).catch((err) => console.warn('Prisma decline interest sync notice:', err));
+    }).catch((err) => console.warn('InsForge decline interest sync notice:', err));
   };
 
   const cancelInterest = (interestId: string) => {
@@ -939,7 +939,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           senderId: currentUser.id,
           text: text.trim(),
         }),
-      }).catch((err) => console.warn('Prisma message sync notice:', err));
+      }).catch((err) => console.warn('InsForge message sync notice:', err));
     }
   };
 
@@ -1009,7 +1009,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // But that requires more complex React state handling.
         }
       })
-      .catch((err) => console.warn('Prisma conversation sync notice:', err));
+      .catch((err) => console.warn('InsForge conversation sync notice:', err));
 
     return newConvId;
   };
@@ -1047,12 +1047,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setVerifications((prev) => [newReq, ...prev]);
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/verifications', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newReq),
-    }).catch((err) => console.warn('Prisma verification sync notice:', err));
+    }).catch((err) => console.warn('InsForge verification sync notice:', err));
   };
 
   const approveVerification = (verifId: string, notes?: string) => {
@@ -1069,12 +1069,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/verifications', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: verifId, status: 'APPROVED', reviewerNotes: notes }),
-    }).catch((err) => console.warn('Prisma approve verification sync notice:', err));
+    }).catch((err) => console.warn('InsForge approve verification sync notice:', err));
 
     const verif = verifications.find((v) => v.id === verifId);
     if (verif) {
@@ -1102,12 +1102,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/verifications', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: verifId, status: 'REJECTED', reviewerNotes: notes }),
-    }).catch((err) => console.warn('Prisma reject verification sync notice:', err));
+    }).catch((err) => console.warn('InsForge reject verification sync notice:', err));
 
     const verif = verifications.find((v) => v.id === verifId);
     if (verif) {
@@ -1127,12 +1127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       prev.map((u) => (u.id === userId ? { ...u, accountStatus: status } : u))
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/users', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: userId, accountStatus: status }),
-    }).catch((err) => console.warn('Prisma user status sync notice:', err));
+    }).catch((err) => console.warn('InsForge user status sync notice:', err));
 
     logAdminAction('UPDATED_USER_STATUS', 'USER', userId, `Changed account status to ${status}`);
   };
@@ -1149,12 +1149,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/users', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: userId, isVerified }),
-    }).catch((err) => console.warn('Prisma user badge sync notice:', err));
+    }).catch((err) => console.warn('InsForge user badge sync notice:', err));
   };
 
   const submitReport = (reportedUserId: string, category: any, description: string) => {
@@ -1175,12 +1175,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setReports((prev) => [newReport, ...prev]);
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newReport),
-    }).catch((err) => console.warn('Prisma report sync notice:', err));
+    }).catch((err) => console.warn('InsForge report sync notice:', err));
   };
 
   const resolveReport = (reportId: string, actionTaken: string) => {
@@ -1192,12 +1192,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/reports', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: reportId, status: 'RESOLVED', adminActionTaken: actionTaken }),
-    }).catch((err) => console.warn('Prisma resolve report sync notice:', err));
+    }).catch((err) => console.warn('InsForge resolve report sync notice:', err));
 
     logAdminAction('RESOLVED_REPORT', 'REPORT', reportId, `Resolved report: ${actionTaken}`);
   };
@@ -1300,18 +1300,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPaymentProofs((prev) => [newProof, ...prev]);
     setInvoices((prev) => [newInvoice, ...prev]);
 
-    // Background sync to Prisma Database
+    // Background sync to InsForge Database
     fetch('/api/payments/proofs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    }).catch((err) => console.warn('Prisma payment proof sync notice:', err));
+    }).catch((err) => console.warn('InsForge payment proof sync notice:', err));
 
     fetch('/api/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newInvoice),
-    }).catch((err) => console.warn('Prisma invoice sync notice:', err));
+    }).catch((err) => console.warn('InsForge invoice sync notice:', err));
 
     // Send user confirmation notification
     const newNotif: NotificationItem = {
@@ -1403,18 +1403,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setInvoices((prev) => [newInvoice, ...prev]);
     setPaymentProofs((prev) => [newProof, ...prev]);
 
-    // Background sync to Prisma Database
+    // Background sync to InsForge Database
     fetch('/api/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newInvoice),
-    }).catch((err) => console.warn('Prisma invoice sync notice:', err));
+    }).catch((err) => console.warn('InsForge invoice sync notice:', err));
 
     fetch('/api/payments/proofs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newProof),
-    }).catch((err) => console.warn('Prisma proof sync notice:', err));
+    }).catch((err) => console.warn('InsForge proof sync notice:', err));
 
     // Send instant success notification
     const newNotif: NotificationItem = {
@@ -1458,7 +1458,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/payments/proofs', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -1467,7 +1467,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         status: 'VERIFIED',
         reviewerName: currentUser?.name || 'Administrator',
       }),
-    }).catch((err) => console.warn('Prisma approve proof sync notice:', err));
+    }).catch((err) => console.warn('InsForge approve proof sync notice:', err));
 
     const targetTier = (proof.planSlug.toUpperCase() as SubscriptionTier) || 'PREMIUM';
     const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
@@ -1550,7 +1550,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/payments/proofs', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -1560,7 +1560,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         rejectionReason: reason || 'Payment screenshot unclear or transaction not found.',
         reviewerName: currentUser?.name || 'Administrator',
       }),
-    }).catch((err) => console.warn('Prisma reject proof sync notice:', err));
+    }).catch((err) => console.warn('InsForge reject proof sync notice:', err));
 
     logAdminAction('REJECTED_PAYMENT_PROOF', 'SUBSCRIPTION', proofId, `Rejected payment proof: ${reason || 'Unverified'}`);
   };
@@ -1573,12 +1573,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setReceivingAccounts((prev) => [newAcc, ...prev]);
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/receiving-accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newAcc),
-    }).catch((err) => console.warn('Prisma add account sync notice:', err));
+    }).catch((err) => console.warn('InsForge add account sync notice:', err));
 
     logAdminAction('ADD_RECEIVING_ACCOUNT', 'SYSTEM', newAcc.id, `Added receiving account: ${newAcc.bankName} - ${newAcc.accountNumber}`);
   };
@@ -1588,12 +1588,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       prev.map((acc) => (acc.id === id ? { ...acc, ...data, updatedAt: new Date().toISOString() } : acc))
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/receiving-accounts', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, ...data }),
-    }).catch((err) => console.warn('Prisma update account sync notice:', err));
+    }).catch((err) => console.warn('InsForge update account sync notice:', err));
 
     logAdminAction('UPDATE_RECEIVING_ACCOUNT', 'SYSTEM', id, `Updated receiving account details: ${id}`);
   };
@@ -1601,10 +1601,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const deleteReceivingAccount = (id: string) => {
     setReceivingAccounts((prev) => prev.filter((acc) => acc.id !== id));
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch(`/api/receiving-accounts?id=${id}`, {
       method: 'DELETE',
-    }).catch((err) => console.warn('Prisma delete account sync notice:', err));
+    }).catch((err) => console.warn('InsForge delete account sync notice:', err));
 
     logAdminAction('DELETE_RECEIVING_ACCOUNT', 'SYSTEM', id, `Deleted receiving account: ${id}`);
   };
@@ -1621,12 +1621,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    // Sync to Prisma Database
+    // Sync to InsForge Database
     fetch('/api/receiving-accounts', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, isActive: newStatus }),
-    }).catch((err) => console.warn('Prisma toggle account status sync notice:', err));
+    }).catch((err) => console.warn('InsForge toggle account status sync notice:', err));
   };
 
   const logAdminAction = (action: string, targetType: any, targetId: string, details: string) => {

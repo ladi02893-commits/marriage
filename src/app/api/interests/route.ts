@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { insforgeAdmin } from '@/lib/insforge/server';
 import { INITIAL_INTERESTS } from '@/lib/data-store';
 
 export async function GET(req: NextRequest) {
@@ -9,29 +9,31 @@ export async function GET(req: NextRequest) {
 
     let dbInterests: any[] = [];
     try {
-      const where: any = {};
+      let query = insforgeAdmin.database
+        .from('interest_requests')
+        .select('*, sender:users!sender_id(name, avatar_url), receiver:users!receiver_id(name, avatar_url)');
+
       if (userId) {
-        where.OR = [{ senderId: userId }, { receiverId: userId }];
+        query = query.or(`sender_id.eq.${userId},receiver_id.eq.${userId}`);
       }
 
-      const rawInterests = await prisma.interestRequest.findMany({
-        where,
-        include: {
-          sender: { select: { name: true, avatarUrl: true } },
-          receiver: { select: { name: true, avatarUrl: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      
-      dbInterests = rawInterests.map((interest) => ({
-        ...interest,
-        senderName: interest.sender?.name || 'Unknown',
-        senderPhoto: interest.sender?.avatarUrl || null,
-        receiverName: interest.receiver?.name || 'Unknown',
-        receiverPhoto: interest.receiver?.avatarUrl || null,
-      }));
+      const { data: rawInterests, error } = await query.order('created_at', { ascending: false });
+
+      if (!error && rawInterests) {
+        dbInterests = rawInterests.map((interest: any) => ({
+          ...interest,
+          senderId: interest.sender_id || interest.senderId,
+          senderProfileId: interest.sender_profile_id || interest.senderProfileId,
+          receiverId: interest.receiver_id || interest.receiverId,
+          receiverProfileId: interest.receiver_profile_id || interest.receiverProfileId,
+          senderName: interest.sender?.name || 'Unknown',
+          senderPhoto: interest.sender?.avatar_url || null,
+          receiverName: interest.receiver?.name || 'Unknown',
+          receiverPhoto: interest.receiver?.avatar_url || null,
+        }));
+      }
     } catch (err) {
-      console.warn('Prisma interest fetch fallback:', err);
+      console.warn('InsForge interest fetch fallback:', err);
     }
 
     const data = dbInterests.length > 0 ? dbInterests : INITIAL_INTERESTS;
@@ -40,7 +42,7 @@ export async function GET(req: NextRequest) {
       success: true,
       data,
       total: data.length,
-      source: dbInterests.length > 0 ? 'PRISMA_DATABASE' : 'DATA_STORE',
+      source: dbInterests.length > 0 ? 'INSFORGE_DATABASE' : 'DATA_STORE',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -62,21 +64,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const interest = await prisma.interestRequest.create({
-      data: {
-        senderId,
-        senderProfileId: senderProfileId || senderId,
-        receiverId,
-        receiverProfileId: receiverProfileId || receiverId,
+    const { data: interest, error } = await insforgeAdmin.database
+      .from('interest_requests')
+      .insert([{
+        sender_id: senderId,
+        sender_profile_id: senderProfileId || senderId,
+        receiver_id: receiverId,
+        receiver_profile_id: receiverProfileId || receiverId,
         message: message || '',
         status: 'PENDING',
-      },
-    });
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
       data: interest,
-      message: 'Interest proposal recorded in Prisma database.',
+      message: 'Interest proposal recorded in InsForge database.',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -98,15 +106,21 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const updated = await prisma.interestRequest.update({
-      where: { id },
-      data: { status },
-    });
+    const { data: updated, error } = await insforgeAdmin.database
+      .from('interest_requests')
+      .update({ status })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
       data: updated,
-      message: 'Interest status updated in Prisma database.',
+      message: 'Interest status updated in InsForge database.',
     });
   } catch (error: any) {
     return NextResponse.json(

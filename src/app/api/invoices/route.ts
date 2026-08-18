@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { insforgeAdmin } from '@/lib/insforge/server';
 import { INITIAL_INVOICES } from '@/lib/data-store';
 
 export async function GET(req: NextRequest) {
@@ -9,15 +9,22 @@ export async function GET(req: NextRequest) {
 
     let dbInvoices: any[] = [];
     try {
-      const where: any = {};
-      if (userId) where.userId = userId;
+      let query = insforgeAdmin.database.from('invoices').select('*');
+      if (userId) query = query.eq('user_id', userId);
 
-      dbInvoices = await prisma.invoice.findMany({
-        where,
-        orderBy: { date: 'desc' },
-      });
+      const { data, error } = await query.order('date', { ascending: false });
+
+      if (!error && data) {
+        dbInvoices = data.map((inv: any) => ({
+          ...inv,
+          userId: inv.user_id || inv.userId,
+          invoiceNumber: inv.invoice_number || inv.invoiceNumber,
+          paymentMethod: inv.payment_method || inv.paymentMethod,
+          planName: inv.plan_name || inv.planName,
+        }));
+      }
     } catch (err) {
-      console.warn('Prisma invoices fetch fallback:', err);
+      console.warn('InsForge invoices fetch fallback:', err);
     }
 
     const data = dbInvoices.length > 0 ? dbInvoices : INITIAL_INVOICES;
@@ -26,7 +33,7 @@ export async function GET(req: NextRequest) {
       success: true,
       data,
       total: data.length,
-      source: dbInvoices.length > 0 ? 'PRISMA_DATABASE' : 'DATA_STORE',
+      source: dbInvoices.length > 0 ? 'INSFORGE_DATABASE' : 'DATA_STORE',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -41,22 +48,28 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { userId, invoiceNumber, amount, currency, status, paymentMethod, planName } = body;
 
-    const invoice = await prisma.invoice.create({
-      data: {
-        userId: userId || 'anonymous',
-        invoiceNumber: invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+    const { data: invoice, error } = await insforgeAdmin.database
+      .from('invoices')
+      .insert([{
+        user_id: userId || 'user-ladi',
+        invoice_number: invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
         amount: Number(amount) || 0,
         currency: currency || 'PKR',
         status: status || 'PAID',
-        paymentMethod: paymentMethod || 'Instant Card Gateway',
-        planName: planName || 'Elite Executive Plan',
-      },
-    });
+        payment_method: paymentMethod || 'Instant Card Gateway',
+        plan_name: planName || 'Elite Executive Plan',
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
       data: invoice,
-      message: 'Invoice created successfully in Prisma database.',
+      message: 'Invoice created successfully in InsForge database.',
     });
   } catch (error: any) {
     return NextResponse.json(

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { insforgeAdmin } from '@/lib/insforge/server';
 import { INITIAL_PROFILES } from '@/lib/data-store';
 
 export async function GET(request: NextRequest) {
@@ -11,56 +11,47 @@ export async function GET(request: NextRequest) {
     const city = searchParams.get('city');
     const search = searchParams.get('search');
 
-    // Attempt fetching from Prisma Database
+    // Attempt fetching from InsForge Database
     let dbProfiles: any[] = [];
     try {
-      const where: any = {};
-      if (gender && gender !== 'ALL') where.gender = gender;
-      if (religion && religion !== 'ALL') where.religion = religion;
-      if (country && country !== 'ALL') where.country = { contains: country, mode: 'insensitive' };
-      if (city) where.city = { contains: city, mode: 'insensitive' };
-      if (search) {
-        where.OR = [
-          { fullName: { contains: search, mode: 'insensitive' } },
-          { city: { contains: search, mode: 'insensitive' } },
-          { bioHeadline: { contains: search, mode: 'insensitive' } },
-        ];
+      let query = insforgeAdmin.database
+        .from('matrimonial_profiles')
+        .select('*, photos:profile_photos(*), educationCareer:education_careers(*), lifestyle:lifestyles(*), familyInfo:family_infos(*), partnerPreferences:partner_preferences(*), privacySettings:privacy_settings(*), user:users(is_verified)');
+
+      if (gender && gender !== 'ALL') query = query.eq('gender', gender);
+      if (religion && religion !== 'ALL') query = query.eq('religion', religion);
+      if (country && country !== 'ALL') query = query.ilike('country', `%${country}%`);
+      if (city && city !== 'ALL') query = query.ilike('city', `%${city}%`);
+
+      const { data: rawProfiles, error } = await query.order('created_at', { ascending: false });
+
+      if (!error && rawProfiles) {
+        dbProfiles = rawProfiles.map((p: any) => ({
+          ...p,
+          userId: p.user_id || p.userId,
+          fullName: p.full_name || p.fullName,
+          displayName: p.display_name || p.displayName,
+          bioHeadline: p.bio_headline || p.bioHeadline,
+          aboutMe: p.about_me || p.aboutMe,
+          caste: p.caste_or_sub_clan || p.caste,
+          sectOrCommunity: p.sect_or_community || p.sectOrCommunity,
+          motherTongue: p.mother_tongue || p.motherTongue,
+          state: p.state_province || p.state || p.province,
+          province: p.state_province || p.province,
+          dateOfBirth: p.date_of_birth || p.dateOfBirth,
+          completionPercentage: p.completion_percentage ?? p.completionPercentage ?? 85,
+          viewCount: p.view_count ?? p.viewCount ?? 0,
+          likeCount: p.like_count ?? p.likeCount ?? 0,
+          isFeatured: p.is_featured ?? p.isFeatured ?? true,
+          isBoosted: p.is_boosted ?? p.isBoosted ?? false,
+          verificationBadge: (p.user?.is_verified ?? p.user?.isVerified) ? 'APPROVED' : 'UNVERIFIED',
+        }));
       }
-
-      const rawProfiles = await prisma.matrimonialProfile.findMany({
-        where,
-        include: {
-          photos: { orderBy: { order: 'asc' } },
-          educationCareer: true,
-          lifestyle: true,
-          familyInfo: true,
-          partnerPreferences: true,
-          privacySettings: true,
-          user: { select: { isVerified: true } }
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      dbProfiles = rawProfiles.map(p => ({
-        ...p,
-        verificationBadge: p.user?.isVerified ? 'APPROVED' : 'UNVERIFIED'
-      }));
     } catch (dbErr) {
-      console.warn('Prisma DB query fallback to initial store:', dbErr);
+      console.warn('InsForge DB query fallback to initial store:', dbErr);
     }
 
-    // Merge database profiles with initial curated profiles ensuring complete discovery catalog
-    const combinedMap = new Map<string, any>();
-    
-    // 1. Load initial curated profiles first
-    INITIAL_PROFILES.forEach((p) => combinedMap.set(p.id, p));
-
-    // 2. Merge or override with live Prisma database profiles
-    dbProfiles.forEach((p) => {
-      combinedMap.set(p.id, p);
-    });
-
-    let results = Array.from(combinedMap.values());
+    let results = dbProfiles.length > 0 ? dbProfiles : INITIAL_PROFILES;
 
     if (gender && gender !== 'ALL') {
       results = results.filter((p) => p.gender === gender);
@@ -90,7 +81,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: results,
       total: results.length,
-      source: dbProfiles.length > 0 ? 'PRISMA_DATABASE_MERGED' : 'DATA_STORE',
+      source: dbProfiles.length > 0 ? 'INSFORGE_DATABASE' : 'DATA_STORE',
       message: 'Profiles retrieved successfully.',
     });
   } catch (error) {
@@ -104,48 +95,56 @@ export async function GET(request: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, fullName, displayName, gender, dateOfBirth, maritalStatus, religion, motherTongue, city, country, bioHeadline, aboutMe, photos, educationCareer, lifestyle, familyInfo } = body;
+    const { userId, fullName, displayName, gender, dateOfBirth, maritalStatus, religion, motherTongue, city, country, bioHeadline, aboutMe, photos, educationCareer } = body;
 
-    const created = await prisma.matrimonialProfile.create({
-      data: {
-        userId,
-        fullName: fullName || displayName,
-        displayName: displayName || fullName,
+    const { data: created, error } = await insforgeAdmin.database
+      .from('matrimonial_profiles')
+      .insert([{
+        user_id: userId,
+        full_name: fullName || displayName,
+        display_name: displayName || fullName,
         gender: gender || 'FEMALE',
-        dateOfBirth: new Date(dateOfBirth || '1998-01-01'),
-        maritalStatus: maritalStatus || 'NEVER_MARRIED',
+        date_of_birth: new Date(dateOfBirth || '1998-01-01').toISOString(),
+        marital_status: maritalStatus || 'NEVER_MARRIED',
         religion: religion || 'ISLAM',
-        motherTongue: motherTongue || 'Urdu',
+        mother_tongue: motherTongue || 'Urdu',
         city: city || 'Islamabad',
         country: country || 'Pakistan',
-        bioHeadline: bioHeadline || 'Matrimonial Candidate',
-        aboutMe: aboutMe || 'Family-oriented individual',
-        photos: photos?.length
-          ? {
-              create: photos.map((ph: any, idx: number) => ({
-                url: typeof ph === 'string' ? ph : ph.url,
-                isPrimary: idx === 0,
-                order: idx + 1,
-              })),
-            }
-          : undefined,
-        educationCareer: educationCareer
-          ? {
-              create: {
-                highestDegree: educationCareer.highestDegree || "Bachelor's",
-                institution: educationCareer.institution,
-                profession: educationCareer.profession || 'Executive',
-                annualIncome: educationCareer.annualIncome?.toString(),
-              },
-            }
-          : undefined,
-      },
-    });
+        bio_headline: bioHeadline || 'Matrimonial Candidate',
+        about_me: aboutMe || 'Family-oriented individual',
+      }])
+      .select()
+      .single();
+
+    if (error || !created) {
+      return NextResponse.json({ success: false, error: error?.message || 'Failed to create profile' }, { status: 500 });
+    }
+
+    if (photos?.length) {
+      await insforgeAdmin.database.from('profile_photos').insert(
+        photos.map((ph: any, idx: number) => ({
+          profile_id: created.id,
+          url: typeof ph === 'string' ? ph : ph.url,
+          is_primary: idx === 0,
+          order_num: idx + 1,
+        }))
+      );
+    }
+
+    if (educationCareer) {
+      await insforgeAdmin.database.from('education_careers').insert([{
+        profile_id: created.id,
+        highest_degree: educationCareer.highestDegree || "Bachelor's",
+        institution: educationCareer.institution,
+        profession: educationCareer.profession || 'Executive',
+        annual_income: educationCareer.annualIncome?.toString(),
+      }]);
+    }
 
     return NextResponse.json({
       success: true,
       profile: created,
-      message: 'Profile created successfully in Prisma database.',
+      message: 'Profile created successfully in InsForge database.',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -179,7 +178,6 @@ export async function PATCH(req: NextRequest) {
       familyInfo,
       partnerPreferences,
       privacySettings,
-      photos,
     } = body;
 
     if (!id) {
@@ -187,150 +185,96 @@ export async function PATCH(req: NextRequest) {
     }
 
     const profileData: any = {};
-    if (fullName !== undefined) profileData.fullName = fullName;
-    if (displayName !== undefined) profileData.displayName = displayName;
+    if (fullName !== undefined) profileData.full_name = fullName;
+    if (displayName !== undefined) profileData.display_name = displayName;
     if (gender !== undefined) profileData.gender = gender;
-    if (dateOfBirth !== undefined) profileData.dateOfBirth = new Date(dateOfBirth);
-    if (maritalStatus !== undefined) profileData.maritalStatus = maritalStatus;
+    if (dateOfBirth !== undefined) profileData.date_of_birth = new Date(dateOfBirth).toISOString();
+    if (maritalStatus !== undefined) profileData.marital_status = maritalStatus;
     if (religion !== undefined) profileData.religion = religion;
-    if (sectOrCommunity !== undefined) profileData.sectOrCommunity = sectOrCommunity;
-    if (motherTongue !== undefined) profileData.motherTongue = motherTongue;
+    if (sectOrCommunity !== undefined) profileData.sect_or_community = sectOrCommunity;
+    if (motherTongue !== undefined) profileData.mother_tongue = motherTongue;
     if (city !== undefined) profileData.city = city;
     if (country !== undefined) profileData.country = country;
-    if (stateProvince !== undefined) profileData.stateProvince = stateProvince;
-    if (bioHeadline !== undefined) profileData.bioHeadline = bioHeadline;
-    if (aboutMe !== undefined) profileData.aboutMe = aboutMe;
-    if (completionPercentage !== undefined) profileData.completionPercentage = completionPercentage;
+    if (stateProvince !== undefined) profileData.state_province = stateProvince;
+    if (bioHeadline !== undefined) profileData.bio_headline = bioHeadline;
+    if (aboutMe !== undefined) profileData.about_me = aboutMe;
+    if (completionPercentage !== undefined) profileData.completion_percentage = completionPercentage;
 
-    const updated = await prisma.matrimonialProfile.update({
-      where: { id },
-      data: {
-        ...profileData,
-        educationCareer: educationCareer
-          ? {
-              upsert: {
-                create: {
-                  highestDegree: educationCareer.highestDegree || "Bachelor's",
-                  institution: educationCareer.institution,
-                  profession: educationCareer.profession || 'Professional',
-                  jobTitle: educationCareer.jobTitle,
-                  fieldOfStudy: educationCareer.fieldOfStudy,
-                  annualIncome: educationCareer.annualIncome?.toString(),
-                },
-                update: {
-                  highestDegree: educationCareer.highestDegree,
-                  institution: educationCareer.institution,
-                  profession: educationCareer.profession,
-                  jobTitle: educationCareer.jobTitle,
-                  fieldOfStudy: educationCareer.fieldOfStudy,
-                  annualIncome: educationCareer.annualIncome?.toString(),
-                },
-              },
-            }
-          : undefined,
-        lifestyle: lifestyle
-          ? {
-              upsert: {
-                create: {
-                  height: lifestyle.height || "5' 6\"",
-                  weight: lifestyle.weight,
-                  bodyType: lifestyle.bodyType,
-                  diet: lifestyle.diet || 'HALAL_ONLY',
-                  smoking: lifestyle.smoking || 'NO',
-                  drinking: lifestyle.drinking || 'NO',
-                  motherTongue: lifestyle.motherTongue || 'Urdu',
-                },
-                update: {
-                  height: lifestyle.height,
-                  weight: lifestyle.weight,
-                  bodyType: lifestyle.bodyType,
-                  diet: lifestyle.diet,
-                  smoking: lifestyle.smoking,
-                  drinking: lifestyle.drinking,
-                  motherTongue: lifestyle.motherTongue,
-                },
-              },
-            }
-          : undefined,
-        familyInfo: familyInfo
-          ? {
-              upsert: {
-                create: {
-                  familyType: familyInfo.familyType || 'NUCLEAR',
-                  familyValues: familyInfo.familyValues || 'MODERATE',
-                  fatherOccupation: familyInfo.fatherOccupation,
-                  motherOccupation: familyInfo.motherOccupation,
-                  brothersCount: familyInfo.brothersCount || 0,
-                  sistersCount: familyInfo.sistersCount || 0,
-                  familyLocation: familyInfo.familyLocation,
-                  aboutFamily: familyInfo.aboutFamily,
-                },
-                update: {
-                  familyType: familyInfo.familyType,
-                  familyValues: familyInfo.familyValues,
-                  fatherOccupation: familyInfo.fatherOccupation,
-                  motherOccupation: familyInfo.motherOccupation,
-                  brothersCount: familyInfo.brothersCount,
-                  sistersCount: familyInfo.sistersCount,
-                  familyLocation: familyInfo.familyLocation,
-                  aboutFamily: familyInfo.aboutFamily,
-                },
-              },
-            }
-          : undefined,
-        partnerPreferences: partnerPreferences
-          ? {
-              upsert: {
-                create: {
-                  minAge: partnerPreferences.ageRange?.min || partnerPreferences.minAge || 20,
-                  maxAge: partnerPreferences.ageRange?.max || partnerPreferences.maxAge || 38,
-                  expectationsNotes: partnerPreferences.expectationsNotes,
-                },
-                update: {
-                  minAge: partnerPreferences.ageRange?.min || partnerPreferences.minAge,
-                  maxAge: partnerPreferences.ageRange?.max || partnerPreferences.maxAge,
-                  expectationsNotes: partnerPreferences.expectationsNotes,
-                },
-              },
-            }
-          : undefined,
-        privacySettings: privacySettings
-          ? {
-              upsert: {
-                create: {
-                  photoVisibility: privacySettings.photoVisibility || 'ALL',
-                  contactVisibility: privacySettings.contactVisibility || 'ONLY_ACCEPTED_INTERESTS',
-                  showAge: privacySettings.showAge ?? true,
-                  showIncome: privacySettings.showIncome ?? true,
-                  showLastSeen: privacySettings.showLastSeen ?? true,
-                  hideProfileTemporarily: privacySettings.hideProfileTemporarily ?? false,
-                },
-                update: {
-                  photoVisibility: privacySettings.photoVisibility,
-                  contactVisibility: privacySettings.contactVisibility,
-                  showAge: privacySettings.showAge,
-                  showIncome: privacySettings.showIncome,
-                  showLastSeen: privacySettings.showLastSeen,
-                  hideProfileTemporarily: privacySettings.hideProfileTemporarily,
-                },
-              },
-            }
-          : undefined,
-      },
-      include: {
-        photos: true,
-        educationCareer: true,
-        lifestyle: true,
-        familyInfo: true,
-        partnerPreferences: true,
-        privacySettings: true,
-      },
-    });
+    const { data: updated, error } = await insforgeAdmin.database
+      .from('matrimonial_profiles')
+      .update(profileData)
+      .eq('id', id)
+      .select('*, photos:profile_photos(*), educationCareer:education_careers(*), lifestyle:lifestyles(*), familyInfo:family_infos(*), partnerPreferences:partner_preferences(*), privacySettings:privacy_settings(*)')
+      .single();
+
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    if (educationCareer) {
+      await insforgeAdmin.database.from('education_careers').upsert([{
+        profile_id: id,
+        highest_degree: educationCareer.highestDegree || "Bachelor's",
+        institution: educationCareer.institution,
+        profession: educationCareer.profession || 'Professional',
+        job_title: educationCareer.jobTitle,
+        field_of_study: educationCareer.fieldOfStudy,
+        annual_income: educationCareer.annualIncome?.toString(),
+      }], { onConflict: 'profile_id' });
+    }
+
+    if (lifestyle) {
+      await insforgeAdmin.database.from('lifestyles').upsert([{
+        profile_id: id,
+        height: lifestyle.height || "5' 6\"",
+        weight: lifestyle.weight,
+        body_type: lifestyle.bodyType,
+        diet: lifestyle.diet || 'HALAL_ONLY',
+        smoking: lifestyle.smoking || 'NO',
+        drinking: lifestyle.drinking || 'NO',
+        mother_tongue: lifestyle.motherTongue || 'Urdu',
+      }], { onConflict: 'profile_id' });
+    }
+
+    if (familyInfo) {
+      await insforgeAdmin.database.from('family_infos').upsert([{
+        profile_id: id,
+        family_type: familyInfo.familyType || 'NUCLEAR',
+        family_values: familyInfo.familyValues || 'MODERATE',
+        father_occupation: familyInfo.fatherOccupation,
+        mother_occupation: familyInfo.motherOccupation,
+        brothers_count: familyInfo.brothersCount || 0,
+        sisters_count: familyInfo.sistersCount || 0,
+        family_location: familyInfo.familyLocation,
+        about_family: familyInfo.aboutFamily,
+      }], { onConflict: 'profile_id' });
+    }
+
+    if (partnerPreferences) {
+      await insforgeAdmin.database.from('partner_preferences').upsert([{
+        profile_id: id,
+        min_age: partnerPreferences.ageRange?.min || partnerPreferences.minAge || 20,
+        max_age: partnerPreferences.ageRange?.max || partnerPreferences.maxAge || 38,
+        expectations_notes: partnerPreferences.expectationsNotes,
+      }], { onConflict: 'profile_id' });
+    }
+
+    if (privacySettings) {
+      await insforgeAdmin.database.from('privacy_settings').upsert([{
+        profile_id: id,
+        photo_visibility: privacySettings.photoVisibility || 'ALL',
+        contact_visibility: privacySettings.contactVisibility || 'ONLY_ACCEPTED_INTERESTS',
+        show_age: privacySettings.showAge ?? true,
+        show_income: privacySettings.showIncome ?? true,
+        show_last_seen: privacySettings.showLastSeen ?? true,
+        hide_profile_temporarily: privacySettings.hideProfileTemporarily ?? false,
+      }], { onConflict: 'profile_id' });
+    }
 
     return NextResponse.json({
       success: true,
       data: updated,
-      message: 'Profile updated successfully in Prisma database.',
+      message: 'Profile updated successfully in InsForge database.',
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -339,4 +283,3 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
-
