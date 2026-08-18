@@ -182,13 +182,12 @@ export async function PATCH(req: NextRequest) {
             .eq('email', updated.user_email);
         }
 
-        // 3. Mark profile as featured & boosted for VIP
+        // 3. Mark profile as featured
         if (updated.user_id) {
           await insforgeAdmin.database
             .from('matrimonial_profiles')
             .update({
               is_featured: true,
-              is_boosted: targetTier === 'PREMIUM_PLUS',
             })
             .eq('user_id', updated.user_id);
         }

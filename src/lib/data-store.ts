@@ -44,7 +44,7 @@ export const INITIAL_USERS: User[] = [
     name: 'Amna Khan',
     email: 'amna.khan@gmail.com',
     role: 'USER',
-    subscriptionTier: 'PREMIUM',
+    subscriptionTier: 'PREMIUM_PLUS',
     accountStatus: 'ACTIVE',
     isVerified: true,
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
