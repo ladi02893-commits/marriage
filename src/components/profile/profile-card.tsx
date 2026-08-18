@@ -96,7 +96,7 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
 
           {/* Badges on Photo */}
           <div className="absolute left-3 top-3 flex flex-wrap gap-1.5 z-10">
-            {profile.verificationBadge === 'VERIFIED' && (
+            {profile.verificationBadge === 'APPROVED' && (
               <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/90 backdrop-blur-md px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
                 <ShieldCheck className="h-3.5 w-3.5" /> ID Verified
               </span>

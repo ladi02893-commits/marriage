@@ -29,19 +29,35 @@ import {
 import { useAuth } from '@/lib/auth-context';
 
 export default function AdminDashboardPage() {
-  const { users, verifications, reports, profiles, interests, invoices, paymentProofs } = useAuth();
+  const { users, verifications, reports, paymentProofs } = useAuth();
+  const [liveStats, setLiveStats] = React.useState<{
+    totalUsers: number;
+    verifiedUsers: number;
+    premiumUsers: number;
+    pendingVerifs: number;
+    openReports: number;
+    pendingPayments: number;
+    totalRevenue: number;
+  } | null>(null);
 
-  const totalUsers = users.length;
-  const verifiedUsers = users.filter((u) => u.isVerified).length;
-  const premiumUsers = users.filter((u) => u.subscriptionTier !== 'FREE').length;
-  const pendingVerifs = verifications.filter((v) => v.status === 'PENDING').length;
-  const pendingPayments = paymentProofs.filter((p) => p.status === 'PENDING').length;
-  const openReports = reports.filter((r) => r.status === 'OPEN').length;
+  React.useEffect(() => {
+    fetch('/api/admin/stats')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data) {
+          setLiveStats(data.data);
+        }
+      })
+      .catch((err) => console.error('Error fetching live admin stats', err));
+  }, []);
 
-  // Real verified Monthly Recurring Revenue calculated from approved payments
-  const totalRevenue = paymentProofs
-    .filter((p) => p.status === 'VERIFIED')
-    .reduce((acc, curr) => acc + curr.amount, 0);
+  const totalUsers = liveStats?.totalUsers ?? users.length;
+  const verifiedUsers = liveStats?.verifiedUsers ?? users.filter((u) => u.isVerified).length;
+  const premiumUsers = liveStats?.premiumUsers ?? users.filter((u) => u.subscriptionTier !== 'FREE').length;
+  const pendingVerifs = liveStats?.pendingVerifs ?? verifications.filter((v) => v.status === 'PENDING').length;
+  const pendingPayments = liveStats?.pendingPayments ?? paymentProofs.filter((p) => p.status === 'PENDING').length;
+  const openReports = liveStats?.openReports ?? reports.filter((r) => r.status === 'OPEN').length;
+  const totalRevenue = liveStats?.totalRevenue ?? paymentProofs.filter((p) => p.status === 'VERIFIED').reduce((acc, curr) => acc + curr.amount, 0);
 
   const revenueGrowthData = [
     { month: 'Sep', revenue: 0, subscribers: 0 },

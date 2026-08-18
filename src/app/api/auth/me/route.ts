@@ -21,10 +21,15 @@ export async function GET() {
       accountStatus: user.accountStatus,
     };
 
+    let mappedProfile = user.profile;
+    if (mappedProfile) {
+      (mappedProfile as any).verificationBadge = user.isVerified ? 'APPROVED' : 'UNVERIFIED';
+    }
+
     return NextResponse.json({
       authenticated: true,
       user: safeUser,
-      profile: user.profile,
+      profile: mappedProfile,
     });
   } catch (error: any) {
     console.error('Session validation error:', error);

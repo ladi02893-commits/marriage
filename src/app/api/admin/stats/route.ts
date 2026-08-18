@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import {
+  INITIAL_USERS,
+  INITIAL_PROFILES,
+  INITIAL_VERIFICATIONS,
+  INITIAL_REPORTS,
+  INITIAL_PAYMENT_PROOFS,
+} from '@/lib/data-store';
 
 export async function GET() {
   try {
@@ -44,10 +51,34 @@ export async function GET() {
       message: 'Live database statistics loaded.',
     });
   } catch (error: any) {
-    console.error('Admin stats DB error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to load real-time stats.' },
-      { status: 500 }
-    );
+    console.warn('Admin stats DB fallback to INITIAL data:', error?.message);
+
+    // Fallback to INITIAL data store counts when DB is unavailable
+    const initialTotalUsers = INITIAL_USERS.length;
+    const initialVerifiedUsers = INITIAL_USERS.filter((u) => u.isVerified).length;
+    const initialPremiumUsers = INITIAL_USERS.filter((u) => u.subscriptionTier !== 'FREE').length;
+    const initialPendingVerifs = INITIAL_VERIFICATIONS.filter((v) => v.status === 'PENDING').length;
+    const initialOpenReports = INITIAL_REPORTS.filter((r) => r.status === 'OPEN').length;
+    const initialPendingPayments = INITIAL_PAYMENT_PROOFS.filter((p) => p.status === 'PENDING').length;
+    const initialRevenue = INITIAL_PAYMENT_PROOFS
+      .filter((p) => p.status === 'VERIFIED')
+      .reduce((acc, curr) => acc + curr.amount, 0);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        totalUsers: initialTotalUsers,
+        totalProfiles: INITIAL_PROFILES.length,
+        verifiedUsers: initialVerifiedUsers,
+        premiumUsers: initialPremiumUsers,
+        pendingVerifs: initialPendingVerifs,
+        openReports: initialOpenReports,
+        pendingPayments: initialPendingPayments,
+        totalRevenue: initialRevenue,
+      },
+      source: 'DATA_STORE_FALLBACK',
+      message: 'Statistics loaded from initial data store (DB unavailable).',
+    });
   }
 }
+

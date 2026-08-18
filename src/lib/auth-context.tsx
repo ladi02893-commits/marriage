@@ -69,7 +69,7 @@ interface AuthContextType {
 
   // Actions
   login: (email: string, password?: string) => Promise<{ success: boolean; error?: string; redirectUrl?: string }>;
-  register: (userData: Partial<User>, profileData: Partial<MatrimonialProfile>) => User;
+  register: (userData: Partial<User> & { password?: string }, profileData: Partial<MatrimonialProfile>) => Promise<{ success: boolean; error?: string; redirectUrl?: string; user?: User }>;
   logout: () => Promise<void>;
   switchUser: (userId: string) => void;
   updateCurrentUserProfile: (data: Partial<MatrimonialProfile>) => void;
@@ -531,147 +531,101 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = (userData: Partial<User>, profileData: Partial<MatrimonialProfile>): User => {
-    const newUserId = `user-${Date.now()}`;
-    const newProfileId = `profile-${Date.now()}`;
+  const register = async (userData: Partial<User> & { password?: string }, profileData: Partial<MatrimonialProfile>): Promise<{ success: boolean; error?: string; redirectUrl?: string; user?: User }> => {
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userData.email,
+          password: (userData as any).password || 'password123',
+          fullName: userData.name || profileData.fullName,
+          gender: profileData.gender,
+          dateOfBirth: profileData.dateOfBirth,
+          maritalStatus: profileData.maritalStatus,
+          religion: profileData.religion,
+          sectOrCommunity: profileData.sectOrCommunity,
+          caste: profileData.caste,
+          subClan: profileData.subClan,
+          motherTongue: profileData.motherTongue,
+          country: profileData.country,
+          province: profileData.province || profileData.state,
+          city: profileData.city,
+          area: profileData.area,
+          citizenship: profileData.citizenship,
+          profession: profileData.educationCareer?.profession,
+          highestDegree: profileData.educationCareer?.highestDegree,
+          institution: profileData.educationCareer?.institution,
+          annualIncome: profileData.educationCareer?.annualIncome,
+          height: profileData.lifestyle?.height,
+          bioHeadline: profileData.bioHeadline,
+          aboutMe: profileData.aboutMe,
+          avatarUrl: profileData.photos?.[0]?.url,
+        }),
+      });
 
-    // Post to real PostgreSQL database API
-    fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: userData.email,
-        password: (userData as any).password || 'password123',
-        fullName: userData.name || profileData.fullName,
-        gender: profileData.gender,
-        dateOfBirth: profileData.dateOfBirth,
-        maritalStatus: profileData.maritalStatus,
-        religion: profileData.religion,
-        sectOrCommunity: profileData.sectOrCommunity,
-        motherTongue: profileData.motherTongue,
-        country: profileData.country,
-        city: profileData.city,
-        profession: profileData.educationCareer?.profession,
-        highestDegree: profileData.educationCareer?.highestDegree,
-        institution: profileData.educationCareer?.institution,
-        annualIncome: profileData.educationCareer?.annualIncome,
-        height: profileData.lifestyle?.height,
-        bioHeadline: profileData.bioHeadline,
-        aboutMe: profileData.aboutMe,
-        avatarUrl: profileData.photos?.[0]?.url,
-      }),
-    }).catch((err) => console.error('Database register error:', err));
+      const data = await res.json();
+      if (!data.success) {
+        return { success: false, error: data.error };
+      }
 
-    const newUser: User = {
-      id: newUserId,
-      name: userData.name || 'New Member',
-      email: userData.email || `member${Date.now()}@example.com`,
-      role: 'USER',
-      subscriptionTier: 'FREE',
-      accountStatus: 'ACTIVE',
-      isVerified: false,
-      avatarUrl: profileData.photos?.[0]?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
-      createdAt: new Date().toISOString(),
-      lastActive: 'Just now',
-      profileId: newProfileId,
-    };
+      // Success, update local state
+      const newUser = data.user;
+      setUsers((prev) => [newUser, ...prev]);
+      setCurrentUser(newUser);
+      setCurrentUserId(newUser.id);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('truepair_active_user_id', newUser.id);
+      }
+      
+      // Attempt to load full profile if available, else create dummy local
+      if (newUser.profileId) {
+        // Will be fetched on next loadSession, but we can set a dummy locally for immediate UI
+        const dummyProfile: MatrimonialProfile = {
+          ...profileData,
+          id: newUser.profileId,
+          userId: newUser.id,
+          fullName: userData.name || 'Member',
+          displayName: userData.name?.split(' ')[0] || 'Member',
+          gender: profileData.gender || 'FEMALE',
+          dateOfBirth: profileData.dateOfBirth || '1998-01-01',
+          age: profileData.age || 27,
+          maritalStatus: profileData.maritalStatus || 'NEVER_MARRIED',
+          religion: profileData.religion || 'ISLAM',
+          motherTongue: profileData.motherTongue || 'Urdu',
+          city: profileData.city || 'Lahore',
+          state: profileData.state || 'Punjab',
+          country: profileData.country || 'Pakistan',
+          citizenship: profileData.citizenship || 'Pakistani',
+          bioHeadline: profileData.bioHeadline || '',
+          aboutMe: profileData.aboutMe || '',
+          photos: profileData.photos || [],
+          educationCareer: profileData.educationCareer as any,
+          lifestyle: profileData.lifestyle as any,
+          familyInfo: profileData.familyInfo as any,
+          partnerPreferences: profileData.partnerPreferences as any,
+          privacy: profileData.privacy as any,
+          completionPercentage: 80,
+          isFeatured: false,
+          isBoosted: false,
+          verificationBadge: 'UNVERIFIED',
+          viewCount: 1,
+          likeCount: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setProfiles((prev) => [dummyProfile, ...prev]);
+        setCurrentProfile(dummyProfile);
+      }
 
-    const newProfile: MatrimonialProfile = {
-      id: newProfileId,
-      userId: newUserId,
-      fullName: profileData.fullName || newUser.name,
-      displayName: (profileData.fullName || newUser.name).split(' ')[0] + ' ' + ((profileData.fullName || newUser.name).split(' ')[1]?.[0] || '') + '.',
-      gender: profileData.gender || 'FEMALE',
-      dateOfBirth: profileData.dateOfBirth || '1998-01-01',
-      age: profileData.age || 27,
-      maritalStatus: profileData.maritalStatus || 'NEVER_MARRIED',
-      religion: profileData.religion || 'ISLAM',
-      sectOrCommunity: profileData.sectOrCommunity || '',
-      motherTongue: profileData.motherTongue || 'Urdu',
-      city: profileData.city || 'London',
-      state: profileData.state || 'Greater London',
-      country: profileData.country || 'United Kingdom',
-      citizenship: profileData.citizenship || 'British',
-      bioHeadline: profileData.bioHeadline || 'Professional seeking meaningful lifelong marriage',
-      aboutMe: profileData.aboutMe || 'I value honesty, integrity, intellectual curiosity, and family harmony.',
-      photos: profileData.photos || [
-        {
-          id: `p-${Date.now()}-1`,
-          url: newUser.avatarUrl!,
-          isPrimary: true,
-          isApproved: true,
-          order: 1,
-        },
-      ],
-      educationCareer: profileData.educationCareer || {
-        highestDegree: "Bachelor's",
-        institution: 'University',
-        fieldOfStudy: 'General',
-        profession: 'Professional',
-        jobTitle: 'Consultant',
-        company: 'Enterprise',
-        annualIncome: '$60,000 - $80,000',
-        employmentSector: 'PRIVATE',
-        workingLocation: 'London',
-      },
-      lifestyle: profileData.lifestyle || {
-        height: "5 ft 7 in (170 cm)",
-        bodyType: 'AVERAGE',
-        diet: 'HALAL_ONLY',
-        smoking: 'NO',
-        drinking: 'NO',
-        motherTongue: 'Urdu',
-        languagesSpoken: ['English', 'Urdu'],
-        hobbies: ['Reading', 'Travel', 'Cooking'],
-        interests: ['Art', 'Community'],
-        livingArrangement: 'INDEPENDENT',
-      },
-      familyInfo: profileData.familyInfo || {
-        familyType: 'NUCLEAR',
-        familyValues: 'MODERATE',
-        fatherOccupation: 'Professional',
-        motherOccupation: 'Homemaker',
-        brothersCount: 1,
-        sistersCount: 1,
-        familyLocation: 'London',
-        aboutFamily: 'Educated and respectable family with warm values.',
-      },
-      partnerPreferences: profileData.partnerPreferences || {
-        ageRange: { min: 25, max: 35 },
-        heightRange: { min: "5 ft 8 in", max: "6 ft 2 in" },
-        maritalStatus: ['NEVER_MARRIED'],
-        religions: ['ISLAM'],
-        educationLevels: ["Bachelor's", "Master's"],
-        professions: ['Any Professional'],
-        preferredLocations: ['United Kingdom', 'United States', 'Canada'],
-        dietaryPreferences: ['HALAL_ONLY'],
-        motherTongues: ['Urdu', 'English'],
-        expectationsNotes: 'Seeking a kind, educated life partner with shared moral values.',
-      },
-      privacy: profileData.privacy || {
-        photoVisibility: 'ALL',
-        contactVisibility: 'ONLY_ACCEPTED_INTERESTS',
-        showAge: true,
-        showIncome: true,
-        showLastSeen: true,
-        searchEngineIndex: false,
-        hideProfileTemporarily: false,
-      },
-      completionPercentage: calculateProfileCompletion(profileData),
-      isFeatured: false,
-      isBoosted: false,
-      verificationBadge: 'UNVERIFIED',
-      viewCount: 1,
-      likeCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    setUsers((prev) => [newUser, ...prev]);
-    setProfiles((prev) => [newProfile, ...prev]);
-    setCurrentUserId(newUserId);
-    return newUser;
+      return { success: true, redirectUrl: data.redirectUrl || '/dashboard', user: newUser };
+    } catch (err: any) {
+      console.error('Database register error:', err);
+      return { success: false, error: 'Network error during registration.' };
+    }
   };
+
 
   const switchUser = (userId: string) => {
     const found = users.find((u) => u.id === userId) || INITIAL_USERS.find((u) => u.id === userId);
@@ -706,6 +660,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return p;
       })
     );
+
+    // Sync profile update to Prisma Database in background
+    if (currentProfile.id && !currentProfile.id.startsWith('profile-')) {
+      fetch('/api/profiles', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: currentProfile.id, ...data }),
+      }).catch((err) => console.warn('Prisma profile update sync notice:', err));
+    }
   };
 
   const updateUserSubscription = (tier: SubscriptionTier, durationDays: number = 30) => {
@@ -960,6 +923,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : c
       )
     );
+
+    // Sync to Database
+    if (!conversationId.startsWith('conv-')) {
+      fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId,
+          senderId: currentUser.id,
+          text: text.trim(),
+        }),
+      }).catch((err) => console.warn('Prisma message sync notice:', err));
+    }
   };
 
   const startOrGetConversation = (recipientUserId: string): string => {
@@ -1011,6 +987,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       ],
     }));
+
+    // Try creating in Database
+    fetch('/api/conversations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        participantAId: currentUser.id,
+        participantBId: targetUserId,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data?.id && data.data.id !== newConvId) {
+          // If the server created an actual DB uuid, we could ideally swap it out.
+          // But that requires more complex React state handling.
+        }
+      })
+      .catch((err) => console.warn('Prisma conversation sync notice:', err));
 
     return newConvId;
   };
@@ -1145,7 +1139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfiles((prev) =>
       prev.map((p) =>
         p.userId === userId
-          ? { ...p, verificationBadge: isVerified ? 'VERIFIED' : 'UNVERIFIED' }
+          ? { ...p, verificationBadge: isVerified ? 'APPROVED' : 'UNVERIFIED' }
           : p
       )
     );
@@ -1260,8 +1254,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     if (hasAcceptedInterest) return true;
 
-    // VIP Plan with direct contact access
-    const userPlan = plans.find((p) => p.slug === currentUser.subscriptionTier);
+    // VIP Plan with direct contact access — map tier to plan slug correctly
+    const tierToSlug: Record<string, string> = {
+      FREE: 'BASIC',
+      PREMIUM: 'PREMIUM',
+      PREMIUM_PLUS: 'VIP',
+    };
+    const planSlug = tierToSlug[currentUser.subscriptionTier] || 'BASIC';
+    const userPlan = plans.find((p) => p.slug.toUpperCase() === planSlug);
     if (userPlan?.limits?.directContactAccess) {
       return true;
     }
@@ -1582,6 +1582,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setReceivingAccounts((prev) =>
       prev.map((acc) => (acc.id === id ? { ...acc, ...data, updatedAt: new Date().toISOString() } : acc))
     );
+
+    // Sync to Prisma Database
+    fetch('/api/receiving-accounts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, ...data }),
+    }).catch((err) => console.warn('Prisma update account sync notice:', err));
+
     logAdminAction('UPDATE_RECEIVING_ACCOUNT', 'SYSTEM', id, `Updated receiving account details: ${id}`);
   };
 
@@ -1597,11 +1605,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleReceivingAccountStatus = (id: string) => {
+    let newStatus = false;
     setReceivingAccounts((prev) =>
-      prev.map((acc) =>
-        acc.id === id ? { ...acc, isActive: !acc.isActive, updatedAt: new Date().toISOString() } : acc
-      )
+      prev.map((acc) => {
+        if (acc.id === id) {
+          newStatus = !acc.isActive;
+          return { ...acc, isActive: newStatus, updatedAt: new Date().toISOString() };
+        }
+        return acc;
+      })
     );
+
+    // Sync to Prisma Database
+    fetch('/api/receiving-accounts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, isActive: newStatus }),
+    }).catch((err) => console.warn('Prisma toggle account status sync notice:', err));
   };
 
   const logAdminAction = (action: string, targetType: any, targetId: string, details: string) => {

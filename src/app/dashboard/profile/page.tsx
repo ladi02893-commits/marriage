@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   Sliders,
 } from 'lucide-react';
+import { FileUpload } from '@/components/ui/file-upload';
 import { useAuth } from '@/lib/auth-context';
 import { CountryCitySelect } from '@/components/ui/country-city-select';
 import { toast } from 'sonner';
@@ -385,23 +386,29 @@ export default function ProfileEditorPage() {
 
             {/* Add Photo Box */}
             <div className="p-4 border border-dashed border-border rounded-2xl bg-muted/20 space-y-2">
-              <label className="text-xs font-semibold text-foreground block">Add New Photo via Image URL</label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={newPhotoUrl}
-                  onChange={(e) => setNewPhotoUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="flex-1 rounded-xl border border-border bg-card p-2.5 text-xs text-foreground focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddPhoto}
-                  className="rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700"
-                >
-                  <Plus className="h-4 w-4" /> Add Photo
-                </button>
-              </div>
+              <label className="text-xs font-semibold text-foreground block">Upload New Photo</label>
+              <FileUpload
+                label="Select Photo"
+                bucket="avatars"
+                folder="gallery"
+                onUploadSuccess={(url) => {
+                  setNewPhotoUrl(url);
+                  // We also auto-trigger the add since FileUpload completed it
+                  const currentPhotos = currentProfile?.photos || [];
+                  const newPhoto = {
+                    id: `p-${Date.now()}`,
+                    url: url,
+                    isPrimary: currentPhotos.length === 0,
+                    isApproved: true,
+                    order: currentPhotos.length + 1,
+                  };
+                  updateCurrentUserProfile({
+                    photos: [...currentPhotos, newPhoto],
+                  });
+                  setNewPhotoUrl('');
+                  toast.success('Photo added to your gallery!');
+                }}
+              />
             </div>
           </div>
         )}

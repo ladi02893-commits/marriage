@@ -14,10 +14,22 @@ export async function GET(req: NextRequest) {
         where.OR = [{ senderId: userId }, { receiverId: userId }];
       }
 
-      dbInterests = await prisma.interestRequest.findMany({
+      const rawInterests = await prisma.interestRequest.findMany({
         where,
+        include: {
+          sender: { select: { name: true, avatarUrl: true } },
+          receiver: { select: { name: true, avatarUrl: true } },
+        },
         orderBy: { createdAt: 'desc' },
       });
+      
+      dbInterests = rawInterests.map((interest) => ({
+        ...interest,
+        senderName: interest.sender?.name || 'Unknown',
+        senderPhoto: interest.sender?.avatarUrl || null,
+        receiverName: interest.receiver?.name || 'Unknown',
+        receiverPhoto: interest.receiver?.avatarUrl || null,
+      }));
     } catch (err) {
       console.warn('Prisma interest fetch fallback:', err);
     }

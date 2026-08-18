@@ -11,6 +11,7 @@ import {
   Lock,
   Camera,
 } from 'lucide-react';
+import { FileUpload } from '@/components/ui/file-upload';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 
@@ -111,36 +112,32 @@ export default function VerificationHubPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {/* Document Preview */}
+              {/* Document File Upload */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-foreground block">
-                  Document Front Image URL
+                  Document Front Image
                 </label>
-                <input
-                  type="url"
+                <FileUpload
+                  label="Upload ID Document"
+                  bucket="verifications"
+                  folder="documents"
                   value={docUrl}
-                  onChange={(e) => setDocUrl(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:outline-none"
+                  onUploadSuccess={(url) => setDocUrl(url)}
                 />
-                <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden border border-border bg-muted">
-                  <img src={docUrl} alt="Document" className="h-full w-full object-cover" />
-                </div>
               </div>
 
-              {/* Live Selfie Preview */}
+              {/* Live Selfie Upload */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-foreground block">
-                  Live Biometric Selfie URL
+                  Live Biometric Selfie
                 </label>
-                <input
-                  type="url"
+                <FileUpload
+                  label="Upload Selfie"
+                  bucket="verifications"
+                  folder="selfies"
                   value={selfieUrl}
-                  onChange={(e) => setSelfieUrl(e.target.value)}
-                  className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:outline-none"
+                  onUploadSuccess={(url) => setSelfieUrl(url)}
                 />
-                <div className="aspect-[16/10] w-full rounded-2xl overflow-hidden border border-border bg-muted">
-                  <img src={selfieUrl} alt="Selfie" className="h-full w-full object-cover" />
-                </div>
               </div>
             </div>
 

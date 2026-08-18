@@ -30,8 +30,8 @@ export default function AdminProfilesModerationPage() {
   const [isDossierModalOpen, setIsDossierModalOpen] = useState(false);
 
   const filteredProfiles = profiles.filter((p) => {
-    if (filterMode === 'VERIFIED' && p.verificationBadge !== 'VERIFIED') return false;
-    if (filterMode === 'NEEDS_REVIEW' && p.verificationBadge === 'VERIFIED') return false;
+    if (filterMode === 'VERIFIED' && p.verificationBadge !== 'APPROVED') return false;
+    if (filterMode === 'NEEDS_REVIEW' && p.verificationBadge === 'APPROVED') return false;
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       const matchName = p.fullName.toLowerCase().includes(term);
@@ -117,7 +117,7 @@ export default function AdminProfilesModerationPage() {
                     <div>
                       <div className="flex items-center gap-1.5">
                         <h3 className="text-base font-bold text-white">{p.fullName}</h3>
-                        {p.verificationBadge === 'VERIFIED' && (
+                        {p.verificationBadge === 'APPROVED' && (
                           <ShieldCheck className="h-4 w-4 text-emerald-500" />
                         )}
                       </div>
@@ -168,7 +168,7 @@ export default function AdminProfilesModerationPage() {
                           name: p.fullName,
                           role: 'USER',
                           subscriptionTier: 'FREE',
-                          isVerified: p.verificationBadge === 'VERIFIED',
+                          isVerified: p.verificationBadge === 'APPROVED',
                           accountStatus: 'ACTIVE',
                           createdAt: p.createdAt,
                           profileId: p.id,

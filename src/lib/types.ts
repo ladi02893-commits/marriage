@@ -2,7 +2,7 @@ export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN';
 
 export type SubscriptionTier = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS';
 
-export type AccountStatus = 'ACTIVE' | 'PENDING_APPROVAL' | 'SUSPENDED' | 'BANNED';
+export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'BANNED' | 'DELETED';
 
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
@@ -10,7 +10,7 @@ export type MaritalStatus = 'NEVER_MARRIED' | 'DIVORCED' | 'WIDOWED' | 'AWAITING
 
 export type Religion = 'ISLAM' | 'HINDUISM' | 'SIKHISM' | 'CHRISTIANITY' | 'BUDDHISM' | 'JAINISM' | 'SPIRITUAL' | 'OTHER';
 
-export type VerificationStatus = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+export type VerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'UNVERIFIED';
 
 export type InterestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED';
 
@@ -315,7 +315,7 @@ export interface AbuseReport {
   category: 'FAKE_PROFILE' | 'HARASSMENT' | 'INAPPROPRIATE_CONTENT' | 'SCAM' | 'MISREPRESENTATION' | 'OTHER';
   description: string;
   evidenceUrl?: string;
-  status: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED' | 'DISMISSED';
+  status: 'OPEN' | 'RESOLVED' | 'DISMISSED';
   timestamp: string;
   adminActionTaken?: string;
 }

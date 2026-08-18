@@ -25,6 +25,7 @@ import {
   Building,
   Upload,
 } from 'lucide-react';
+import { FileUpload } from '@/components/ui/file-upload';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { CountryCitySelect } from '@/components/ui/country-city-select';
@@ -204,10 +205,11 @@ export default function RegisterWizardPage() {
       });
 
       // 2. Register User & Matrimonial Profile in Auth Context
-      register(
+      const regResult = await register(
         {
           name: formData.fullName,
           email: formData.email,
+          password: formData.password,
         },
         {
           fullName: formData.fullName,
@@ -293,9 +295,16 @@ export default function RegisterWizardPage() {
 
       setIsSubmitting(false);
       toast.dismiss(toastId);
+      
+      if (!regResult.success) {
+        toast.error('Registration failed: ' + (regResult.error || 'Unknown error'));
+        return;
+      }
+
       toast.success('Registration & Payment Submission Complete! Welcome to Compatible Matrimonials.');
-      router.push('/dashboard');
+      router.push(regResult.redirectUrl || '/dashboard');
     } catch (err: any) {
+
       setIsSubmitting(false);
       toast.dismiss(toastId);
       toast.error('Registration failed: ' + (err.message || 'Unknown error'));
@@ -893,14 +902,13 @@ export default function RegisterWizardPage() {
                 {/* Profile Photo & Bio Headline */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Profile Photo URL *</label>
-                    <input
-                      type="url"
-                      required
+                    <label className="text-xs font-semibold text-foreground block mb-2">Profile Photo *</label>
+                    <FileUpload
+                      label="Upload Profile Picture"
+                      bucket="avatars"
+                      folder="members"
                       value={formData.photoUrl}
-                      onChange={(e) => updateField('photoUrl', e.target.value)}
-                      placeholder="https://..."
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
+                      onUploadSuccess={(url) => updateField('photoUrl', url)}
                     />
                   </div>
                   <div>
@@ -1094,41 +1102,14 @@ export default function RegisterWizardPage() {
                     <label className="text-xs font-semibold text-foreground block">
                       Payment Slip / Receipt Screenshot *
                     </label>
-                    <div className="flex flex-col sm:flex-row items-center gap-3">
-                      <label className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-background p-3 text-center cursor-pointer hover:bg-muted/50 transition">
-                        <Upload className="h-4 w-4 text-brand-600" />
-                        <span className="text-xs font-medium text-foreground">
-                          Upload receipt image / slip
-                        </span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (loadEvt) => {
-                                if (loadEvt.target?.result) {
-                                  updateField('paymentScreenshotUrl', loadEvt.target.result as string);
-                                  toast.success(`Attached ${file.name}`);
-                                }
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                      <span className="text-[11px] text-muted-foreground">or</span>
-                      <input
-                        type="text"
-                        value={formData.paymentScreenshotUrl}
-                        onChange={(e) => updateField('paymentScreenshotUrl', e.target.value)}
-                        placeholder="Paste image URL..."
-                        className="flex-1 w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                      />
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
+                    <FileUpload
+                      label="Upload Payment Receipt"
+                      bucket="payment-proofs"
+                      folder="registrations"
+                      value={formData.paymentScreenshotUrl}
+                      onUploadSuccess={(url) => updateField('paymentScreenshotUrl', url)}
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-2">
                       * Admins will cross-verify your transaction slip on the admin control panel.
                     </p>
                   </div>

@@ -88,7 +88,7 @@ function SearchContent() {
           return false;
 
         // Verified filter
-        if (verifiedOnly && p.verificationBadge !== 'VERIFIED') return false;
+        if (verifiedOnly && p.verificationBadge !== 'APPROVED') return false;
 
         // Search term filter
         if (searchTerm.trim()) {

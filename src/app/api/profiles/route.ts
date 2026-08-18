@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         ];
       }
 
-      dbProfiles = await prisma.matrimonialProfile.findMany({
+      const rawProfiles = await prisma.matrimonialProfile.findMany({
         where,
         include: {
           photos: { orderBy: { order: 'asc' } },
@@ -36,9 +36,15 @@ export async function GET(request: NextRequest) {
           familyInfo: true,
           partnerPreferences: true,
           privacySettings: true,
+          user: { select: { isVerified: true } }
         },
         orderBy: { createdAt: 'desc' },
       });
+
+      dbProfiles = rawProfiles.map(p => ({
+        ...p,
+        verificationBadge: p.user?.isVerified ? 'APPROVED' : 'UNVERIFIED'
+      }));
     } catch (dbErr) {
       console.warn('Prisma DB query fallback to initial store:', dbErr);
     }
@@ -148,3 +154,189 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const {
+      id,
+      fullName,
+      displayName,
+      gender,
+      dateOfBirth,
+      maritalStatus,
+      religion,
+      sectOrCommunity,
+      motherTongue,
+      city,
+      country,
+      stateProvince,
+      bioHeadline,
+      aboutMe,
+      completionPercentage,
+      educationCareer,
+      lifestyle,
+      familyInfo,
+      partnerPreferences,
+      privacySettings,
+      photos,
+    } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Profile id is required.' }, { status: 400 });
+    }
+
+    const profileData: any = {};
+    if (fullName !== undefined) profileData.fullName = fullName;
+    if (displayName !== undefined) profileData.displayName = displayName;
+    if (gender !== undefined) profileData.gender = gender;
+    if (dateOfBirth !== undefined) profileData.dateOfBirth = new Date(dateOfBirth);
+    if (maritalStatus !== undefined) profileData.maritalStatus = maritalStatus;
+    if (religion !== undefined) profileData.religion = religion;
+    if (sectOrCommunity !== undefined) profileData.sectOrCommunity = sectOrCommunity;
+    if (motherTongue !== undefined) profileData.motherTongue = motherTongue;
+    if (city !== undefined) profileData.city = city;
+    if (country !== undefined) profileData.country = country;
+    if (stateProvince !== undefined) profileData.stateProvince = stateProvince;
+    if (bioHeadline !== undefined) profileData.bioHeadline = bioHeadline;
+    if (aboutMe !== undefined) profileData.aboutMe = aboutMe;
+    if (completionPercentage !== undefined) profileData.completionPercentage = completionPercentage;
+
+    const updated = await prisma.matrimonialProfile.update({
+      where: { id },
+      data: {
+        ...profileData,
+        educationCareer: educationCareer
+          ? {
+              upsert: {
+                create: {
+                  highestDegree: educationCareer.highestDegree || "Bachelor's",
+                  institution: educationCareer.institution,
+                  profession: educationCareer.profession || 'Professional',
+                  jobTitle: educationCareer.jobTitle,
+                  fieldOfStudy: educationCareer.fieldOfStudy,
+                  annualIncome: educationCareer.annualIncome?.toString(),
+                },
+                update: {
+                  highestDegree: educationCareer.highestDegree,
+                  institution: educationCareer.institution,
+                  profession: educationCareer.profession,
+                  jobTitle: educationCareer.jobTitle,
+                  fieldOfStudy: educationCareer.fieldOfStudy,
+                  annualIncome: educationCareer.annualIncome?.toString(),
+                },
+              },
+            }
+          : undefined,
+        lifestyle: lifestyle
+          ? {
+              upsert: {
+                create: {
+                  height: lifestyle.height || "5' 6\"",
+                  weight: lifestyle.weight,
+                  bodyType: lifestyle.bodyType,
+                  diet: lifestyle.diet || 'HALAL_ONLY',
+                  smoking: lifestyle.smoking || 'NO',
+                  drinking: lifestyle.drinking || 'NO',
+                  motherTongue: lifestyle.motherTongue || 'Urdu',
+                },
+                update: {
+                  height: lifestyle.height,
+                  weight: lifestyle.weight,
+                  bodyType: lifestyle.bodyType,
+                  diet: lifestyle.diet,
+                  smoking: lifestyle.smoking,
+                  drinking: lifestyle.drinking,
+                  motherTongue: lifestyle.motherTongue,
+                },
+              },
+            }
+          : undefined,
+        familyInfo: familyInfo
+          ? {
+              upsert: {
+                create: {
+                  familyType: familyInfo.familyType || 'NUCLEAR',
+                  familyValues: familyInfo.familyValues || 'MODERATE',
+                  fatherOccupation: familyInfo.fatherOccupation,
+                  motherOccupation: familyInfo.motherOccupation,
+                  brothersCount: familyInfo.brothersCount || 0,
+                  sistersCount: familyInfo.sistersCount || 0,
+                  familyLocation: familyInfo.familyLocation,
+                  aboutFamily: familyInfo.aboutFamily,
+                },
+                update: {
+                  familyType: familyInfo.familyType,
+                  familyValues: familyInfo.familyValues,
+                  fatherOccupation: familyInfo.fatherOccupation,
+                  motherOccupation: familyInfo.motherOccupation,
+                  brothersCount: familyInfo.brothersCount,
+                  sistersCount: familyInfo.sistersCount,
+                  familyLocation: familyInfo.familyLocation,
+                  aboutFamily: familyInfo.aboutFamily,
+                },
+              },
+            }
+          : undefined,
+        partnerPreferences: partnerPreferences
+          ? {
+              upsert: {
+                create: {
+                  minAge: partnerPreferences.ageRange?.min || partnerPreferences.minAge || 20,
+                  maxAge: partnerPreferences.ageRange?.max || partnerPreferences.maxAge || 38,
+                  expectationsNotes: partnerPreferences.expectationsNotes,
+                },
+                update: {
+                  minAge: partnerPreferences.ageRange?.min || partnerPreferences.minAge,
+                  maxAge: partnerPreferences.ageRange?.max || partnerPreferences.maxAge,
+                  expectationsNotes: partnerPreferences.expectationsNotes,
+                },
+              },
+            }
+          : undefined,
+        privacySettings: privacySettings
+          ? {
+              upsert: {
+                create: {
+                  photoVisibility: privacySettings.photoVisibility || 'ALL',
+                  contactVisibility: privacySettings.contactVisibility || 'ONLY_ACCEPTED_INTERESTS',
+                  showAge: privacySettings.showAge ?? true,
+                  showIncome: privacySettings.showIncome ?? true,
+                  showLastSeen: privacySettings.showLastSeen ?? true,
+                  hideProfileTemporarily: privacySettings.hideProfileTemporarily ?? false,
+                },
+                update: {
+                  photoVisibility: privacySettings.photoVisibility,
+                  contactVisibility: privacySettings.contactVisibility,
+                  showAge: privacySettings.showAge,
+                  showIncome: privacySettings.showIncome,
+                  showLastSeen: privacySettings.showLastSeen,
+                  hideProfileTemporarily: privacySettings.hideProfileTemporarily,
+                },
+              },
+            }
+          : undefined,
+      },
+      include: {
+        photos: true,
+        educationCareer: true,
+        lifestyle: true,
+        familyInfo: true,
+        partnerPreferences: true,
+        privacySettings: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updated,
+      message: 'Profile updated successfully in Prisma database.',
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to update profile in database.' },
+      { status: 500 }
+    );
+  }
+}
+

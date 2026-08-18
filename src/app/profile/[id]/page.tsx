@@ -9,6 +9,7 @@ import {
   Crown,
   MapPin,
   Briefcase,
+  AlertTriangle,
   GraduationCap,
   Sparkles,
   Send,
@@ -248,10 +249,10 @@ export default function ProfileDetailPage() {
                 />
 
                 <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-                  {profile.verificationBadge === 'VERIFIED' && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-white shadow-md">
-                      <ShieldCheck className="h-4 w-4" /> ID Verified Member
-                    </span>
+                  {profile.verificationBadge === 'APPROVED' && (
+                    <div className="absolute -top-2 -right-2 bg-blue-500 rounded-full p-1 border-[3px] border-zinc-900 shadow-xl" title="Verified Member">
+                      <ShieldCheck className="h-5 w-5 text-white" />
+                    </div>
                   )}
                   {profile.isFeatured && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-white shadow-md">
@@ -420,13 +421,13 @@ export default function ProfileDetailPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {profile.verificationBadge === 'VERIFIED' ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                      <ShieldCheck className="h-3.5 w-3.5" /> ID Verified
+                  {profile.verificationBadge === 'APPROVED' ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full">
+                      <ShieldCheck className="h-4 w-4" /> Identity Verified
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
-                      Verification Pending
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 bg-zinc-800 px-3 py-1 rounded-full">
+                      <AlertTriangle className="h-4 w-4" /> Unverified Member
                     </span>
                   )}
                 </div>
@@ -641,7 +642,7 @@ export default function ProfileDetailPage() {
               name: profile.fullName,
               role: 'USER',
               subscriptionTier: 'FREE',
-              isVerified: profile.verificationBadge === 'VERIFIED',
+              isVerified: profile.verificationBadge === 'APPROVED',
               accountStatus: 'ACTIVE',
               createdAt: profile.createdAt,
               profileId: profile.id,

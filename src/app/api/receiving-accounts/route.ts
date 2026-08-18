@@ -85,3 +85,42 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, isActive, isPrimary, provider, bankName, accountTitle, accountNumber, iban, branchName, instructions } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'id is required.' }, { status: 400 });
+    }
+
+    const updateData: any = {};
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (isPrimary !== undefined) updateData.isPrimary = isPrimary;
+    if (provider !== undefined) updateData.provider = provider;
+    if (bankName !== undefined) updateData.bankName = bankName;
+    if (accountTitle !== undefined) updateData.accountTitle = accountTitle;
+    if (accountNumber !== undefined) updateData.accountNumber = accountNumber;
+    if (iban !== undefined) updateData.iban = iban;
+    if (branchName !== undefined) updateData.branchName = branchName;
+    if (instructions !== undefined) updateData.instructions = instructions;
+
+    const updated = await prisma.receivingAccount.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: updated,
+      message: 'Receiving account updated in Prisma database.',
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to update receiving account.' },
+      { status: 500 }
+    );
+  }
+}
+

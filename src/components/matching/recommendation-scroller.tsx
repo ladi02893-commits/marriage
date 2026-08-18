@@ -114,7 +114,7 @@ export function RecommendationScroller({
                 </div>
 
                 {/* Verified Badge */}
-                {profile.verificationBadge === 'VERIFIED' && (
+                {profile.verificationBadge === 'APPROVED' && (
                   <div className="absolute top-2.5 left-2.5 rounded-full bg-emerald-600/90 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-md flex items-center gap-0.5">
                     <ShieldCheck className="h-3 w-3" /> Verified
                   </div>
