@@ -256,6 +256,7 @@ export default function SubscriptionBillingPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {plans.map((p) => {
             const isSelected =
               ((p.slug.toUpperCase() === 'BASIC' || p.slug.toUpperCase() === 'FREE') && currentTier === 'FREE') ||
               (p.slug.toUpperCase() === 'PREMIUM' && currentTier === 'PREMIUM') ||
