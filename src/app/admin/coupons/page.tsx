@@ -7,8 +7,7 @@ import { Coupon } from '@/lib/types';
 import { toast } from 'sonner';
 
 export default function AdminCouponsPage() {
-  const { coupons } = useAuth();
-  const [couponList, setCouponList] = useState<Coupon[]>(coupons);
+  const { coupons, addCoupon, toggleCouponStatus } = useAuth();
   const [newCode, setNewCode] = useState('');
   const [newPercent, setNewPercent] = useState<number>(20);
   const [newLimit, setNewLimit] = useState<number>(200);
@@ -27,15 +26,13 @@ export default function AdminCouponsPage() {
       isActive: true,
     };
 
-    setCouponList((prev) => [newC, ...prev]);
+    addCoupon(newC);
     setNewCode('');
     toast.success(`Coupon ${newC.code} generated successfully!`);
   };
 
-  const toggleCouponStatus = (id: string) => {
-    setCouponList((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isActive: !c.isActive } : c))
-    );
+  const handleToggleCouponStatus = (id: string) => {
+    toggleCouponStatus(id);
     toast.info('Coupon status updated.');
   };
 
@@ -117,7 +114,7 @@ export default function AdminCouponsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
-              {couponList.map((c) => (
+              {coupons.map((c) => (
                 <tr key={c.id}>
                   <td className="py-3.5 px-4 font-mono font-bold text-amber-400 text-sm">{c.code}</td>
                   <td className="py-3.5 px-4 text-white font-bold">
@@ -137,7 +134,7 @@ export default function AdminCouponsPage() {
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <button
-                      onClick={() => toggleCouponStatus(c.id)}
+                      onClick={() => handleToggleCouponStatus(c.id)}
                       className="rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-1 text-[11px] font-semibold text-zinc-200 hover:bg-zinc-700"
                     >
                       {c.isActive ? 'Deactivate' : 'Activate'}

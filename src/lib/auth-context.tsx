@@ -138,6 +138,8 @@ interface AuthContextType {
   updatePlan: (planId: string, data: Partial<SubscriptionPlan>) => void;
   addPlan: (plan: SubscriptionPlan) => void;
   applyCoupon: (code: string) => { valid: boolean; discountPercent?: number; fixedDiscount?: number; message: string };
+  addCoupon: (coupon: Coupon) => void;
+  toggleCouponStatus: (couponId: string) => void;
   logAdminAction: (action: string, targetType: any, targetId: string, details: string) => void;
 }
 
@@ -291,6 +293,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        const savedCouponsStr = typeof window !== 'undefined' ? localStorage.getItem('truepair_live_coupons') : null;
+        if (savedCouponsStr && isMounted) {
+          const parsedCoupons = JSON.parse(savedCouponsStr);
+          if (Array.isArray(parsedCoupons) && parsedCoupons.length > 0) {
+            setCoupons(parsedCoupons);
+          }
+        }
+
+        const savedPlansStr = typeof window !== 'undefined' ? localStorage.getItem('truepair_live_plans') : null;
+        if (savedPlansStr && isMounted) {
+          const parsedPlans = JSON.parse(savedPlansStr);
+          if (Array.isArray(parsedPlans) && parsedPlans.length > 0) {
+            setPlans(parsedPlans);
+          }
+        }
+
         const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('truepair_active_user_id') : null;
         if (savedUserId && isMounted) {
           let matchedUser = liveUsers.find((u) => u.id === savedUserId) || INITIAL_USERS.find((u) => u.id === savedUserId);
@@ -394,6 +412,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(savedAccounts);
         if (Array.isArray(parsed) && parsed.length > 0) setReceivingAccounts(parsed);
       }
+
+      const savedCoupons = localStorage.getItem('truepair_live_coupons');
+      if (savedCoupons) {
+        const parsed = JSON.parse(savedCoupons);
+        if (Array.isArray(parsed) && parsed.length > 0) setCoupons(parsed);
+      }
+
+      const savedPlans = localStorage.getItem('truepair_live_plans');
+      if (savedPlans) {
+        const parsed = JSON.parse(savedPlans);
+        if (Array.isArray(parsed) && parsed.length > 0) setPlans(parsed);
+      }
     } catch (e) {
       console.error('Error loading stored live interactions:', e);
     }
@@ -426,6 +456,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         if (e.key === 'truepair_live_users' && e.newValue) {
           setUsers(JSON.parse(e.newValue));
+        }
+        if (e.key === 'truepair_live_coupons' && e.newValue) {
+          setCoupons(JSON.parse(e.newValue));
+        }
+        if (e.key === 'truepair_live_plans' && e.newValue) {
+          setPlans(JSON.parse(e.newValue));
         }
       } catch (err) {
         console.error('Storage sync error:', err);
@@ -490,6 +526,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem('truepair_live_users', JSON.stringify(users));
     }
   }, [users]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('truepair_live_coupons', JSON.stringify(coupons));
+    }
+  }, [coupons]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('truepair_live_plans', JSON.stringify(plans));
+    }
+  }, [plans]);
 
   const login = async (email: string, password?: string): Promise<{ success: boolean; error?: string; redirectUrl?: string }> => {
     try {
@@ -1274,6 +1322,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
+  const addCoupon = (coupon: Coupon) => {
+    setCoupons((prev) => [coupon, ...prev]);
+    logAdminAction('CREATED_COUPON', 'COUPON', coupon.id, `Created coupon ${coupon.code}`);
+  };
+
+  const toggleCouponStatus = (couponId: string) => {
+    setCoupons((prev) =>
+      prev.map((c) => (c.id === couponId ? { ...c, isActive: !c.isActive } : c))
+    );
+    logAdminAction('UPDATED_COUPON', 'COUPON', couponId, `Toggled coupon status`);
+  };
+
   const canViewContactDetails = (targetProfileId: string): boolean => {
     if (!currentUser || !currentProfile) return false;
     // Admin / Super Admin can view all
@@ -1800,6 +1860,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updatePlan,
         addPlan,
         applyCoupon,
+        addCoupon,
+        toggleCouponStatus,
         logAdminAction,
       }}
     >

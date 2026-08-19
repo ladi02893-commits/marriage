@@ -48,11 +48,11 @@ export default function SubscriptionBillingPage() {
       p.status === 'PENDING'
   );
 
-  // Filter invoices for current user (or show all user invoices)
+  // Filter invoices for current user
   const userInvoices = invoices.filter(
     (inv) => inv.userId === currentUser?.id || inv.userId === `user-${currentUser?.id}`
   );
-  const displayInvoices = userInvoices.length > 0 ? userInvoices : invoices;
+  const displayInvoices = userInvoices;
 
   const expiryDateFormatted = currentUser?.subscriptionExpiresAt
     ? new Date(currentUser.subscriptionExpiresAt).toLocaleDateString('en-US', {
