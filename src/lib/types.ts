@@ -213,11 +213,13 @@ export interface Consultant {
   phone: string;
   whatsappNumber: string;
   avatarUrl: string;
+  photoUrl?: string;
   bio: string;
   specialization: string;
   assignedClientIds: string[];
   isActive: boolean;
   rating?: number;
+  experienceYears?: number;
   consultationsCompleted?: number;
   availableDays?: string[];
   workingHours?: string;

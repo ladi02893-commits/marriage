@@ -107,7 +107,7 @@ export default function AdminConsultantsPage() {
             >
               <div className="flex items-start gap-4">
                 <img
-                  src={c.photoUrl}
+                  src={c.photoUrl || c.avatarUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200'}
                   alt={c.name}
                   className="h-16 w-16 rounded-2xl object-cover border border-amber-500/40 shrink-0"
                 />
