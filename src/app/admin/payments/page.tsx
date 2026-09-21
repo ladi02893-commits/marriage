@@ -87,7 +87,7 @@ export default function AdminPaymentsManagementPage() {
   }>({
     provider: 'JAZZCASH',
     bankName: '',
-    accountTitle: 'Compatible Matrimonials',
+    accountTitle: 'VIP ROYAL MATCHMAKING PVT LTD',
     accountNumber: '',
     iban: '',
     branchName: '',
@@ -112,7 +112,10 @@ export default function AdminPaymentsManagementPage() {
   // Filtered payments list
   const filteredProofs = useMemo(() => {
     return paymentProofs.filter((p) => {
-      if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
+      if (statusFilter !== 'ALL') {
+        const isVerifiedMatch = statusFilter === 'VERIFIED' && (p.status === 'VERIFIED' || p.status === 'APPROVED');
+        if (!isVerifiedMatch && p.status !== statusFilter) return false;
+      }
       if (gatewayFilter !== 'ALL' && p.paymentMethod !== gatewayFilter) return false;
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase();
@@ -130,7 +133,7 @@ export default function AdminPaymentsManagementPage() {
   // Statistics & Financial Totals
   const totalVerifiedRevenue = useMemo(() => {
     return paymentProofs
-      .filter((p) => p.status === 'VERIFIED')
+      .filter((p) => p.status === 'VERIFIED' || p.status === 'APPROVED')
       .reduce((sum, p) => sum + p.amount, 0);
   }, [paymentProofs]);
 
@@ -141,12 +144,12 @@ export default function AdminPaymentsManagementPage() {
   }, [paymentProofs]);
 
   const pendingCount = paymentProofs.filter((p) => p.status === 'PENDING').length;
-  const verifiedCount = paymentProofs.filter((p) => p.status === 'VERIFIED').length;
+  const verifiedCount = paymentProofs.filter((p) => p.status === 'VERIFIED' || p.status === 'APPROVED').length;
   const rejectedCount = paymentProofs.filter((p) => p.status === 'REJECTED').length;
 
   // Gateway Breakdown Analytics
   const gatewayBreakdown = useMemo(() => {
-    const verifiedOnly = paymentProofs.filter((p) => p.status === 'VERIFIED');
+    const verifiedOnly = paymentProofs.filter((p) => p.status === 'VERIFIED' || p.status === 'APPROVED');
     const total = verifiedOnly.reduce((s, p) => s + p.amount, 0) || 1;
 
     const byMethod: Record<string, { count: number; total: number }> = {
@@ -279,7 +282,7 @@ export default function AdminPaymentsManagementPage() {
     setAccountForm({
       provider: 'JAZZCASH',
       bankName: '',
-      accountTitle: 'Compatible Matrimonials',
+      accountTitle: 'VIP ROYAL MATCHMAKING PVT LTD',
       accountNumber: '',
       iban: '',
       branchName: '',
@@ -372,7 +375,7 @@ export default function AdminPaymentsManagementPage() {
               setAccountForm({
                 provider: 'BANK_TRANSFER',
                 bankName: '',
-                accountTitle: 'Compatible Matrimonials',
+                accountTitle: 'VIP ROYAL MATCHMAKING PVT LTD',
                 accountNumber: '',
                 iban: '',
                 branchName: '',
@@ -515,7 +518,7 @@ export default function AdminPaymentsManagementPage() {
               setAccountForm({
                 provider: 'BANK_TRANSFER',
                 bankName: '',
-                accountTitle: 'Compatible Matrimonials',
+                accountTitle: 'VIP ROYAL MATCHMAKING PVT LTD',
                 accountNumber: '',
                 iban: '',
                 branchName: '',
@@ -910,7 +913,7 @@ export default function AdminPaymentsManagementPage() {
                 setAccountForm({
                   provider: 'BANK_TRANSFER',
                   bankName: '',
-                  accountTitle: 'Compatible Matrimonials',
+                  accountTitle: 'VIP ROYAL MATCHMAKING PVT LTD',
                   accountNumber: '',
                   iban: '',
                   branchName: '',
@@ -1234,7 +1237,7 @@ export default function AdminPaymentsManagementPage() {
                     required
                     value={accountForm.accountTitle}
                     onChange={(e) => setAccountForm({ ...accountForm, accountTitle: e.target.value })}
-                    placeholder="Compatible Matrimonials"
+                    placeholder="VIP ROYAL MATCHMAKING PVT LTD"
                     className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white placeholder-zinc-600 focus:border-amber-500 focus:outline-none"
                   />
                 </div>

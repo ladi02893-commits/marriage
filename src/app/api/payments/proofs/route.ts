@@ -78,9 +78,9 @@ export async function POST(req: NextRequest) {
         user_name: userName || 'Member',
         user_email: userEmail || '',
         user_phone: userPhone || '',
-        plan_slug: planSlug || 'PREMIUM',
-        plan_name: planName || 'Elite Executive Plan',
-        amount: Number(amount) || 15000,
+        plan_slug: planSlug || 'VIP',
+        plan_name: planName || 'VIP Royal Package',
+        amount: Number(amount) || 10000,
         currency: currency || 'PKR',
         payment_method: paymentMethod || 'JAZZCASH',
         transaction_id: transactionId || `TRX-${Date.now()}`,
@@ -136,19 +136,35 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
-    // If approved, upgrade the user's tier in InsForge if user exists
+    // If approved, upgrade the user's tier & connection credits in InsForge
     if (status === 'VERIFIED' && updated) {
       try {
         const rawSlug = (updated.plan_slug || updated.plan_name || '').toUpperCase();
-        let targetTier: 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS' = 'PREMIUM';
-        if (
+        let targetTier: 'FREE' | 'BASIC' | 'PREMIUM' | 'VIP' | 'PREMIUM_PLUS' = 'PREMIUM';
+        let connectionsToAdd = 0;
+        let isPack = false;
+
+        if (rawSlug.includes('PACK_10') || rawSlug.includes('10 CONNECTIONS') || rawSlug.includes('10 CONN') || rawSlug.includes('10_CONN')) {
+          connectionsToAdd = 10;
+          isPack = true;
+        } else if (rawSlug.includes('PACK_30') || rawSlug.includes('30 CONNECTIONS') || rawSlug.includes('30 CONN') || rawSlug.includes('30_CONN')) {
+          connectionsToAdd = 30;
+          isPack = true;
+        } else if (rawSlug.includes('PACK_50') || rawSlug.includes('50 CONNECTIONS') || rawSlug.includes('50 CONN') || rawSlug.includes('50_CONN')) {
+          connectionsToAdd = 50;
+          isPack = true;
+        } else if (rawSlug.includes('PACK_100') || rawSlug.includes('100 CONNECTIONS') || rawSlug.includes('100 CONN') || rawSlug.includes('100_CONN')) {
+          connectionsToAdd = 100;
+          isPack = true;
+        } else if (
           rawSlug.includes('VIP') ||
           rawSlug.includes('ROYAL') ||
           rawSlug.includes('PREMIUM_PLUS') ||
           rawSlug.includes('PLUS') ||
           rawSlug === 'PLAN-VIP'
         ) {
-          targetTier = 'PREMIUM_PLUS';
+          targetTier = 'VIP';
+          connectionsToAdd = 300;
         } else if (
           rawSlug.includes('PREMIUM') ||
           rawSlug.includes('ELITE') ||
@@ -156,29 +172,87 @@ export async function PATCH(req: NextRequest) {
           rawSlug === 'PLAN-PREMIUM'
         ) {
           targetTier = 'PREMIUM';
+          connectionsToAdd = 100;
+        } else if (rawSlug.includes('BASIC')) {
+          targetTier = 'BASIC';
+          connectionsToAdd = 30;
+        } else {
+          // Fallback based on amount
+          if (updated.amount >= 10000) {
+            targetTier = 'VIP';
+            connectionsToAdd = 300;
+          } else if (updated.amount >= 5000) {
+            targetTier = 'PREMIUM';
+            connectionsToAdd = 100;
+          } else if (updated.amount >= 2000) {
+            targetTier = 'BASIC';
+            connectionsToAdd = 30;
+          } else {
+            connectionsToAdd = 10;
+            isPack = true;
+          }
         }
 
-        // 1. Update user record
+        // Fetch existing user to calculate accurate connection balance
+        let existingUser: any = null;
+        if (updated.user_id) {
+          try {
+            const { data: u } = await insforgeAdmin.database
+              .from('users')
+              .select('id, total_connections, remaining_connections, used_connections, subscription_tier')
+              .eq('id', updated.user_id)
+              .maybeSingle();
+            existingUser = u;
+          } catch (e) {
+            console.warn('Could not fetch existing user by id:', e);
+          }
+        }
+        if (!existingUser && updated.user_email) {
+          try {
+            const { data: u } = await insforgeAdmin.database
+              .from('users')
+              .select('id, total_connections, remaining_connections, used_connections, subscription_tier')
+              .eq('email', updated.user_email)
+              .maybeSingle();
+            existingUser = u;
+          } catch (e) {
+            console.warn('Could not fetch existing user by email:', e);
+          }
+        }
+
+        const currentTotal = existingUser?.total_connections ?? 0;
+        const currentRemaining = existingUser?.remaining_connections ?? 0;
+        const currentUsed = existingUser?.used_connections ?? 0;
+
+        const newTotal = isPack ? (currentTotal + connectionsToAdd) : Math.max(currentTotal, connectionsToAdd);
+        const newRemaining = isPack ? (currentRemaining + connectionsToAdd) : Math.max(0, newTotal - currentUsed);
+        const finalTier = isPack ? (existingUser?.subscription_tier || 'BASIC') : targetTier;
+
+        const userUpdatePayload: any = {
+          subscription_tier: finalTier,
+          is_verified: true,
+          account_status: 'ACTIVE',
+          total_connections: newTotal,
+          remaining_connections: newRemaining,
+        };
+
+        if (finalTier === 'VIP' || finalTier === 'PREMIUM_PLUS') {
+          userUpdatePayload.assigned_consultant_id = 'consultant-1';
+        }
+
+        // 1. Update user record by ID
         if (updated.user_id) {
           await insforgeAdmin.database
             .from('users')
-            .update({ 
-              subscription_tier: targetTier,
-              is_verified: true,
-              account_status: 'ACTIVE'
-            })
+            .update(userUpdatePayload)
             .eq('id', updated.user_id);
         }
 
-        // 2. Also try matching by email if user_email is present
+        // 2. Also update by email if present
         if (updated.user_email) {
           await insforgeAdmin.database
             .from('users')
-            .update({ 
-              subscription_tier: targetTier,
-              is_verified: true,
-              account_status: 'ACTIVE'
-            })
+            .update(userUpdatePayload)
             .eq('email', updated.user_email);
         }
 
@@ -202,7 +276,13 @@ export async function PATCH(req: NextRequest) {
             currency: updated.currency || 'PKR',
             status: 'PAID',
             payment_method: updated.payment_method || 'BANK_TRANSFER',
-            plan_name: updated.plan_name || (targetTier === 'PREMIUM_PLUS' ? 'VIP Royal Matchmaking' : 'Elite Executive'),
+            plan_name: updated.plan_name || (
+              finalTier === 'VIP' || finalTier === 'PREMIUM_PLUS'
+                ? 'VIP Royal Package (300 Connections)'
+                : finalTier === 'PREMIUM'
+                ? 'Premium Package (100 Connections)'
+                : 'Basic Package (30 Connections)'
+            ),
           }]);
       } catch (userUpErr) {
         console.warn('User subscription auto-upgrade error in DB:', userUpErr);

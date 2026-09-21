@@ -268,9 +268,11 @@ export default function RegisterWizardPage() {
     const toastId = toast.loading('Creating royal profile and registering bank payment proof with Admin Queue...');
 
     try {
+      const newUserId = `user-${Date.now()}`;
+
       // 1. Submit Payment Proof (Manual Bank Transfer Priority - Section 29, 30)
       submitPaymentProof({
-        userId: `user-${Date.now()}`,
+        userId: newUserId,
         userName: formData.fullName,
         userEmail: formData.email,
         userPhone: formData.whatsappNumber || formData.phone,
@@ -289,6 +291,7 @@ export default function RegisterWizardPage() {
       // 2. Register User & Profile (Section 7, 8, 12: Unique VRM ID, Status: PENDING_APPROVAL)
       const regResult = await register(
         {
+          id: newUserId,
           name: formData.fullName,
           email: formData.email,
           password: formData.password,

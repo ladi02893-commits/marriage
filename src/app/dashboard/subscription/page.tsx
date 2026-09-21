@@ -6,16 +6,17 @@ import {
   Crown,
   CheckCircle2,
   Download,
-  Calendar,
   CreditCard,
   Sparkles,
   ArrowRight,
   ShieldCheck,
   Clock,
   MessageCircle,
-  Eye,
   FileText,
   AlertCircle,
+  Zap,
+  Users,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
@@ -24,60 +25,79 @@ import { InvoiceReceiptModal } from '@/components/ui/invoice-receipt-modal';
 import { SubscriptionPlan, Invoice } from '@/lib/types';
 
 export default function SubscriptionBillingPage() {
-  const { currentUser, currentProfile, plans, invoices, paymentProofs, updateUserSubscription } = useAuth();
+  const {
+    currentUser,
+    currentProfile,
+    plans,
+    extraPacks,
+    invoices,
+    paymentProofs,
+    connectionQuota,
+  } = useAuth();
 
   const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<SubscriptionPlan | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
-  const currentTier = currentUser?.subscriptionTier || 'FREE';
+  const currentTier = currentUser?.subscriptionTier || 'BASIC';
 
   const currentPlan =
     plans.find((p) => {
       const s = p.slug.toUpperCase();
-      if (currentTier === 'PREMIUM_PLUS') return s === 'VIP' || s === 'PREMIUM_PLUS' || s.includes('VIP') || s.includes('ROYAL');
-      if (currentTier === 'PREMIUM') return s === 'PREMIUM' || s.includes('ELITE') || s.includes('EXECUTIVE');
-      return s === 'BASIC' || s === 'FREE';
+      if (currentTier === 'PREMIUM_PLUS' || currentTier === 'VIP') return s === 'VIP' || s === 'PREMIUM_PLUS';
+      if (currentTier === 'PREMIUM') return s === 'PREMIUM';
+      return s === 'BASIC';
     }) || plans[0];
 
   // Check if current user has a pending payment proof in queue
   const userPendingProof = paymentProofs.find(
     (p) =>
-      (p.userId === currentUser?.id || (currentUser?.email && p.userEmail === currentUser.email)) &&
+      (p.userId === currentUser?.id || (currentUser?.email && p.userEmail.toLowerCase() === currentUser.email.toLowerCase())) &&
       p.status === 'PENDING'
   );
 
   // Filter invoices for current user
   const userInvoices = invoices.filter(
-    (inv) => inv.userId === currentUser?.id || inv.userId === `user-${currentUser?.id}`
+    (inv) =>
+      inv.userId === currentUser?.id ||
+      inv.userId === `user-${currentUser?.id}` ||
+      (currentUser?.email && inv.userName?.toLowerCase() === currentUser.name?.toLowerCase())
   );
   const displayInvoices = userInvoices;
 
-  const expiryDateFormatted = currentUser?.subscriptionExpiresAt
-    ? new Date(currentUser.subscriptionExpiresAt).toLocaleDateString('en-US', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })
-    : null;
-
-  const remainingDays = currentUser?.subscriptionExpiresAt
-    ? Math.max(0, Math.ceil((new Date(currentUser.subscriptionExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : null;
-
   const handleOpenUpgrade = (plan: SubscriptionPlan) => {
-    if (plan.slug.toUpperCase() === 'BASIC') {
-      if (currentTier === 'FREE') {
-        toast.info('You are already on the Basic (Free) tier.');
-        return;
-      }
-      updateUserSubscription('FREE');
-      toast.success('Your subscription has been switched to Basic (Free) tier.');
-      return;
-    }
-
     setSelectedPlanForCheckout(plan);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleBuyExtraPack = (pack: any) => {
+    const count = pack.connectionsCount || pack.connections || 10;
+    const pseudoPlan: SubscriptionPlan = {
+      id: pack.id,
+      name: pack.name,
+      slug: pack.id,
+      description: `${count} Additional Connection Credits Top-Up`,
+      currency: 'PKR',
+      monthlyPrice: pack.pricePKR,
+      yearlyPrice: pack.pricePKR,
+      connectionsLimit: count,
+      connectionLimit: count,
+      features: [
+        `${count} Additional Connection Credits`,
+        'Valid with your current package',
+        'No monthly expiry',
+      ],
+      badge: 'Top-Up Pack',
+      isPopular: false,
+      isActive: true,
+      order: 10,
+      limits: {
+        connectionsCount: count,
+        directContactAccess: true,
+      },
+    };
+    setSelectedPlanForCheckout(pseudoPlan);
     setIsCheckoutOpen(true);
   };
 
@@ -91,21 +111,24 @@ export default function SubscriptionBillingPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold font-serif text-foreground">Subscription & VIP Tier</h1>
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-gold-500/40 bg-gold-500/10 px-3 py-0.5 text-xs font-bold text-gold-700 dark:text-gold-300 mb-1">
+            <Crown className="h-3.5 w-3.5 text-gold-500" /> Connection-Based Royal Packages
+          </div>
+          <h1 className="text-2xl font-bold font-serif text-foreground">Packages & Connection Credits</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Manage your matrimonial membership tier, unlock verified contact dossiers, and view billing invoices.
+            Manage your connection balances, top-up additional connection packs, and view bank transfer receipts.
           </p>
         </div>
 
         <Link
           href="/pricing"
-          className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-rose-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-brand-600/20 hover:from-brand-700 transition"
+          className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-900 to-brand-700 px-5 py-2.5 text-xs font-bold text-gold-300 shadow-md hover:from-brand-800 transition"
         >
-          <Crown className="h-4 w-4" /> Compare All Plans
+          <Crown className="h-4 w-4 text-gold-400" /> Compare All Packages
         </Link>
       </div>
 
-      {/* Pending Payment Verification Banner if applicable */}
+      {/* Pending Payment Verification Banner */}
       {userPendingProof && (
         <div className="rounded-3xl border border-amber-300 bg-amber-50/80 p-6 text-amber-900 shadow-sm dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -113,50 +136,48 @@ export default function SubscriptionBillingPage() {
               <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold">Payment Verification In Progress</h3>
+                  <h3 className="text-sm font-bold">Manual Bank Payment Verification In Progress</h3>
                   <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-extrabold text-amber-800 dark:bg-amber-900 dark:text-amber-300">
                     PENDING ADMIN APPROVAL
                   </span>
                 </div>
                 <p className="text-xs text-amber-800/90 dark:text-amber-300/80 leading-relaxed">
-                  Your transaction <strong>{userPendingProof.transactionId}</strong> for{' '}
-                  <strong>{userPendingProof.planName}</strong> ({userPendingProof.currency} {userPendingProof.amount}) via{' '}
-                  <strong>{userPendingProof.paymentMethod}</strong> is queued for admin review. Standard turnaround is
-                  1-2 hours.
+                  Your bank transfer slip for <strong>{userPendingProof.planName}</strong> ({userPendingProof.currency}{' '}
+                  {userPendingProof.amount.toLocaleString()}) via <strong>{userPendingProof.paymentMethod}</strong> (TRX:{' '}
+                  <strong>{userPendingProof.transactionId}</strong>) is being reviewed by our accounts desk. Standard
+                  turnaround is 1-2 hours.
                 </p>
               </div>
             </div>
 
             <a
               href={`https://wa.me/923001234567?text=${encodeURIComponent(
-                `Assalam-o-Alaikum! My payment proof for ${userPendingProof.planName} is pending. TRX ID: ${userPendingProof.transactionId}, User: ${currentUser?.name} (${currentUser?.email}). Please assist.`
+                `Assalam-o-Alaikum! My bank transfer proof for ${userPendingProof.planName} is pending review. TRX ID: ${userPendingProof.transactionId}, User: ${currentUser?.name} (${currentUser?.email}). Please expedite verification.`
               )}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 transition shrink-0"
             >
-              <MessageCircle className="h-4 w-4" /> Fast-Track WhatsApp
+              <MessageCircle className="h-4 w-4" /> Fast-Track on WhatsApp
             </a>
           </div>
         </div>
       )}
 
-      {/* Current Active Plan Card */}
-      <div className="rounded-3xl border border-brand-200 bg-gradient-to-r from-brand-900 via-brand-800 to-rose-950 p-6 sm:p-8 text-white shadow-xl">
+      {/* Current Active Plan & Quota Metrics Card */}
+      <div className="rounded-3xl border border-gold-500/30 bg-gradient-to-r from-brand-950 via-brand-900 to-rose-950 p-6 sm:p-8 text-white shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-gold-300">
-                <Crown className="h-3.5 w-3.5" /> CURRENT MEMBERSHIP
+                <Crown className="h-3.5 w-3.5 fill-gold-400" /> ACTIVE PACKAGE
               </span>
-              {currentTier !== 'FREE' && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-400/30">
-                  <ShieldCheck className="h-3 w-3" /> Blue Shield Verified
-                </span>
-              )}
-              {expiryDateFormatted && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/25 border border-amber-400/40 px-3 py-0.5 text-[11px] font-bold text-amber-200">
-                  <Calendar className="h-3 w-3 text-amber-300" /> Valid Until: {expiryDateFormatted} ({remainingDays} Days Left)
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-bold text-emerald-300 border border-emerald-400/30">
+                <ShieldCheck className="h-3 w-3" /> Royal Verified Member
+              </span>
+              {currentUser?.profileIdCode && (
+                <span className="font-mono text-xs bg-gold-400/20 text-gold-300 border border-gold-400/30 px-2.5 py-0.5 rounded-full font-bold">
+                  {currentUser.profileIdCode}
                 </span>
               )}
             </div>
@@ -165,102 +186,85 @@ export default function SubscriptionBillingPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="rounded-2xl bg-white/10 p-4 border border-white/15 backdrop-blur-md text-center min-w-[160px] w-full sm:w-auto">
-              <span className="text-[11px] text-brand-200 uppercase tracking-wider block">Status</span>
-              <span className="text-lg font-bold text-emerald-400">
-                {currentTier === 'FREE' ? 'Free Basic (2 Connects)' : 'Active (Verified)'}
+            <div className="rounded-2xl bg-white/10 p-4 border border-white/15 backdrop-blur-md text-center min-w-[170px] w-full sm:w-auto">
+              <span className="text-[11px] text-brand-200 uppercase tracking-wider block">Remaining Balance</span>
+              <span className="text-2xl font-black text-gold-300 font-serif">
+                {connectionQuota.remaining}{' '}
+                <span className="text-xs font-normal text-white">/ {connectionQuota.total}</span>
               </span>
-              <span className="text-[11px] text-brand-200 block mt-0.5">
-                {expiryDateFormatted ? `Renews on ${expiryDateFormatted}` : 'Standard Free Quota'}
+              <span className="text-[11px] text-emerald-300 block mt-0.5">
+                {connectionQuota.remaining > 0 ? 'Credits Active & Ready' : 'Quota Exhausted'}
               </span>
             </div>
 
-            {currentTier === 'FREE' && (
-              <button
-                onClick={() => {
-                  const premPlan = plans.find((p) => p.slug.toUpperCase() === 'PREMIUM') || plans[1];
-                  handleOpenUpgrade(premPlan);
-                }}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-gold-500 to-amber-600 px-5 py-3 text-xs font-bold text-stone-950 shadow-lg hover:from-gold-400 hover:to-amber-500 transition cursor-pointer"
-              >
-                <Sparkles className="h-4 w-4" /> Upgrade to Premium Now
-              </button>
-            )}
+            <button
+              onClick={() => {
+                const target = plans.find((p) => p.slug.toUpperCase() === 'VIP') || plans[2] || plans[0];
+                handleOpenUpgrade(target);
+              }}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-gold-500 via-amber-400 to-gold-600 px-5 py-3 text-xs font-bold text-stone-950 shadow-lg hover:from-gold-400 transition cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4" /> Upgrade Package
+            </button>
           </div>
         </div>
 
-        {/* Feature Quota Progress Bars */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-white/15 text-xs">
-          <div className="rounded-2xl bg-black/30 p-4 backdrop-blur-sm space-y-1.5">
-            <div className="flex justify-between text-brand-200">
-              <span>Connection Interests</span>
-              <span className="font-bold text-white">
-                {currentTier === 'PREMIUM_PLUS'
-                  ? '200 / Unlimited'
-                  : currentTier === 'PREMIUM'
-                  ? '50 Monthly'
-                  : '2 Monthly Allowance'}
-              </span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
-              <div
-                className="h-full bg-emerald-400 rounded-full"
-                style={{ width: currentTier === 'PREMIUM_PLUS' ? '100%' : currentTier === 'PREMIUM' ? '65%' : '20%' }}
-              />
-            </div>
+        {/* Live Quota Progress Bar */}
+        <div className="mt-8 pt-6 border-t border-white/15 space-y-3">
+          <div className="flex items-center justify-between text-xs text-brand-100">
+            <span>
+              Connection Usage: <strong>{connectionQuota.used} Used</strong> (
+              <strong>{connectionQuota.remaining} Remaining</strong>)
+            </span>
+            <span className="font-bold text-gold-300">{connectionQuota.usagePercentage}% Quota Consumed</span>
           </div>
 
-          <div className="rounded-2xl bg-black/30 p-4 backdrop-blur-sm space-y-1.5">
-            <div className="flex justify-between text-brand-200">
-              <span>Direct WhatsApp Unlocks</span>
-              <span className="font-bold text-white">
-                {currentTier !== 'FREE' ? 'Unlocked & Active' : 'Locked (Requires Premium)'}
-              </span>
-            </div>
-            <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
-              <div
-                className="h-full bg-emerald-400 rounded-full"
-                style={{ width: currentTier !== 'FREE' ? '100%' : '0%' }}
-              />
-            </div>
+          <div className="h-3 w-full rounded-full bg-white/20 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                connectionQuota.isReached
+                  ? 'bg-rose-500'
+                  : connectionQuota.usagePercentage >= 80
+                  ? 'bg-amber-400'
+                  : 'bg-emerald-400'
+              }`}
+              style={{ width: `${Math.min(100, connectionQuota.usagePercentage)}%` }}
+            />
           </div>
 
-          <div className="rounded-2xl bg-black/30 p-4 backdrop-blur-sm space-y-1.5">
-            <div className="flex justify-between text-brand-200">
-              <span>Verified Dossier Views</span>
-              <span className="font-bold text-white">
-                {currentTier === 'PREMIUM_PLUS'
-                  ? 'Full Access'
-                  : currentTier === 'PREMIUM'
-                  ? 'Full Access'
-                  : 'Basic Views'}
-              </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-[11px] text-brand-200">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span>Browsing profiles consumes 0 credits</span>
             </div>
-            <div className="h-2 w-full rounded-full bg-white/20 overflow-hidden">
-              <div
-                className="h-full bg-emerald-400 rounded-full"
-                style={{ width: currentTier !== 'FREE' ? '100%' : '30%' }}
-              />
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span>1 credit unlocks direct Phone/WhatsApp</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+              <span>Same profile never deducts twice</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Upgrade / Change Membership Cards */}
+      {/* Available Packages Grid */}
       <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-sm space-y-6">
         <div>
-          <h3 className="text-lg font-bold font-serif text-foreground">Available Membership Plans</h3>
+          <h3 className="text-lg font-bold font-serif text-foreground">Available Connection Packages</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Select an upgrade tier below to open the checkout gateway with instant Card, JazzCash, EasyPaisa, or Bank IBFT.
+            Select a package below to pay via Bank IBFT, JazzCash, EasyPaisa, or instant online debit/credit card.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {plans.map((p) => {
             const isSelected =
-              ((p.slug.toUpperCase() === 'BASIC' || p.slug.toUpperCase() === 'FREE') && currentTier === 'FREE') ||
+              (p.slug.toUpperCase() === 'BASIC' && currentTier === 'BASIC') ||
               (p.slug.toUpperCase() === 'PREMIUM' && currentTier === 'PREMIUM') ||
-              ((p.slug.toUpperCase() === 'VIP' || p.slug.toUpperCase() === 'PREMIUM_PLUS') && currentTier === 'PREMIUM_PLUS');
+              ((p.slug.toUpperCase() === 'VIP' || p.slug.toUpperCase() === 'PREMIUM_PLUS') &&
+                (currentTier === 'VIP' || currentTier === 'PREMIUM_PLUS'));
             const isVipPlan = p.slug.toUpperCase() === 'VIP' || p.slug.toUpperCase() === 'PREMIUM_PLUS';
 
             return (
@@ -268,29 +272,37 @@ export default function SubscriptionBillingPage() {
                 key={p.id}
                 className={`rounded-3xl border p-6 flex flex-col justify-between transition-all duration-200 ${
                   isSelected
-                    ? 'border-brand-600 bg-brand-50/40 ring-2 ring-brand-500/20 dark:bg-brand-950/30'
+                    ? 'border-gold-500 bg-gold-50/20 ring-2 ring-gold-500/20 dark:bg-gold-950/20'
+                    : isVipPlan
+                    ? 'border-gold-500/60 bg-gradient-to-b from-gold-50/30 to-background dark:from-gold-950/20 dark:to-background shadow-md'
                     : 'border-border bg-background hover:shadow-md'
                 }`}
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold font-serif text-foreground">{p.name}</span>
-                    {isSelected && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                        ✓ Active Tier
+                    <span className="text-sm font-bold font-serif text-foreground">{p.name}</span>
+                    {isSelected ? (
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                        ✓ Current Package
                       </span>
-                    )}
+                    ) : isVipPlan ? (
+                      <span className="rounded-full bg-gold-100 px-2.5 py-0.5 text-[10px] font-bold text-gold-800 dark:bg-gold-950 dark:text-gold-300">
+                        ⭐ Most Popular
+                      </span>
+                    ) : null}
                   </div>
 
                   <p className="text-xs text-muted-foreground min-h-[36px]">{p.description}</p>
 
                   <div className="text-2xl font-black font-serif text-foreground">
-                    {p.monthlyPrice === 0 ? 'Free' : `PKR ${p.monthlyPrice.toLocaleString()}`}
-                    <span className="text-xs font-normal text-muted-foreground"> / mo</span>
+                    PKR {p.monthlyPrice.toLocaleString()}
+                    <span className="text-xs font-normal text-muted-foreground block text-gold-600 dark:text-gold-400 font-sans mt-0.5 font-bold">
+                      {p.connectionsLimit || (isVipPlan ? 300 : p.slug === 'PREMIUM' ? 100 : 30)} Connection Credits
+                    </span>
                   </div>
 
                   <ul className="space-y-2 pt-3 border-t border-border text-xs">
-                    {p.features.slice(0, 4).map((f, i) => (
+                    {p.features.slice(0, 5).map((f, i) => (
                       <li key={i} className="flex items-start gap-2 text-foreground/85">
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
                         <span className="leading-tight">{f}</span>
@@ -307,13 +319,65 @@ export default function SubscriptionBillingPage() {
                       isSelected
                         ? 'bg-muted text-muted-foreground cursor-default'
                         : isVipPlan
-                        ? 'bg-gradient-to-r from-amber-500 via-gold-500 to-amber-600 text-stone-950 shadow-md hover:from-amber-400'
-                        : 'bg-gradient-to-r from-brand-600 to-rose-600 text-white shadow-brand-600/20 hover:from-brand-700'
+                        ? 'bg-gradient-to-r from-gold-500 via-amber-400 to-gold-600 text-stone-950 shadow-md hover:from-gold-400'
+                        : 'bg-gradient-to-r from-brand-900 to-brand-700 text-white shadow-brand-900/20 hover:from-brand-800'
                     }`}
                   >
-                    {isSelected ? 'Current Active Tier' : `Upgrade to ${p.name}`}
+                    {isSelected ? 'Renew / Top-Up' : `Purchase ${p.name}`}
                   </button>
                 </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Extra Connection Top-Up Packs (Section 38) */}
+      <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-4">
+          <div>
+            <h3 className="text-lg font-bold font-serif text-foreground flex items-center gap-2">
+              <Zap className="h-5 w-5 text-amber-500" /> Need More Connections? Buy Extra Packs
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Instantly top-up connection credits without upgrading your entire package. Valid with your active profile.
+            </p>
+          </div>
+          <span className="text-xs font-bold text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/40 px-3 py-1 rounded-full border border-brand-200 dark:border-brand-900">
+            Instant Top-Up
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+          {extraPacks.map((pack) => {
+            const count = pack.connectionsCount || pack.connections || 10;
+            return (
+              <div
+                key={pack.id}
+                className="rounded-2xl border border-border p-5 bg-background hover:border-gold-500 transition-all space-y-3 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-muted-foreground uppercase">{pack.name}</span>
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      +{count} Credits
+                    </span>
+                  </div>
+                  <div className="text-xl font-bold font-serif text-foreground mt-2">
+                    PKR {pack.pricePKR.toLocaleString()}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Rs. {Math.round(pack.pricePKR / count)} per verified contact unlock
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleBuyExtraPack(pack)}
+                  className="w-full rounded-xl bg-gold-500 hover:bg-gold-400 text-stone-950 py-2.5 text-xs font-bold transition shadow-sm cursor-pointer"
+                >
+                  Top-Up {count} Credits
+                </button>
               </div>
             );
           })}
@@ -324,9 +388,9 @@ export default function SubscriptionBillingPage() {
       <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
           <div>
-            <h3 className="text-lg font-bold font-serif text-foreground">Invoice & Billing History</h3>
+            <h3 className="text-lg font-bold font-serif text-foreground">Invoice & Payment Receipts</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Official tax-compliant electronic receipts for your membership payments.
+              Official tax-compliant electronic receipts for your package and connection credit orders.
             </p>
           </div>
           <span className="text-xs font-semibold text-muted-foreground">
@@ -340,41 +404,49 @@ export default function SubscriptionBillingPage() {
             <div className="text-xs text-muted-foreground">No invoices recorded yet on this account.</div>
             <button
               onClick={() => {
-                const premPlan = plans.find((p) => p.slug.toUpperCase() === 'PREMIUM') || plans[1];
-                handleOpenUpgrade(premPlan);
+                const plan = plans.find((p) => p.slug.toUpperCase() === 'PREMIUM') || plans[0];
+                handleOpenUpgrade(plan);
               }}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-700 transition"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-brand-900 text-gold-300 px-4 py-2 text-xs font-bold shadow-sm hover:bg-brand-800 transition"
             >
-              Upgrade & Generate First Invoice
+              Purchase Package & Generate Receipt
             </button>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
+            <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
-                  <th className="pb-3 font-semibold">Invoice #</th>
-                  <th className="pb-3 font-semibold">Plan Description</th>
-                  <th className="pb-3 font-semibold">Date</th>
-                  <th className="pb-3 font-semibold">Amount</th>
-                  <th className="pb-3 font-semibold">Payment Method</th>
-                  <th className="pb-3 font-semibold">Status</th>
-                  <th className="pb-3 font-semibold text-right">Receipt Actions</th>
+                  <th className="py-3 px-4 font-semibold">Invoice #</th>
+                  <th className="py-3 px-4 font-semibold">Date</th>
+                  <th className="py-3 px-4 font-semibold">Package / Item</th>
+                  <th className="py-3 px-4 font-semibold">Amount</th>
+                  <th className="py-3 px-4 font-semibold">Payment Method</th>
+                  <th className="py-3 px-4 font-semibold">Status</th>
+                  <th className="py-3 px-4 font-semibold text-right">Receipt</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/60">
                 {displayInvoices.map((inv) => (
-                  <tr key={inv.id} className="text-foreground">
-                    <td className="py-3.5 font-bold font-mono text-[11px]">{inv.invoiceNumber}</td>
-                    <td className="py-3.5 font-medium">{inv.planName}</td>
-                    <td className="py-3.5 text-muted-foreground">
-                      {new Date(inv.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  <tr key={inv.id} className="hover:bg-muted/40 transition">
+                    <td className="py-3.5 px-4 font-mono font-bold text-foreground">
+                      {inv.invoiceNumber}
                     </td>
-                    <td className="py-3.5 font-bold font-serif">
+                    <td className="py-3.5 px-4 text-muted-foreground">
+                      {new Date(inv.date).toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-foreground">{inv.planName}</td>
+                    <td className="py-3.5 px-4 font-mono font-bold">
                       {inv.currency} {inv.amount.toLocaleString()}
                     </td>
-                    <td className="py-3.5 text-muted-foreground">{inv.paymentMethod}</td>
-                    <td className="py-3.5">
+                    <td className="py-3.5 px-4 text-muted-foreground capitalize">
+                      {inv.paymentMethod?.replace('_', ' ').toLowerCase() || 'Bank Transfer'}
+                    </td>
+                    <td className="py-3.5 px-4">
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                           inv.status === 'PAID'
@@ -385,12 +457,12 @@ export default function SubscriptionBillingPage() {
                         {inv.status}
                       </span>
                     </td>
-                    <td className="py-3.5 text-right">
+                    <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => handleViewReceipt(inv)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:underline cursor-pointer"
+                        className="inline-flex items-center gap-1 rounded-xl border border-border px-3 py-1.5 font-medium text-foreground hover:bg-muted transition"
                       >
-                        <Eye className="h-3.5 w-3.5" /> View Receipt
+                        <Download className="h-3 w-3" /> View Receipt
                       </button>
                     </td>
                   </tr>
@@ -402,32 +474,18 @@ export default function SubscriptionBillingPage() {
       </div>
 
       {/* Checkout Modal */}
-      {selectedPlanForCheckout && (
-        <CheckoutModal
-          isOpen={isCheckoutOpen}
-          onClose={() => {
-            setIsCheckoutOpen(false);
-            setSelectedPlanForCheckout(null);
-          }}
-          plan={selectedPlanForCheckout}
-          initialBillingCycle="ANNUAL"
-          selectedCountry={currentProfile?.country || 'Pakistan'}
-        />
-      )}
+      <CheckoutModal
+        isOpen={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        plan={selectedPlanForCheckout}
+      />
 
-      {/* Receipt Modal */}
-      {viewingInvoice && (
-        <InvoiceReceiptModal
-          isOpen={isReceiptModalOpen}
-          onClose={() => {
-            setIsReceiptModalOpen(false);
-            setViewingInvoice(null);
-          }}
-          invoice={viewingInvoice}
-          userName={currentUser?.name}
-          userEmail={currentUser?.email}
-        />
-      )}
+      {/* Invoice Receipt Modal */}
+      <InvoiceReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        invoice={viewingInvoice}
+      />
     </div>
   );
 }

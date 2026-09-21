@@ -78,24 +78,26 @@ export default function PricingPage() {
       return;
     }
 
+    const count = pack.connectionsCount || pack.connections || pack.count || 10;
+
     // Wrap as pseudo plan for checkout modal
     const pseudoPlan: SubscriptionPlan = {
       id: pack.id,
       name: pack.name,
       slug: pack.id,
-      description: `${pack.connections} Extra Connection Credits Top-Up`,
+      description: `${count} Extra Connection Credits Top-Up`,
       currency: 'PKR',
-      monthlyPrice: pack.pricePKR,
-      yearlyPrice: pack.pricePKR,
-      connectionsLimit: pack.connections,
-      connectionLimit: pack.connections,
-      features: [`${pack.connections} Additional Connection Credits`, 'Valid with your current package', 'No monthly expiry'],
+      monthlyPrice: pack.pricePKR || pack.priceNum || 1000,
+      yearlyPrice: pack.pricePKR || pack.priceNum || 1000,
+      connectionsLimit: count,
+      connectionLimit: count,
+      features: [`${count} Additional Connection Credits`, 'Valid with your current package', 'No monthly expiry'],
       badge: 'Top-Up Pack',
       isPopular: false,
       isActive: true,
       order: 10,
       limits: {
-        connectionsCount: pack.connections,
+        connectionsCount: count,
         directContactAccess: true,
       },
     };

@@ -26,6 +26,8 @@ import {
   Calendar,
   Eye,
   Lock,
+  Unlock,
+  Phone,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -57,6 +59,8 @@ export default function ProfileDetailPage() {
     startOrGetConversation,
     canViewContactDetails,
     connectionQuota,
+    unlockContactDetails,
+    isContactUnlocked,
   } = useAuth();
 
   const profile = profiles.find((p) => p.id === profileId) || profiles[1] || profiles[0];
@@ -66,8 +70,10 @@ export default function ProfileDetailPage() {
   const [isAdminDossierOpen, setIsAdminDossierOpen] = useState(false);
   const [quotaModalOpen, setQuotaModalOpen] = useState(false);
   const [quotaAction, setQuotaAction] = useState<'INTEREST' | 'MESSAGE' | 'CONTACT'>('INTEREST');
+  const [unlockConfirmOpen, setUnlockConfirmOpen] = useState(false);
 
   const favorited = isFavorited(profile.id);
+  const contactUnlocked = isContactUnlocked(profile.id) || canViewContactDetails(profile.id);
 
   const hasSentInterest = interests.some(
     (i) =>
@@ -103,9 +109,9 @@ export default function ProfileDetailPage() {
   const handleFavoriteClick = () => {
     const added = toggleFavorite(profile.id);
     if (added) {
-      toast.success(`Shortlisted ${profile.displayName} to favorites.`);
+      toast.success(`Added ${profile.displayName} to Favorite Connections.`);
     } else {
-      toast.info(`Removed ${profile.displayName} from favorites.`);
+      toast.info(`Removed ${profile.displayName} from Favorite Connections.`);
     }
   };
 
@@ -335,14 +341,14 @@ export default function ProfileDetailPage() {
               </div>
             </div>
 
-            {/* Consent-Based Contact Details Card (Workflow Version 1.0) */}
+            {/* Consent & Credit-Based Contact Details Card */}
             <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b border-border pb-3">
                 <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <ShieldCheck className="h-4 w-4 text-emerald-600" />
                   Verified Contact Details
                 </h4>
-                {canViewContactDetails(profile.id) ? (
+                {contactUnlocked ? (
                   <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
                     Unlocked
                   </span>
@@ -353,7 +359,7 @@ export default function ProfileDetailPage() {
                 )}
               </div>
 
-              {canViewContactDetails(profile.id) ? (
+              {contactUnlocked ? (
                 <div className="space-y-2.5 text-xs">
                   <div className="p-3 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2 border border-emerald-500/20">
                     <div className="flex items-center justify-between">
@@ -370,7 +376,7 @@ export default function ProfileDetailPage() {
 
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <a
-                      href={`https://wa.me/${(profile.phone || '923001234567').replace(/[^0-9]/g, '')}?text=Assalam-o-Alaikum%20${encodeURIComponent(profile.displayName)},%20I%20reviewed%20your%20matrimonial%20profile%20on%20Compatible%20Matrimonials.`}
+                      href={`https://wa.me/${(profile.phone || '923001234567').replace(/[^0-9]/g, '')}?text=Assalam-o-Alaikum%20${encodeURIComponent(profile.displayName)},%20I%20reviewed%20your%20matrimonial%20profile%20on%20VIP%20Royal%20Matchmaking.`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2 font-bold text-white shadow-sm hover:bg-emerald-700 text-center"
@@ -389,14 +395,34 @@ export default function ProfileDetailPage() {
                 <div className="space-y-3 text-xs text-center py-2">
                   <div className="rounded-2xl bg-muted/40 p-3 text-muted-foreground leading-relaxed text-[11px]">
                     <Lock className="h-5 w-5 text-amber-500 mx-auto mb-1.5" />
-                    <strong>Privacy Vault Protocol:</strong> Direct phone and WhatsApp contact details remain confidential until both members mutually accept an interest request.
+                    <strong>Verified Contact Details:</strong> Unlock {profile.displayName}'s direct phone & WhatsApp contact using <strong>1 Connection Credit</strong>.
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!currentUser) {
+                        toast.info('Please sign in to unlock contact details.');
+                        return;
+                      }
+                      if (connectionQuota.remaining <= 0) {
+                        setQuotaAction('CONTACT');
+                        setQuotaModalOpen(true);
+                        return;
+                      }
+                      setUnlockConfirmOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 py-2.5 text-xs font-bold text-stone-950 shadow-md transition cursor-pointer"
+                  >
+                    <Unlock className="h-4 w-4" /> Unlock Contact (1 Credit)
+                  </button>
+
                   {!hasSentInterest && (
                     <button
                       onClick={handleRequestContact}
-                      className="w-full rounded-xl bg-brand-600/90 hover:bg-brand-600 py-2 text-xs font-bold text-white shadow-sm transition cursor-pointer"
+                      className="w-full rounded-xl border border-border bg-card hover:bg-muted py-2 text-xs font-semibold text-foreground transition cursor-pointer"
                     >
-                      Request Contact Access
+                      Or Send Connection Interest
                     </button>
                   )}
                 </div>
@@ -417,7 +443,7 @@ export default function ProfileDetailPage() {
                     {profile.fullName}
                   </h1>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {profile.displayName} • Profile ID: {profile.id} • Active Member
+                    {profile.displayName} • Profile ID: {profile.profileIdCode || profile.id} • Active Member
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -650,6 +676,51 @@ export default function ProfileDetailPage() {
           }
           profile={profile}
         />
+      )}
+
+      {/* Unlock Confirmation Modal */}
+      {unlockConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-sm rounded-3xl border border-gold-500/40 bg-card p-6 shadow-2xl space-y-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gold-500/10 text-gold-600 mx-auto">
+              <Unlock className="h-6 w-6" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold font-serif text-foreground">
+                Unlock Direct Contact Details?
+              </h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                This action will deduct <strong>1 Connection Credit</strong> from your balance to instantly reveal{' '}
+                <strong>{profile.displayName}</strong>'s direct phone & WhatsApp number.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-muted/40 p-3 text-center text-xs">
+              <span className="text-muted-foreground">Current Balance:</span>{' '}
+              <strong className="text-gold-600 dark:text-gold-400 font-bold">{connectionQuota.remaining} Credits</strong>{' '}
+              &rarr; <span className="text-muted-foreground">After:</span>{' '}
+              <strong>{Math.max(0, connectionQuota.remaining - 1)} Credits</strong>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setUnlockConfirmOpen(false)}
+                className="w-1/2 rounded-xl border border-border py-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setUnlockConfirmOpen(false);
+                  unlockContactDetails(profile.id);
+                }}
+                className="w-1/2 rounded-xl bg-gold-500 hover:bg-gold-400 py-2 text-xs font-bold text-stone-950 shadow-md transition"
+              >
+                Confirm Unlock
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <Footer />

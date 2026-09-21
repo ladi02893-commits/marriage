@@ -113,16 +113,31 @@ export async function POST(req: NextRequest) {
 
     const redirectUrl = isPrivileged ? '/admin' : '/dashboard';
 
+    const tier = isPrivileged ? 'PREMIUM_PLUS' : (user.subscription_tier || user.subscriptionTier || 'BASIC');
+    const profileIdCode = user.profile_id_code || user.profileIdCode || user.profile?.profile_id_code || user.profile?.profileIdCode || 'VRM-000001';
+    const totalConnections = isPrivileged ? 99999 : (user.total_connections ?? user.totalConnections ?? (tier === 'PREMIUM_PLUS' || tier === 'VIP' ? 300 : tier === 'PREMIUM' ? 100 : 30));
+    const usedConnections = isPrivileged ? 0 : (user.used_connections ?? user.usedConnections ?? 0);
+    const remainingConnections = isPrivileged ? 99999 : (user.remaining_connections ?? user.remainingConnections ?? Math.max(0, totalConnections - usedConnections));
+
     const safeUser = {
       id: user.id,
       email: user.email,
       name: user.name,
+      phone: user.phone || user.profile?.phone || '',
+      whatsappNumber: user.whatsapp_number || user.whatsappNumber || user.profile?.whatsappNumber || user.phone || '',
+      profileIdCode,
       role: isPrivileged ? 'SUPER_ADMIN' : (user.role || 'USER'),
-      subscriptionTier: isPrivileged ? 'PREMIUM_PLUS' : (user.subscription_tier || user.subscriptionTier || 'FREE'),
+      subscriptionTier: tier,
       isVerified: user.is_verified ?? user.isVerified ?? true,
+      isWhatsappVerified: user.is_whatsapp_verified ?? user.isWhatsappVerified ?? true,
+      isEmailVerified: user.is_email_verified ?? user.isEmailVerified ?? true,
       avatarUrl: user.avatar_url || user.avatarUrl || user.profile?.photos?.[0]?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
       profileId: user.profile?.id || (user.id.startsWith('user-') ? user.id.replace('user-', 'profile-') : user.profileId || 'profile-1'),
       accountStatus: accountStatus,
+      totalConnections,
+      usedConnections,
+      remainingConnections,
+      assignedConsultantId: user.assigned_consultant_id || user.assignedConsultantId || 'consultant-1',
     };
 
     const response = NextResponse.json({

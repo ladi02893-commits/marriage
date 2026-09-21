@@ -201,6 +201,7 @@ export interface ExtraConnectionPack {
   id: string;
   name: string;
   connectionsCount: number;
+  connections?: number;
   pricePKR: number;
   popular?: boolean;
   description?: string;

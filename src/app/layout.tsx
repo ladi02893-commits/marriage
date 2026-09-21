@@ -10,23 +10,23 @@ import { Toaster } from "sonner";
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Compatible Matrimonials — AI-Powered Matrimonial Platform",
+  title: "VIP Royal Matchmaking — Premium Connection-Based Matrimonial Platform",
   description:
-    "Where Compatibility Meets Commitment. A high-trust, verified matrimonial platform connecting educated professionals and families worldwide.",
+    "Where Nobility Meets Lifelong Matrimony. A high-trust, connection-based matrimonial and relationship platform connecting educated Pakistani professionals and families worldwide.",
   keywords: [
-    "Compatible Matrimonials",
-    "Marriage Bureau",
-    "Matchmaking",
+    "VIP Royal Matchmaking",
+    "Pakistani Marriage Bureau",
+    "VIP Rishta Matchmaking",
     "Verified Matrimonial Profiles",
-    "Compatibility Matching",
-    "Matrimony Web App",
+    "Family Consultant Matrimony",
+    "Royal Pakistani Matrimony",
   ],
-  authors: [{ name: "Compatible Matrimonials" }],
+  authors: [{ name: "VIP Royal Matchmaking" }],
   openGraph: {
-    title: "Compatible Matrimonials — AI-Powered Verified Matchmaking",
-    description: "Connect with verified, cultured professionals and families seeking lifelong marriage.",
+    title: "VIP Royal Matchmaking — Premium Pakistani Matrimonial Platform",
+    description: "Connect with verified, cultured professionals and respected families seeking lifelong marriage.",
     type: "website",
-    siteName: "Compatible Matrimonials",
+    siteName: "VIP Royal Matchmaking",
   },
 };
 

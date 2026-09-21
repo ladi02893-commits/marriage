@@ -162,7 +162,7 @@ export function PaymentSlipDisplay({
             {amount}
           </span>
           <span className="text-[9px] text-emerald-400 font-semibold block mt-0.5">
-            ✓ Credited to Compatible Matrimonials
+            ✓ Credited to VIP Royal Matchmaking
           </span>
         </div>
       </div>

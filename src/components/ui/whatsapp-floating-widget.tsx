@@ -10,7 +10,7 @@ interface WhatsAppFloatingWidgetProps {
 
 export function WhatsAppFloatingWidget({
   phoneNumber = '923001234567',
-  defaultMessage = 'Assalam-o-Alaikum! I am interested in Compatible Matrimonials membership packages, registration, and rishta matchmaking services.',
+  defaultMessage = 'Assalam-o-Alaikum! I am interested in VIP Royal Matchmaking connection packages, profile registration, and Senior Family Consultant services.',
 }: WhatsAppFloatingWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [customMsg, setCustomMsg] = useState(defaultMessage);
@@ -53,7 +53,7 @@ export function WhatsAppFloatingWidget({
               <Sparkles className="h-3 w-3" /> Automated Matchmaking Bot
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Welcome to <strong>Compatible Matrimonials</strong> ❤️. Need assistance with registration, package pricing, or manual payment verification (Easypaisa / JazzCash / Bank)?
+              Welcome to <strong>VIP Royal Matchmaking</strong> 👑. Need assistance with registration, connection packages, or bank transfer verification?
             </p>
           </div>
 

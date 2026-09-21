@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         currency: currency || 'PKR',
         status: status || 'PAID',
         payment_method: paymentMethod || 'Instant Card Gateway',
-        plan_name: planName || 'Elite Executive Plan',
+        plan_name: planName || 'VIP Royal Package',
       }])
       .select()
       .single();

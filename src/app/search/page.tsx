@@ -32,10 +32,11 @@ function SearchContent() {
   const initialCity = searchParams.get('city') || 'ALL';
   const initialMinAge = Number(searchParams.get('minAge')) || 20;
   const initialMaxAge = Number(searchParams.get('maxAge')) || 45;
+  const initialProfileId = searchParams.get('profileId') || '';
 
   // Filter State
-  const [searchTerm, setSearchTerm] = useState('');
-  const [profileIdSearch, setProfileIdSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
+  const [profileIdSearch, setProfileIdSearch] = useState(initialProfileId);
   const [gender, setGender] = useState<string>(initialGender);
   const [minAge, setMinAge] = useState<number>(initialMinAge);
   const [maxAge, setMaxAge] = useState<number>(initialMaxAge);

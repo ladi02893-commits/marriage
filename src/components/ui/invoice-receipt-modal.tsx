@@ -98,16 +98,16 @@ export function InvoiceReceiptModal({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-6">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-black font-serif tracking-tight text-brand-600 dark:text-brand-400">
-                  Compatible Matrimonials
+                <span className="text-xl font-black font-serif tracking-tight text-brand-900 dark:text-gold-400">
+                  VIP Royal Matchmaking
                 </span>
-                <ShieldCheck className="h-5 w-5 text-brand-600" />
+                <ShieldCheck className="h-5 w-5 text-gold-500" />
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Pakistan's #1 Secure & Sharia-Compliant Matrimonial Matchmaking Network
+                Pakistan's #1 Connection-Based Royal Matrimonial Matchmaking Network
               </p>
               <p className="text-[10px] text-muted-foreground">
-                NTN / Reg: PK-MAT-2025-9988 | support@compatiblematrimonials.com
+                NTN / Reg: PK-VRM-2025-9988 | billing@viproyalmatch.pk
               </p>
             </div>
 
@@ -196,7 +196,7 @@ export function InvoiceReceiptModal({
               <span>Authenticity & Official Verification Notice</span>
             </div>
             <p>
-              This is an official electronically generated invoice by Compatible Matrimonials. In accordance with
+              This is an official electronically generated invoice by VIP Royal Matchmaking. In accordance with
               terms of service, matrimonial memberships are non-transferable and subject to our community safety rules.
             </p>
             {isPending && (

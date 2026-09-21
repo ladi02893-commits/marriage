@@ -61,15 +61,18 @@ export default function AdminSubscriptionsPage() {
     setEditingPlanId(plan.id);
     setMonthlyPrice(plan.monthlyPrice);
     setYearlyPrice(plan.yearlyPrice);
-    setConnectionLimit(plan.limits?.monthlyInterests ?? (plan.slug === 'BASIC' ? 2 : plan.slug === 'PREMIUM' ? 50 : 200));
+    setConnectionLimit(plan.connectionsLimit ?? (plan.slug === 'BASIC' ? 30 : plan.slug === 'PREMIUM' ? 100 : 300));
     setPlanDescription(plan.description);
   };
 
   const handleSavePlan = (planId: string) => {
     const existing = plans.find((p) => p.id === planId);
     updatePlan(planId, {
+      price: Number(monthlyPrice),
       monthlyPrice: Number(monthlyPrice),
       yearlyPrice: Number(yearlyPrice),
+      connectionsLimit: Number(connectionLimit),
+      connectionLimit: Number(connectionLimit),
       description: planDescription,
       currency: 'PKR',
       limits: {
@@ -78,13 +81,14 @@ export default function AdminSubscriptionsPage() {
           canViewVisitors: false,
           hasPriorityMatching: false,
           hasFeaturedBadge: false,
-          directContactAccess: false,
+          directContactAccess: true,
         }),
+        connectionsCount: Number(connectionLimit),
         monthlyInterests: Number(connectionLimit),
       },
     });
     setEditingPlanId(null);
-    toast.success('Subscription pricing tier & connection limits updated successfully in PKR!');
+    toast.success('Package price & connection credit limit updated successfully in PKR!');
   };
 
   return (

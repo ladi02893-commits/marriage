@@ -909,23 +909,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const codeNum = String(users.length + 22).padStart(6, '0');
       const profileIdCode = `VRM-${codeNum}`;
 
+      const tier = userData.subscriptionTier || 'BASIC';
+      const initialTotal = userData.totalConnections ?? (tier === 'VIP' || tier === 'PREMIUM_PLUS' ? 300 : tier === 'PREMIUM' ? 100 : 30);
+
       const newUser: User = {
-        id: `user-${Date.now()}`,
+        id: userData.id || `user-${Date.now()}`,
         name: userData.name || profileData.fullName || 'Member',
         email: userData.email || '',
         phone: userData.phone || '',
         whatsappNumber: userData.whatsappNumber || userData.phone || '',
         profileIdCode,
         role: 'USER',
-        subscriptionTier: 'FREE',
+        subscriptionTier: tier,
         accountStatus: 'ACTIVE',
         profileApprovalStatus: settings.requireAdminProfileApproval ? 'PENDING_APPROVAL' : 'APPROVED',
         isVerified: false,
         isWhatsappVerified: userData.isWhatsappVerified || false,
         isEmailVerified: true,
-        totalConnections: 30,
+        totalConnections: initialTotal,
         usedConnections: 0,
-        remainingConnections: 30,
+        remainingConnections: userData.remainingConnections ?? initialTotal,
+        assignedConsultantId: tier === 'VIP' || tier === 'PREMIUM_PLUS' ? 'consultant-1' : undefined,
         createdAt: new Date().toISOString(),
         lastActive: 'Online',
       };
@@ -1302,7 +1306,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPaymentProofs((prev) =>
       prev.map((p) =>
         p.id === proofId
-          ? { ...p, status: 'APPROVED', reviewedAt: now, reviewedBy: currentUser?.name || 'Super Admin' }
+          ? { ...p, status: 'VERIFIED', reviewedAt: now, reviewedBy: currentUser?.name || 'Super Admin' }
           : p
       )
     );

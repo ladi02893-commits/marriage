@@ -51,6 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Packages & Payments', href: '/dashboard/subscription', icon: CreditCard },
     { name: 'Identity Verification', href: '/dashboard/verification', icon: ShieldCheck },
     { name: 'Privacy & Photo Access', href: '/dashboard/privacy', icon: Lock },
+    { name: 'Family Access', href: '/dashboard/family', icon: Users },
     { name: 'Support & Helpdesk', href: '/dashboard/support', icon: HelpCircle },
     { name: 'Account Settings', href: '/dashboard/settings', icon: Settings },
   ];

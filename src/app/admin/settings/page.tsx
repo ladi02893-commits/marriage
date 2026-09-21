@@ -22,18 +22,18 @@ export default function AdminSystemSettingsPage() {
 
   const [siteName, setSiteName] = useState(settings.siteName || 'VIP Royal Matchmaking');
   const [minAge, setMinAge] = useState(settings.minAge || 18);
-  const [profilePrefix, setProfilePrefix] = useState('VRM-');
+  const [profilePrefix, setProfilePrefix] = useState(settings.profileIdPrefix || 'VRM-');
 
   // Governance Toggles (Section 84)
   const [allowRegistrations, setAllowRegistrations] = useState(true);
-  const [requireProfileApproval, setRequireProfileApproval] = useState(true);
-  const [requireWhatsappVerification, setRequireWhatsappVerification] = useState(true);
-  const [requireEmailVerification, setRequireEmailVerification] = useState(true);
+  const [requireProfileApproval, setRequireProfileApproval] = useState(settings.requireAdminProfileApproval ?? true);
+  const [requireWhatsappVerification, setRequireWhatsappVerification] = useState(settings.requireWhatsAppVerification ?? true);
+  const [requireEmailVerification, setRequireEmailVerification] = useState(settings.requireEmailVerification ?? true);
 
   // Tax Settings (Section 35)
-  const [taxEnabled, setTaxEnabled] = useState(false);
-  const [taxPercent, setTaxPercent] = useState(5);
-  const [taxLabel, setTaxLabel] = useState('Service & Verification Fee');
+  const [taxEnabled, setTaxEnabled] = useState(settings.tax?.taxEnabled ?? false);
+  const [taxPercent, setTaxPercent] = useState(settings.tax?.taxPercentage ?? 5);
+  const [taxLabel, setTaxLabel] = useState(settings.tax?.taxLabel || 'Service & Verification Fee');
 
   // Matching Weights
   const [ageW, setAgeW] = useState(settings.matchingWeights.ageWeight || 25);
@@ -51,7 +51,16 @@ export default function AdminSystemSettingsPage() {
     updateSettings({
       siteName,
       minAge,
+      profileIdPrefix: profilePrefix,
       requireEmailVerification,
+      requireWhatsAppVerification: requireWhatsappVerification,
+      requireAdminProfileApproval: requireProfileApproval,
+      tax: {
+        taxEnabled,
+        taxPercentage: Number(taxPercent),
+        taxFixed: 0,
+        taxLabel,
+      },
       matchingWeights: {
         ageWeight: ageW,
         locationWeight: locW,

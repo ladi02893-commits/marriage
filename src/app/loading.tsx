@@ -22,7 +22,7 @@ export default function GlobalLoading() {
       <div className="mt-6 text-center space-y-2 max-w-xs">
         <div className="flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-widest text-brand-600 dark:text-brand-400">
           <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-spin" />
-          <span>Compatible Matrimonials</span>
+          <span>VIP Royal Matchmaking</span>
         </div>
         <p className="text-xs text-muted-foreground font-medium">
           Connecting verified matrimonial profiles...

@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       .insert([{
         provider: provider || 'BANK_TRANSFER',
         bank_name: bankName || 'Meezan Bank',
-        account_title: accountTitle || 'Compatible Matrimonials',
+        account_title: accountTitle || 'VIP ROYAL MATCHMAKING PVT LTD',
         account_number: accountNumber || '0101-0101010101',
         iban: iban || null,
         branch_name: branchName || null,

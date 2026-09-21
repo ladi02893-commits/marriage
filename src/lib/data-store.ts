@@ -2878,7 +2878,7 @@ export const INITIAL_PAYMENT_PROOFS: PaymentProof[] = [
     transactionId: 'TRX-MEEZ-883921',
     transactionDate: '2025-02-01',
     screenshotUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
-    status: 'APPROVED',
+    status: 'VERIFIED',
     submittedAt: '2025-02-01T11:45:00Z',
     reviewedAt: '2025-02-01T12:00:00Z',
     reviewedBy: 'Super Admin Ladi',

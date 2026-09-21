@@ -133,7 +133,7 @@ export function AdminUserDossierModal({
 
   const cleanPhone = (profile?.phone || user.email).replace(/[^0-9]/g, '');
   const whatsappUrl = `https://wa.me/${cleanPhone || '923001234567'}?text=${encodeURIComponent(
-    `Assalam-o-Alaikum ${user.name}, this is the Administrator from Compatible Matrimonials regarding your account.`
+    `Assalam-o-Alaikum ${user.name}, this is the Administrator from VIP Royal Matchmaking regarding your account.`
   )}`;
 
   return (

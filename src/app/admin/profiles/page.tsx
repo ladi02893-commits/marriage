@@ -22,22 +22,24 @@ import { AdminUserDossierModal } from '@/components/admin/admin-user-dossier-mod
 import { User, MatrimonialProfile } from '@/lib/types';
 
 export default function AdminProfilesModerationPage() {
-  const { profiles, users, updateUserStatus } = useAuth();
+  const { profiles, users, updateUserStatus, updateProfileApproval } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterMode, setFilterMode] = useState<'ALL' | 'VERIFIED' | 'NEEDS_REVIEW'>('ALL');
+  const [filterMode, setFilterMode] = useState<'ALL' | 'VERIFIED' | 'NEEDS_REVIEW' | 'PENDING_APPROVAL'>('ALL');
   const [selectedUserForDossier, setSelectedUserForDossier] = useState<User | null>(null);
   const [selectedProfileForDossier, setSelectedProfileForDossier] = useState<MatrimonialProfile | null>(null);
   const [isDossierModalOpen, setIsDossierModalOpen] = useState(false);
 
   const filteredProfiles = profiles.filter((p) => {
+    if (filterMode === 'PENDING_APPROVAL' && p.approvalStatus !== 'PENDING_APPROVAL') return false;
     if (filterMode === 'VERIFIED' && p.verificationBadge !== 'APPROVED') return false;
-    if (filterMode === 'NEEDS_REVIEW' && p.verificationBadge === 'APPROVED') return false;
+    if (filterMode === 'NEEDS_REVIEW' && (p.verificationBadge === 'APPROVED' && p.approvalStatus === 'APPROVED')) return false;
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       const matchName = p.fullName.toLowerCase().includes(term);
       const matchCity = p.city.toLowerCase().includes(term);
       const matchProf = p.educationCareer?.profession?.toLowerCase().includes(term);
-      if (!matchName && !matchCity && !matchProf) return false;
+      const matchCode = p.profileIdCode?.toLowerCase().includes(term);
+      if (!matchName && !matchCity && !matchProf && !matchCode) return false;
     }
     return true;
   });
@@ -65,8 +67,8 @@ export default function AdminProfilesModerationPage() {
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-1.5 rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
-          {(['ALL', 'VERIFIED', 'NEEDS_REVIEW'] as const).map((mode) => (
+        <div className="flex items-center gap-1.5 rounded-2xl border border-zinc-800 bg-zinc-900 p-1 flex-wrap">
+          {(['ALL', 'PENDING_APPROVAL', 'VERIFIED', 'NEEDS_REVIEW'] as const).map((mode) => (
             <button
               key={mode}
               onClick={() => setFilterMode(mode)}
@@ -76,7 +78,13 @@ export default function AdminProfilesModerationPage() {
                   : 'text-zinc-400 hover:text-white'
               }`}
             >
-              {mode === 'ALL' ? 'All Profiles' : mode === 'VERIFIED' ? 'Verified Blue Badges' : 'Pending Screening'}
+              {mode === 'ALL'
+                ? 'All Profiles'
+                : mode === 'PENDING_APPROVAL'
+                ? 'Pending Approval'
+                : mode === 'VERIFIED'
+                ? 'Verified Badges'
+                : 'Needs Screening'}
             </button>
           ))}
         </div>
@@ -98,7 +106,7 @@ export default function AdminProfilesModerationPage() {
         {filteredProfiles.map((p) => {
           const cleanPhone = (p.phone || '923001234567').replace(/[^0-9]/g, '');
           const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-            `Assalam-o-Alaikum ${p.fullName}, this is the Concierge from Compatible Matrimonials regarding your matrimonial profile (#${p.id}).`
+            `Assalam-o-Alaikum ${p.fullName}, this is the Concierge from VIP Royal Matchmaking regarding your matrimonial profile (#${p.id}).`
           )}`;
 
           return (
@@ -182,13 +190,34 @@ export default function AdminProfilesModerationPage() {
                   >
                     <Eye className="h-3.5 w-3.5 inline mr-1 text-amber-400" /> Dossier
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => toast.success(`Approved profile and verified badge for ${p.displayName}`)}
-                    className="rounded-xl bg-emerald-600 px-4 py-1.5 font-bold text-white shadow-md hover:bg-emerald-700 transition cursor-pointer"
-                  >
-                    Approve Profile
-                  </button>
+                  {p.approvalStatus !== 'APPROVED' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateProfileApproval(p.id, 'APPROVED');
+                          toast.success(`Approved profile for ${p.displayName}`);
+                        }}
+                        className="rounded-xl bg-emerald-600 px-3.5 py-1.5 font-bold text-white shadow-md hover:bg-emerald-700 transition cursor-pointer"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateProfileApproval(p.id, 'REJECTED', 'Profile rejected by moderation desk.');
+                          toast.error(`Rejected profile for ${p.displayName}`);
+                        }}
+                        className="rounded-xl border border-rose-800 bg-rose-950/60 px-2.5 py-1.5 font-bold text-rose-300 hover:bg-rose-900 transition cursor-pointer"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  ) : (
+                    <span className="rounded-xl bg-emerald-950/60 border border-emerald-800/60 px-3 py-1 text-[11px] font-bold text-emerald-400">
+                      Approved
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

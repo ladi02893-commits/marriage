@@ -368,7 +368,7 @@ export function CheckoutModal({
                 {submissionResult.type === 'MANUAL' && (
                   <a
                     href={`https://wa.me/923001234567?text=${encodeURIComponent(
-                      `Assalam-o-Alaikum! I have submitted my payment proof for ${submissionResult.planName} on Compatible Matrimonials. TRX ID: ${submissionResult.trxId}, Email: ${currentUser?.email}. Please fast-track my verification.`
+                      `Assalam-o-Alaikum! I have submitted my payment proof for ${submissionResult.planName} on VIP Royal Matchmaking. TRX ID: ${submissionResult.trxId}, Email: ${currentUser?.email}. Please fast-track my verification.`
                     )}`}
                     target="_blank"
                     rel="noreferrer"
@@ -709,13 +709,13 @@ export function CheckoutModal({
                         <div>
                           <span className="text-[10px] text-muted-foreground block">Bank / Merchant Name:</span>
                           <span className="font-bold text-foreground">
-                            {activeReceivingAccount?.bankName || 'Compatible Matrimonials Merchant'}
+                            {activeReceivingAccount?.bankName || 'VIP Royal Matchmaking Merchant'}
                           </span>
                         </div>
                         <div>
                           <span className="text-[10px] text-muted-foreground block">Account Title:</span>
                           <span className="font-bold text-foreground">
-                            {activeReceivingAccount?.accountTitle || 'Compatible Matrimonials'}
+                            {activeReceivingAccount?.accountTitle || 'VIP ROYAL MATCHMAKING PVT LTD'}
                           </span>
                         </div>
                       </div>
