@@ -146,8 +146,8 @@ export default function SupportTicketsPage() {
 
               <div>
                 <label className="font-semibold text-foreground block mb-1 flex items-center justify-between">
-                  <span>Related Profile ID (Optional)</span>
-                  <span className="text-[10px] text-muted-foreground">Section 49</span>
+                  <span>Related Candidate Profile ID (Optional)</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">e.g. VRM-000002</span>
                 </label>
                 <input
                   type="text"

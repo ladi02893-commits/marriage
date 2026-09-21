@@ -130,7 +130,7 @@ export default function AccountSettingsPage() {
               className="rounded border-border text-brand-600 focus:ring-brand-500 h-4 w-4"
             />
             <span className="text-foreground font-medium">
-              Subscribe to TRUEPAIR weekly curated matchmaking digest
+              Subscribe to VIP Royal weekly curated matchmaking digest
             </span>
           </label>
 

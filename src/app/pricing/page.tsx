@@ -241,7 +241,9 @@ export default function PricingPage() {
                 Already have a package? Purchase extra connection credit packs anytime to continue unlocking contact details.
               </p>
             </div>
-            <span className="font-mono text-xs text-muted-foreground">Section 38 Feature</span>
+            <span className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+              Instant Credit Booster
+            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

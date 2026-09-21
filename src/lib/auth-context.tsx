@@ -162,6 +162,7 @@ interface AuthContextType {
     amount: number;
     currency: string;
     paymentMethod: string;
+    connectionsCount?: number;
     billingCycle?: 'MONTHLY' | 'ANNUAL';
     cardLast4?: string;
   }) => Promise<{ success: boolean; invoice: Invoice }>;
@@ -519,6 +520,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentUser(updatedUser);
     setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updatedUser : u)));
 
+    // Background DB sync to InsForge
+    try {
+      fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: currentUser.id,
+          usedConnections: newUsed,
+          remainingConnections: newRemaining,
+        }),
+      }).catch(() => {});
+    } catch (e) {}
+
     const newTx: ConnectionTransaction = {
       id: `ctx-${Date.now()}`,
       userId: currentUser.id,
@@ -550,11 +564,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Connection Refund (Section 83)
   const refundConnectionCredit = (userId: string, targetProfileId: string, reason: string) => {
+    let refundedRemaining = 0;
+    let refundedUsed = 0;
+
     setUsers((prev) =>
       prev.map((u) => {
         if (u.id === userId) {
           const newRemaining = (u.remainingConnections || 0) + 1;
           const newUsed = Math.max(0, (u.usedConnections || 1) - 1);
+          refundedRemaining = newRemaining;
+          refundedUsed = newUsed;
           return { ...u, remainingConnections: newRemaining, usedConnections: newUsed };
         }
         return u;
@@ -575,6 +594,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       prev.filter((tx) => !(tx.userId === userId && tx.connectedProfileId === targetProfileId))
     );
 
+    // Sync to DB
+    try {
+      fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userId,
+          remainingConnections: refundedRemaining,
+          usedConnections: refundedUsed,
+        }),
+      }).catch(() => {});
+    } catch (e) {}
+
     const notif: NotificationItem = {
       id: `notif-${Date.now()}`,
       userId,
@@ -594,11 +626,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Buy Additional Connections (Section 38)
   const addExtraConnections = (userId: string, count: number) => {
+    let finalTotal = 0;
+    let finalRemaining = 0;
+
     setUsers((prev) =>
       prev.map((u) => {
         if (u.id === userId) {
           const newTotal = (u.totalConnections || 0) + count;
           const newRemaining = (u.remainingConnections || 0) + count;
+          finalTotal = newTotal;
+          finalRemaining = newRemaining;
           return { ...u, totalConnections: newTotal, remainingConnections: newRemaining };
         }
         return u;
@@ -615,6 +652,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : null
       );
     }
+
+    // Sync to DB
+    try {
+      fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: userId,
+          totalConnections: finalTotal,
+          remainingConnections: finalRemaining,
+        }),
+      }).catch(() => {});
+    } catch (e) {}
+
     toast.success(`Added ${count} connection credits to account!`);
     logAdminAction('ADD_EXTRA_CONNECTIONS', 'USER', userId, `Added ${count} connection credits to user balance.`);
   };
@@ -1092,6 +1143,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setInterests((prev) => [newInterest, ...prev]);
 
+    // Background sync to InsForge API
+    try {
+      fetch('/api/interests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderId: currentUser.id,
+          senderProfileId: resolvedCurrentProfile?.id || `profile-${currentUser.id}`,
+          receiverId: target.userId,
+          receiverProfileId: target.id,
+          message: newInterest.message,
+        }),
+      }).catch(() => {});
+    } catch (e) {}
+
     const newNotif: NotificationItem = {
       id: `notif-${Date.now()}`,
       userId: target.userId,
@@ -1111,6 +1177,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setInterests((prev) =>
       prev.map((item) => (item.id === interestId ? { ...item, status: 'ACCEPTED', updatedAt: new Date().toISOString() } : item))
     );
+
+    // Background sync to InsForge API
+    try {
+      fetch('/api/interests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: interestId,
+          status: 'ACCEPTED',
+        }),
+      }).catch(() => {});
+    } catch (e) {}
+
     const intReq = interests.find((i) => i.id === interestId);
     if (intReq) {
       startOrGetConversation(intReq.senderId);
@@ -1133,6 +1212,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setInterests((prev) =>
       prev.map((item) => (item.id === interestId ? { ...item, status: 'DECLINED', updatedAt: new Date().toISOString() } : item))
     );
+    try {
+      fetch('/api/interests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: interestId,
+          status: 'DECLINED',
+        }),
+      }).catch(() => {});
+    } catch (e) {}
     toast.info('Interest request declined.');
   };
 
@@ -1189,6 +1278,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setConversations((prev) =>
       prev.map((c) => (c.id === conversationId ? { ...c, lastMessageText: text.trim(), lastMessageTime: 'Just now' } : c))
     );
+
+    // Background sync to InsForge API
+    try {
+      fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversationId,
+          senderId: currentUser.id,
+          text: text.trim(),
+        }),
+      }).catch(() => {});
+    } catch (e) {}
   };
 
   const startOrGetConversation = (recipientUserId: string): string => {
@@ -1326,33 +1428,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    const isExtraPack = proof.planSlug.startsWith('PACK_');
-    const rawSlug = proof.planSlug.toUpperCase();
+    const rawSlug = (proof.planSlug || '').toUpperCase();
+    const rawName = (proof.planName || '').toUpperCase();
+    const isExtraPack =
+      rawSlug.startsWith('PACK') ||
+      rawSlug.startsWith('EXTRA') ||
+      rawSlug.includes('PACK_') ||
+      rawSlug.includes('PACK-') ||
+      rawName.includes('EXTRA') ||
+      rawName.includes('BOOSTER') ||
+      rawName.includes('TOP-UP');
 
     let connectionsToAdd = 30;
     let targetTier: SubscriptionTier = 'BASIC';
 
     if (isExtraPack) {
-      connectionsToAdd =
-        rawSlug === 'PACK_10' ? 10 : rawSlug === 'PACK_30' ? 30 : rawSlug === 'PACK_50' ? 50 : 100;
+      if (rawSlug.includes('100') || rawName.includes('100')) connectionsToAdd = 100;
+      else if (rawSlug.includes('50') || rawName.includes('50')) connectionsToAdd = 50;
+      else if (rawSlug.includes('30') || rawName.includes('30')) connectionsToAdd = 30;
+      else if (rawSlug.includes('10') || rawName.includes('10')) connectionsToAdd = 10;
+      else connectionsToAdd = 10;
     } else if (rawSlug.includes('VIP') || rawSlug.includes('ROYAL') || rawSlug.includes('PLUS')) {
       targetTier = 'PREMIUM_PLUS';
       connectionsToAdd = 300;
     } else if (rawSlug.includes('PREMIUM')) {
       targetTier = 'PREMIUM';
       connectionsToAdd = 100;
+    } else {
+      targetTier = 'BASIC';
+      connectionsToAdd = 30;
     }
+
+    let updatedTotal = 0;
+    let updatedRemaining = 0;
+    let updatedTier: SubscriptionTier = targetTier;
 
     setUsers((prev) =>
       prev.map((u) => {
         if (u.id === proof.userId || (proof.userEmail && u.email.toLowerCase() === proof.userEmail.toLowerCase())) {
           const currentTotal = u.totalConnections || 0;
           const currentRemaining = u.remainingConnections || 0;
+          updatedTotal = currentTotal + connectionsToAdd;
+          updatedRemaining = currentRemaining + connectionsToAdd;
+          updatedTier = isExtraPack ? u.subscriptionTier : targetTier;
+
           return {
             ...u,
-            subscriptionTier: isExtraPack ? u.subscriptionTier : targetTier,
-            totalConnections: currentTotal + connectionsToAdd,
-            remainingConnections: currentRemaining + connectionsToAdd,
+            subscriptionTier: updatedTier,
+            totalConnections: updatedTotal,
+            remainingConnections: updatedRemaining,
             isVerified: true,
             accountStatus: 'ACTIVE',
           };
@@ -1375,6 +1499,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : null
       );
     }
+
+    // Sync user upgrade to InsForge DB
+    try {
+      fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: proof.userId,
+          total_connections: updatedTotal,
+          remaining_connections: updatedRemaining,
+          subscription_tier: updatedTier,
+        }),
+      }).catch(() => {});
+    } catch (e) {}
 
     // Mark invoice PAID
     setInvoices((prev) =>
@@ -1436,9 +1574,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     amount: number;
     currency: string;
     paymentMethod: string;
+    connectionsCount?: number;
+    billingCycle?: 'MONTHLY' | 'ANNUAL';
+    cardLast4?: string;
   }): Promise<{ success: boolean; invoice: Invoice }> => {
-    const connectionsToAdd = params.planSlug.includes('VIP') ? 300 : params.planSlug.includes('PREMIUM') ? 100 : 30;
-    const targetTier: SubscriptionTier = params.planSlug.includes('VIP') ? 'PREMIUM_PLUS' : params.planSlug.includes('PREMIUM') ? 'PREMIUM' : 'BASIC';
+    const rawSlug = (params.planSlug || '').toUpperCase();
+    const rawName = (params.planName || '').toUpperCase();
+    const isExtraPack =
+      rawSlug.startsWith('PACK') ||
+      rawSlug.startsWith('EXTRA') ||
+      rawSlug.includes('PACK_') ||
+      rawSlug.includes('PACK-') ||
+      rawName.includes('EXTRA') ||
+      rawName.includes('BOOSTER') ||
+      rawName.includes('TOP-UP');
+
+    let connectionsToAdd = params.connectionsCount || 30;
+    if (isExtraPack) {
+      if (!params.connectionsCount) {
+        if (rawSlug.includes('100') || rawName.includes('100')) connectionsToAdd = 100;
+        else if (rawSlug.includes('50') || rawName.includes('50')) connectionsToAdd = 50;
+        else if (rawSlug.includes('30') || rawName.includes('30')) connectionsToAdd = 30;
+        else if (rawSlug.includes('10') || rawName.includes('10')) connectionsToAdd = 10;
+        else connectionsToAdd = 10;
+      }
+    } else {
+      connectionsToAdd = rawSlug.includes('VIP') ? 300 : rawSlug.includes('PREMIUM') ? 100 : 30;
+    }
+
+    const targetTier: SubscriptionTier = isExtraPack
+      ? (currentUser?.subscriptionTier || 'BASIC')
+      : rawSlug.includes('VIP')
+      ? 'PREMIUM_PLUS'
+      : rawSlug.includes('PREMIUM')
+      ? 'PREMIUM'
+      : 'BASIC';
+
     const invoiceNum = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     const newInvoice: Invoice = {
@@ -1456,16 +1627,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     if (currentUser) {
+      const newTotal = (currentUser.totalConnections || 0) + connectionsToAdd;
+      const newRemaining = (currentUser.remainingConnections || 0) + connectionsToAdd;
+
       const updated: User = {
         ...currentUser,
         subscriptionTier: targetTier,
-        totalConnections: (currentUser.totalConnections || 0) + connectionsToAdd,
-        remainingConnections: (currentUser.remainingConnections || 0) + connectionsToAdd,
+        totalConnections: newTotal,
+        remainingConnections: newRemaining,
         isVerified: true,
         accountStatus: 'ACTIVE',
       };
       setCurrentUser(updated);
       setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updated : u)));
+
+      // Sync to InsForge DB
+      try {
+        fetch('/api/users', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: currentUser.id,
+            total_connections: newTotal,
+            remaining_connections: newRemaining,
+            subscription_tier: targetTier,
+          }),
+        }).catch(() => {});
+      } catch (e) {}
     }
 
     setInvoices((prev) => [newInvoice, ...prev]);

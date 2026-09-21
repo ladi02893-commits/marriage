@@ -24,7 +24,7 @@ export default function PrivacyPage() {
         <div className="space-y-3">
           <h2 className="text-lg font-bold text-foreground font-serif">1. Commitment to Matrimonial Confidentiality</h2>
           <p>
-            TRUEPAIR ("we", "our", or "the Bureau") operates with the highest standards of confidentiality. We understand the deeply sensitive nature of matrimonial profiles, family histories, and personal preferences.
+            VIP Royal Matchmaking ("we", "our", or "the Bureau") operates with the highest standards of confidentiality. We understand the deeply sensitive nature of matrimonial profiles, family histories, and personal preferences.
           </p>
         </div>
 

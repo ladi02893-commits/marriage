@@ -75,7 +75,7 @@ export default function FamilyAccessPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <div className="inline-flex items-center gap-1.5 rounded-full border border-gold-500/40 bg-gold-500/10 px-3 py-0.5 text-xs font-bold text-gold-700 dark:text-gold-300 mb-1">
-            <Crown className="h-3.5 w-3.5 text-gold-500" /> Section 28: Family Collaboration
+            <Crown className="h-3.5 w-3.5 text-gold-500" /> Family Collaboration & Access
           </div>
           <h1 className="text-2xl font-bold font-serif text-foreground">
             Family Member Access & Permissions

@@ -23,7 +23,7 @@ export default function TermsPage() {
         <div className="space-y-3">
           <h2 className="text-lg font-bold text-foreground font-serif">1. Eligibility for Matrimonial Membership</h2>
           <p>
-            TRUEPAIR is exclusively dedicated to individuals seeking lawful, lifelong matrimonial marriage. By registering, you affirm that you are of legal minimum marriageable age (at least 18 years of age) and legally eligible to enter into matrimony.
+            VIP Royal Matchmaking is exclusively dedicated to individuals seeking lawful, lifelong matrimonial marriage. By registering, you affirm that you are of legal minimum marriageable age (at least 18 years of age) and legally eligible to enter into matrimony.
           </p>
         </div>
 

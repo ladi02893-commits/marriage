@@ -177,7 +177,7 @@ export default function MessagesChatPage() {
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-gradient-to-b from-transparent to-muted/10">
                 {/* Privacy Banner inside chat */}
                 <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-3 text-center text-[11px] text-brand-900 dark:border-brand-950 dark:bg-brand-950/30 dark:text-brand-200">
-                  🔒 <strong>TRUEPAIR Family Shield:</strong> For your personal safety, never disclose sensitive financial passwords or bank transfer coordinates in private chat.
+                  🔒 <strong>VIP ROYAL Family Shield:</strong> For your personal safety, never disclose sensitive financial passwords or bank transfer coordinates in private chat.
                 </div>
 
                 {activeMessages.map((msg) => {

@@ -70,7 +70,7 @@ export default function VerificationHubPage() {
             <h3 className="text-base font-bold text-foreground">Current Verification Status</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {currentUser?.isVerified
-                ? 'Your government identity document and facial biometric selfie have been verified by TRUEPAIR compliance officers. The Blue Shield badge is prominently displayed on your profile card.'
+                ? 'Your government identity document and facial biometric selfie have been verified by VIP Royal compliance officers. The Blue Shield badge is prominently displayed on your profile card.'
                 : userVerif
                 ? `Verification request (${userVerif.documentType}) is currently ${userVerif.status.toLowerCase()}. Our compliance team will audit it shortly.`
                 : 'You have not yet submitted your government ID. Submit below to gain the verified badge.'}

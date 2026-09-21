@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Crown,
   Users,
@@ -27,6 +28,7 @@ import { Footer } from '@/components/footer';
 import { toast } from 'sonner';
 
 export default function ConsultantPortalPage() {
+  const router = useRouter();
   const {
     currentUser,
     users,
@@ -37,6 +39,25 @@ export default function ConsultantPortalPage() {
     addConsultantRecommendation,
     addConsultantNote,
   } = useAuth();
+
+  useEffect(() => {
+    if (!currentUser) {
+      router.push('/login?redirect=/consultant');
+    } else if (currentUser.role === 'USER') {
+      router.push('/dashboard/consultant');
+    }
+  }, [currentUser, router]);
+
+  if (!currentUser || currentUser.role === 'USER') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="text-center space-y-3">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-gold-500 border-r-transparent" />
+          <p className="text-xs text-muted-foreground">Verifying consultant clearance & family dossier access...</p>
+        </div>
+      </div>
+    );
+  }
 
   const activeConsultant = consultants[0] || {
     id: 'consultant-1',

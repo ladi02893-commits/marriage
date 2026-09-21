@@ -74,7 +74,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-foreground">Phone & WhatsApp Concierge</h4>
-                  <p className="text-muted-foreground mt-0.5">+44 (0) 20 7946 0912 (Mon - Fri: 9am - 7pm GMT)</p>
+                  <p className="text-muted-foreground mt-0.5">+92 300 1234567 (Mon - Sat: 10am - 7pm PKT)</p>
                 </div>
               </div>
 
@@ -84,7 +84,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-foreground">Email Support Desk</h4>
-                  <p className="text-muted-foreground mt-0.5">concierge@truepair.com / support@truepair.com</p>
+                  <p className="text-muted-foreground mt-0.5">concierge@viproyalmatchmaking.com / support@viproyalmatchmaking.com</p>
                 </div>
               </div>
             </div>

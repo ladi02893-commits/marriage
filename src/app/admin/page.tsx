@@ -132,10 +132,10 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Monthly Recurring Revenue */}
+        {/* Package & Connection Revenue */}
         <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-400">Monthly Recurring Revenue</span>
+            <span className="text-xs font-semibold text-zinc-400">Package & Connection Revenue</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-800 text-emerald-400">
               <DollarSign className="h-4 w-4" />
             </div>
@@ -144,14 +144,14 @@ export default function AdminDashboardPage() {
             PKR {totalRevenue.toLocaleString()}
           </div>
           <div className="text-[11px] text-zinc-400">
-            From verified subscriptions
+            From verified connection packages
           </div>
         </div>
 
         {/* Premium VIP Subscribers */}
         <div className="rounded-3xl border border-zinc-800 bg-zinc-900/80 p-5 shadow-sm space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-400">Paid VIP Subscribers</span>
+            <span className="text-xs font-semibold text-zinc-400">Paid VIP Members</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-zinc-800 text-amber-400">
               <CreditCard className="h-4 w-4" />
             </div>
@@ -186,7 +186,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white">Revenue Ledger Trend (PKR)</h3>
-              <p className="text-xs text-zinc-400">Monthly subscription proceeds across all packages</p>
+              <p className="text-xs text-zinc-400">Connection package & top-up proceeds across all tiers</p>
             </div>
             <Link
               href="/admin/payments"

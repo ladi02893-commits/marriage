@@ -84,7 +84,7 @@ export default function AdminSystemSettingsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
           <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">
-            <Crown className="h-4 w-4" /> Section 84: System Settings & Engine Governance
+            <Crown className="h-4 w-4" /> System Settings & Engine Governance
           </div>
           <h1 className="text-2xl font-bold font-serif text-white">Platform Settings & Control</h1>
           <p className="text-xs text-zinc-400 mt-0.5">
@@ -119,7 +119,7 @@ export default function AdminSystemSettingsPage() {
             </div>
 
             <div>
-              <label className="text-zinc-400 font-semibold block mb-1">Profile ID Prefix (Section 7)</label>
+              <label className="text-zinc-400 font-semibold block mb-1">Profile ID Prefix</label>
               <input
                 type="text"
                 value={profilePrefix}
@@ -198,7 +198,7 @@ export default function AdminSystemSettingsPage() {
         <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6 space-y-4 shadow-xl">
           <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Percent className="h-4 w-4 text-amber-500" /> Tax & Service Fee System (Section 35)
+              <Percent className="h-4 w-4 text-amber-500" /> Tax & Service Fee System
             </h3>
             <label className="flex items-center gap-2 text-xs text-zinc-300 font-semibold cursor-pointer">
               <input
@@ -248,7 +248,7 @@ export default function AdminSystemSettingsPage() {
         <div className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6 space-y-4 shadow-xl md:col-span-2">
           <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <Scale className="h-4 w-4 text-amber-500" /> Matching Engine Compatibility Weights (Section 15)
+              <Scale className="h-4 w-4 text-amber-500" /> Matching Engine Compatibility Weights
             </h3>
             <span
               className={`text-xs font-mono font-bold ${

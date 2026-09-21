@@ -18,7 +18,7 @@ export default function StoriesPage() {
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-brand-600">Celebrations of Love</span>
           <h1 className="text-3xl sm:text-5xl font-bold font-serif text-foreground">
-            TRUEPAIR Matrimonial Success Stories
+            VIP Royal Matrimonial Success Stories
           </h1>
           <p className="text-xs sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
             Real stories from doctors, engineers, executives, and accomplished couples who discovered their life partners on our platform.
@@ -56,7 +56,7 @@ export default function StoriesPage() {
         {/* Submit Your Story Box */}
         <div className="rounded-3xl border border-brand-200 bg-gradient-to-r from-brand-50 to-rose-50 p-8 sm:p-12 text-center dark:border-brand-900 dark:from-brand-950/40 dark:to-rose-950/20">
           <Heart className="h-8 w-8 text-brand-600 fill-brand-600 mx-auto mb-3" />
-          <h3 className="text-2xl font-bold text-foreground font-serif">Did You Meet Your Spouse on TRUEPAIR?</h3>
+          <h3 className="text-2xl font-bold text-foreground font-serif">Did You Meet Your Spouse on VIP Royal?</h3>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto mt-1 mb-6">
             We would be honored to feature your love story and wedding photographs to inspire prospective members.
           </p>

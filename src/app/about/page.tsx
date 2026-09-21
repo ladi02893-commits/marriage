@@ -13,7 +13,7 @@ export default function AboutPage() {
 
       <div className="border-b border-border bg-brand-50/40 py-16 text-center dark:bg-brand-950/20">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-brand-600">About TRUEPAIR</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-brand-600">About VIP Royal Matchmaking</span>
           <h1 className="text-3xl sm:text-5xl font-bold font-serif text-foreground">
             Where Compatibility Meets Commitment
           </h1>
@@ -32,7 +32,7 @@ export default function AboutPage() {
               Reinventing the Marriage Bureau for the Modern Era
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              In an age of fleeting swipe culture, TRUEPAIR was created specifically for individuals and families seeking genuine, lifelong commitment. We understand that marriage is a profound union of hearts, core moral values, intellect, and family traditions.
+              In an age of fleeting swipe culture, VIP Royal Matchmaking was created specifically for individuals and families seeking genuine, lifelong commitment. We understand that marriage is a profound union of hearts, core moral values, intellect, and family traditions.
             </p>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
               Our multi-criteria compatibility engine combines lifestyle, career goals, family values, and religious preferences to recommend candidates with deep mutual alignment.

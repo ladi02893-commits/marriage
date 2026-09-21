@@ -111,7 +111,7 @@ export default function AdminConsultantsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
           <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">
-            <Crown className="h-4 w-4" /> Section 54: Admin Consultant Management
+            <Crown className="h-4 w-4" /> Senior Family Concierge Team
           </div>
           <h1 className="text-2xl font-bold font-serif text-white">Senior Family Consultants</h1>
           <p className="text-xs text-zinc-400 mt-0.5">

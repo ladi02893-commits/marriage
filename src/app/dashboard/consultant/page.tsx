@@ -133,7 +133,7 @@ export default function UserConsultantPage() {
               <Calendar className="h-4 w-4" /> Book Appointment
             </button>
             <a
-              href={`https://wa.me/${consultant.phone?.replace(/[^0-9]/g, '') || '923008492011'}`}
+              href={`https://wa.me/${(consultant.whatsappNumber || consultant.phone)?.replace(/[^0-9]/g, '') || '923008492011'}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 hover:bg-white/20 px-4 py-3 text-xs font-semibold text-white transition backdrop-blur-md"

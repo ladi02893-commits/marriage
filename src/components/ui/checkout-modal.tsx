@@ -200,6 +200,7 @@ export function CheckoutModal({
             amount: finalAmount,
             currency: currencyConfig.code,
             paymentMethod: `Credit / Debit Card (${cardNumber.slice(-4) || 'Online'})`,
+            connectionsCount: plan.connectionsLimit || plan.connectionLimit || (plan.limits as any)?.connectionsCount,
             billingCycle,
             cardLast4: cardNumber.slice(-4) || '4242',
           });

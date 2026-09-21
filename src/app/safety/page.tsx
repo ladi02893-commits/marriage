@@ -29,7 +29,7 @@ export default function SafetyPage() {
         {/* Verification Process Grid */}
         <div className="space-y-6">
           <h2 className="text-2xl font-bold font-serif text-foreground text-center">
-            The 3-Layer TruePair Verification Standard
+            The 3-Layer VIP Royal Verification Standard
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-3">
@@ -85,7 +85,7 @@ export default function SafetyPage() {
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Never Transfer Funds
               </h4>
               <p>
-                TRUEPAIR members will never ask for monetary transfers or financial assistance. Report any financial solicitation to our moderation desk immediately.
+                VIP Royal Matchmaking members will never ask for monetary transfers or financial assistance. Report any financial solicitation to our moderation desk immediately.
               </p>
             </div>
 

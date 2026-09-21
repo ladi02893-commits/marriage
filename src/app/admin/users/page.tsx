@@ -117,7 +117,7 @@ export default function UserManagementPage() {
           >
             <option value="ALL">All Statuses</option>
             <option value="ACTIVE">Active</option>
-            <option value="SUSPENDED">Suspended (Section 66)</option>
+            <option value="SUSPENDED">Suspended Account</option>
             <option value="BANNED">Banned (Permanent)</option>
           </select>
 
@@ -348,7 +348,7 @@ export default function UserManagementPage() {
             <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
               <div className="flex items-center gap-2">
                 <RotateCcw className="h-4 w-4 text-amber-500" />
-                <h4 className="font-bold text-sm">Refund 1 Connection Credit (Section 83)</h4>
+                <h4 className="font-bold text-sm">Refund 1 Connection Credit</h4>
               </div>
               <button onClick={() => setRefundModalUser(null)} className="text-zinc-400 hover:text-white">
                 ✕

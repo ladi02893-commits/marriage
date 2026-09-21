@@ -66,7 +66,7 @@ export default function AdminSupportManagementPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
           <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-500 mb-1">
-            <HelpCircle className="h-4 w-4" /> Section 56: Admin Helpdesk & Inquiries
+            <HelpCircle className="h-4 w-4" /> Admin Helpdesk & Inquiries
           </div>
           <h1 className="text-2xl font-bold font-serif text-white">Support Tickets & Disputes</h1>
           <p className="text-xs text-zinc-400 mt-0.5">

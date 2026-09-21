@@ -187,7 +187,7 @@ export default function AdminSubscriptionsPage() {
                   <div className="space-y-3 bg-zinc-950 p-4 rounded-2xl border border-zinc-800 animate-in fade-in">
                     <div>
                       <label className="text-[10px] font-bold text-amber-400 block mb-1">
-                        Monthly Base Price (PKR) *
+                        Package Base Price (PKR) *
                       </label>
                       <input
                         type="number"
@@ -292,7 +292,7 @@ export default function AdminSubscriptionsPage() {
                             <Globe className="h-3 w-3" /> In {previewCountry}:
                           </span>
                           <span className="font-mono text-xs font-bold text-white">
-                            {localizedMonthly.formatted} / mo
+                            {localizedMonthly.formatted} (Fixed Package)
                           </span>
                         </div>
                         <div className="text-[10px] text-zinc-400 flex items-center justify-between pt-1 border-t border-amber-500/15">
