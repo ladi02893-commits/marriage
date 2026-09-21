@@ -46,6 +46,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => clearInterval(intervalId);
   }, [refreshDatabase]);
 
+  // Role & Access Security Guard
+  React.useEffect(() => {
+    if (currentUser === null) {
+      // If logged out completely, send to login
+      const timeout = setTimeout(() => {
+        router.push('/login?redirect=/admin');
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [currentUser, router]);
+
   const pendingVerifsCount = verifications.filter((v) => v.status === 'PENDING').length;
   const pendingPaymentsCount = (paymentProofs || []).filter((p) => p.status === 'PENDING').length;
   const openReportsCount = reports.filter((r) => r.status === 'OPEN').length;
@@ -66,6 +77,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Platform Settings', href: '/admin/settings', icon: Sliders },
     { name: 'Audit Logs', href: '/admin/audit-logs', icon: History },
   ];
+
+  if (currentUser && currentUser.role === 'USER') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white p-6">
+        <div className="max-w-md w-full rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center space-y-4 shadow-2xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+            <ShieldAlert className="h-7 w-7" />
+          </div>
+          <h2 className="text-xl font-bold font-serif text-white">Administrative Clearance Required</h2>
+          <p className="text-xs text-zinc-400">
+            Your current logged-in account ({currentUser.name}) does not have administrative privileges to access the VIP Royal Matchmaking Control Room.
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/dashboard"
+              className="inline-block w-full rounded-xl bg-amber-500 py-2.5 text-xs font-bold text-black hover:bg-amber-400 transition"
+            >
+              Return to Member Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-zinc-950 text-zinc-100 selection:bg-amber-500 selection:text-black">
@@ -165,7 +200,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-black font-bold">
               <ShieldAlert className="h-4 w-4" />
             </div>
-            <span className="font-serif font-bold text-base text-white">TRUEPAIR ADMIN</span>
+            <span className="font-serif font-bold text-base text-white">VIP ROYAL ADMIN</span>
           </Link>
 
           <button

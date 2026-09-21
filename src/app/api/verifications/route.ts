@@ -105,6 +105,14 @@ export async function PATCH(req: NextRequest) {
           .from('users')
           .update({ is_verified: true })
           .eq('id', updated.user_id);
+
+        await insforgeAdmin.database
+          .from('matrimonial_profiles')
+          .update({
+            verification_badge: 'APPROVED',
+            is_identity_verified: true,
+          })
+          .eq('user_id', updated.user_id);
       } catch (uErr) {
         console.warn('User badge update notice:', uErr);
       }

@@ -22,7 +22,7 @@ import { Consultant } from '@/lib/types';
 import { toast } from 'sonner';
 
 export default function AdminConsultantsPage() {
-  const { consultants, users, assignConsultant } = useAuth();
+  const { consultants, users, assignConsultant, addConsultant, deleteConsultant } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedConsultant, setSelectedConsultant] = useState<Consultant | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -33,12 +33,13 @@ export default function AdminConsultantsPage() {
   const [consultantForm, setConsultantForm] = useState({
     name: '',
     title: 'Senior Family Matchmaking Consultant',
-    phone: '+92 300 ',
-    email: '@viproyalmatch.pk',
+    phone: '+92 300 1234567',
+    whatsappNumber: '+92 300 1234567',
+    email: 'consultant@viproyalmatch.pk',
     experienceYears: 15,
     specialization: 'Prominent & Noble Families',
     photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600',
-    bio: '',
+    bio: 'Dedicated royal matchmaking consultant helping noble families connect with dignity and compatibility.',
   });
 
   const handleOpenAssign = (consultant: Consultant) => {
@@ -67,8 +68,39 @@ export default function AdminConsultantsPage() {
       return;
     }
 
-    toast.success(`Consultant ${consultantForm.name} registered successfully.`);
+    const newConsultant: Consultant = {
+      id: `consultant-${Date.now()}`,
+      name: consultantForm.name.trim(),
+      title: consultantForm.title.trim() || 'Senior Family Matchmaking Consultant',
+      phone: consultantForm.phone.trim() || '+92 300 1234567',
+      whatsappNumber: consultantForm.whatsappNumber?.trim() || consultantForm.phone.trim() || '+92 300 1234567',
+      email: consultantForm.email.trim() || `${consultantForm.name.toLowerCase().replace(/[^a-z0-9]/g, '')}@viproyalmatch.pk`,
+      experienceYears: Number(consultantForm.experienceYears) || 10,
+      specialization: consultantForm.specialization.trim() || 'Prominent & Noble Families',
+      avatarUrl: consultantForm.photoUrl,
+      photoUrl: consultantForm.photoUrl,
+      bio: consultantForm.bio || 'Dedicated royal matchmaking consultant helping noble families connect with dignity and compatibility.',
+      assignedClientIds: [],
+      isActive: true,
+      rating: 5.0,
+      consultationsCompleted: 0,
+      availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      workingHours: '10:00 AM - 07:00 PM',
+    };
+
+    addConsultant(newConsultant);
     setIsAddModalOpen(false);
+    setConsultantForm({
+      name: '',
+      title: 'Senior Family Matchmaking Consultant',
+      phone: '+92 300 1234567',
+      whatsappNumber: '+92 300 1234567',
+      email: 'consultant@viproyalmatch.pk',
+      experienceYears: 15,
+      specialization: 'Prominent & Noble Families',
+      photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600',
+      bio: 'Dedicated royal matchmaking consultant helping noble families connect with dignity and compatibility.',
+    });
   };
 
   // VIP members available for assignment
@@ -149,6 +181,19 @@ export default function AdminConsultantsPage() {
                 >
                   Open Portal
                 </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to remove ${c.name} from the active consultant registry?`)) {
+                      deleteConsultant(c.id);
+                    }
+                  }}
+                  className="rounded-xl border border-rose-800/60 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 p-2 text-xs transition"
+                  title="Remove Consultant"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
           );
@@ -254,6 +299,30 @@ export default function AdminConsultantsPage() {
                     type="text"
                     value={consultantForm.phone}
                     onChange={(e) => setConsultantForm((p) => ({ ...p, phone: e.target.value }))}
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-zinc-200 focus:outline-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold block mb-1">WhatsApp Direct Number</label>
+                  <input
+                    type="text"
+                    value={consultantForm.whatsappNumber}
+                    onChange={(e) => setConsultantForm((p) => ({ ...p, whatsappNumber: e.target.value }))}
+                    placeholder="+92 300 1234567"
+                    className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-zinc-200 focus:outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold block mb-1">Experience (Years)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={consultantForm.experienceYears}
+                    onChange={(e) => setConsultantForm((p) => ({ ...p, experienceYears: Number(e.target.value) }))}
                     className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-zinc-200 focus:outline-none font-mono"
                   />
                 </div>

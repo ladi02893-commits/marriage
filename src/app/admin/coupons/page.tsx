@@ -11,6 +11,11 @@ export default function AdminCouponsPage() {
   const [newCode, setNewCode] = useState('');
   const [newPercent, setNewPercent] = useState<number>(20);
   const [newLimit, setNewLimit] = useState<number>(200);
+  const [newExpiry, setNewExpiry] = useState<string>(() => {
+    const nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+    return nextYear.toISOString().split('T')[0];
+  });
 
   const handleCreateCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +25,7 @@ export default function AdminCouponsPage() {
       id: `coup-${Date.now()}`,
       code: newCode.trim().toUpperCase(),
       discountPercent: newPercent,
-      expiresAt: '2025-12-31T23:59:59Z',
+      expiresAt: new Date(`${newExpiry}T23:59:59Z`).toISOString(),
       usageLimit: newLimit,
       timesUsed: 0,
       isActive: true,
@@ -28,7 +33,7 @@ export default function AdminCouponsPage() {
 
     addCoupon(newC);
     setNewCode('');
-    toast.success(`Coupon ${newC.code} generated successfully!`);
+    toast.success(`Coupon ${newC.code} generated successfully (Valid until ${newExpiry})!`);
   };
 
   const handleToggleCouponStatus = (id: string) => {
@@ -53,7 +58,7 @@ export default function AdminCouponsPage() {
           <Plus className="h-4 w-4 text-amber-500" /> Generate New Discount Voucher
         </h3>
 
-        <form onSubmit={handleCreateCoupon} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <form onSubmit={handleCreateCoupon} className="grid grid-cols-1 sm:grid-cols-5 gap-3">
           <div>
             <label className="text-[10px] font-bold text-zinc-400 block mb-1">Coupon Code</label>
             <input
@@ -85,6 +90,17 @@ export default function AdminCouponsPage() {
               min={10}
               value={newLimit}
               onChange={(e) => setNewLimit(Number(e.target.value))}
+              className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2 text-xs text-white"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-zinc-400 block mb-1">Expiry Date</label>
+            <input
+              type="date"
+              required
+              value={newExpiry}
+              onChange={(e) => setNewExpiry(e.target.value)}
               className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2 text-xs text-white"
             />
           </div>

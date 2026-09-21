@@ -45,7 +45,53 @@ export default function AdminAnalyticsDeepDivePage() {
   ];
 
   const handleExportCSV = () => {
-    toast.success('Exporting platform business metrics as CSV...');
+    try {
+      const rows: string[][] = [
+        ['VIP Royal Matchmaking - SaaS Platform Analytics Report'],
+        [`Generated At: ${new Date().toISOString()}`],
+        [],
+        ['User Acquisition & Conversion Funnel'],
+        ['Stage', 'Count', 'Conversion Rate (%)'],
+      ];
+
+      const topCount = conversionFunnel[0]?.count || 1;
+      conversionFunnel.forEach((item) => {
+        const rate = ((item.count / topCount) * 100).toFixed(2);
+        rows.push([item.stage, item.count.toString(), `${rate}%`]);
+      });
+
+      rows.push([]);
+      rows.push(['Demographic Religious Split']);
+      rows.push(['Community / Religion', 'Percentage Share (%)']);
+      religionDistribution.forEach((rel) => {
+        rows.push([rel.name, `${rel.value}%`]);
+      });
+
+      const csvContent = rows
+        .map((row) =>
+          row
+            .map((cell) => {
+              const escaped = cell.replace(/"/g, '""');
+              return `"${escaped}"`;
+            })
+            .join(',')
+        )
+        .join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `vip_royal_analytics_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success('Analytics CSV report downloaded successfully!');
+    } catch (err) {
+      toast.error('Failed to generate CSV export.');
+    }
   };
 
   return (

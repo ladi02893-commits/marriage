@@ -134,6 +134,8 @@ interface AuthContextType {
 
   // Consultant Concierge (Sections 24-27)
   assignConsultant: (userId: string, consultantId: string) => void;
+  addConsultant: (consultant: Consultant) => void;
+  deleteConsultant: (consultantId: string) => void;
   addConsultantRecommendation: (userId: string, targetProfileId: string, note: string) => void;
   addConsultantNote: (userId: string, consultantId: string, note: string, isPrivate?: boolean) => void;
 
@@ -191,6 +193,7 @@ interface AuthContextType {
   applyCoupon: (code: string) => { valid: boolean; discountPercent?: number; fixedDiscount?: number; message: string };
   addCoupon: (coupon: Coupon) => void;
   toggleCouponStatus: (couponId: string) => void;
+  updateCMS: (data: Partial<CMSContent>) => void;
   logAdminAction: (action: string, targetType: any, targetId: string, details: string) => void;
 }
 
@@ -676,6 +679,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     toast.success('Senior Consultant assigned successfully!');
     logAdminAction('ASSIGN_CONSULTANT', 'CONSULTANT', consultantId, `Assigned consultant ${consultantId} to client ${userId}`);
+  };
+
+  const addConsultant = (consultantData: Consultant) => {
+    setConsultants((prev) => [consultantData, ...prev]);
+    toast.success(`Senior Consultant ${consultantData.name} registered.`);
+    logAdminAction('CREATE_CONSULTANT', 'CONSULTANT', consultantData.id, `Created consultant ${consultantData.name}`);
+  };
+
+  const deleteConsultant = (consultantId: string) => {
+    setConsultants((prev) => prev.filter((c) => c.id !== consultantId));
+    toast.info('Consultant removed from registry.');
+    logAdminAction('DELETE_CONSULTANT', 'CONSULTANT', consultantId, `Deleted consultant ${consultantId}`);
   };
 
   const addConsultantRecommendation = (userId: string, targetProfileId: string, note: string) => {
@@ -1568,6 +1583,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCoupons((prev) => prev.map((c) => (c.id === couponId ? { ...c, isActive: !c.isActive } : c)));
   };
 
+  const updateCMS = (data: Partial<CMSContent>) => {
+    setCms((prev) => ({ ...prev, ...data }));
+    toast.success('Website CMS content updated and published!');
+    logAdminAction('UPDATE_CMS', 'CMS', 'HOMEPAGE', 'Updated marketing & FAQ content');
+  };
+
   const logAdminAction = (action: string, targetType: any, targetId: string, details: string) => {
     const newLog: AdminAuditLog = {
       id: `log-${Date.now()}`,
@@ -1637,6 +1658,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         unblockUser,
         isUserBlocked,
         assignConsultant,
+        addConsultant,
+        deleteConsultant,
         addConsultantRecommendation,
         addConsultantNote,
         sendMessage,
@@ -1672,6 +1695,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         applyCoupon,
         addCoupon,
         toggleCouponStatus,
+        updateCMS,
         logAdminAction,
       }}
     >

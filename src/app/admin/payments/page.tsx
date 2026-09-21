@@ -101,8 +101,8 @@ export default function AdminPaymentsManagementPage() {
     userName: '',
     userEmail: '',
     userPhone: '',
-    planSlug: 'PREMIUM',
-    amount: 15000,
+    planSlug: 'VIP',
+    amount: 10000,
     paymentMethod: 'BANK_TRANSFER',
     transactionId: '',
     senderAccountNumber: '',
@@ -207,23 +207,32 @@ export default function AdminPaymentsManagementPage() {
     }
 
     const planNames: Record<string, string> = {
-      BASIC: 'Basic Matchmaking Plan',
-      PREMIUM: 'Elite Executive Plan',
-      VIP: 'VIP Bespoke Matchmaking',
+      BASIC: 'Basic Package (30 Connections)',
+      PREMIUM: 'Premium Package (100 Connections)',
+      VIP: 'VIP Royal Package (300 Connections)',
+      PACK_10: '10 Extra Connections Pack',
+      PACK_30: '30 Extra Connections Pack',
+      PACK_50: '50 Extra Connections Pack',
+      PACK_100: '100 Extra Connections Pack',
     };
 
+    // Link with existing user if email matches
+    const existingUser = users.find(
+      (u) => u.email.toLowerCase() === manualForm.userEmail.trim().toLowerCase()
+    );
+
     submitPaymentProof({
-      userId: `user-${Date.now()}`,
-      userName: manualForm.userName,
-      userEmail: manualForm.userEmail,
-      userPhone: manualForm.userPhone || '+92 300 0000000',
+      userId: existingUser?.id || `user-${Date.now()}`,
+      userName: manualForm.userName.trim(),
+      userEmail: manualForm.userEmail.trim(),
+      userPhone: manualForm.userPhone.trim() || '+92 300 0000000',
       planSlug: manualForm.planSlug,
       planName: planNames[manualForm.planSlug] || manualForm.planSlug,
       amount: Number(manualForm.amount),
       currency: 'PKR',
       paymentMethod: manualForm.paymentMethod as any,
-      transactionId: manualForm.transactionId,
-      senderAccountNumber: manualForm.senderAccountNumber,
+      transactionId: manualForm.transactionId.trim(),
+      senderAccountNumber: manualForm.senderAccountNumber.trim(),
       screenshotUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
     });
 
@@ -233,8 +242,8 @@ export default function AdminPaymentsManagementPage() {
       userName: '',
       userEmail: '',
       userPhone: '',
-      planSlug: 'PREMIUM',
-      amount: 15000,
+      planSlug: 'VIP',
+      amount: 10000,
       paymentMethod: 'BANK_TRANSFER',
       transactionId: '',
       senderAccountNumber: '',
@@ -1530,18 +1539,30 @@ export default function AdminPaymentsManagementPage() {
                     value={manualForm.planSlug}
                     onChange={(e) => {
                       const slug = e.target.value;
-                      const amounts: Record<string, number> = { BASIC: 0, PREMIUM: 15000, VIP: 35000 };
+                      const amounts: Record<string, number> = {
+                        BASIC: 2000,
+                        PREMIUM: 5000,
+                        VIP: 10000,
+                        PACK_10: 1000,
+                        PACK_30: 2500,
+                        PACK_50: 4000,
+                        PACK_100: 7500,
+                      };
                       setManualForm({
                         ...manualForm,
                         planSlug: slug,
-                        amount: amounts[slug] ?? 15000,
+                        amount: amounts[slug] ?? 5000,
                       });
                     }}
                     className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white focus:border-amber-500 focus:outline-none"
                   >
-                    <option value="PREMIUM">Elite Executive Plan (PKR 15,000)</option>
-                    <option value="VIP">VIP Bespoke Matchmaking (PKR 35,000)</option>
-                    <option value="BASIC">Basic Free Plan (PKR 0)</option>
+                    <option value="VIP">VIP Royal Package (300 Connections) — PKR 10,000</option>
+                    <option value="PREMIUM">Premium Package (100 Connections) — PKR 5,000</option>
+                    <option value="BASIC">Basic Package (30 Connections) — PKR 2,000</option>
+                    <option value="PACK_10">Top-Up: 10 Connections Pack — PKR 1,000</option>
+                    <option value="PACK_30">Top-Up: 30 Connections Pack — PKR 2,500</option>
+                    <option value="PACK_50">Top-Up: 50 Connections Pack — PKR 4,000</option>
+                    <option value="PACK_100">Top-Up: 100 Connections Pack — PKR 7,500</option>
                   </select>
                 </div>
               </div>

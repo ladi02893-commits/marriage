@@ -25,10 +25,12 @@ export default function AdminSystemSettingsPage() {
   const [profilePrefix, setProfilePrefix] = useState(settings.profileIdPrefix || 'VRM-');
 
   // Governance Toggles (Section 84)
-  const [allowRegistrations, setAllowRegistrations] = useState(true);
+  const [allowRegistrations, setAllowRegistrations] = useState(settings.allowNewRegistrations ?? true);
   const [requireProfileApproval, setRequireProfileApproval] = useState(settings.requireAdminProfileApproval ?? true);
   const [requireWhatsappVerification, setRequireWhatsappVerification] = useState(settings.requireWhatsAppVerification ?? true);
   const [requireEmailVerification, setRequireEmailVerification] = useState(settings.requireEmailVerification ?? true);
+  const [freeTierLimit, setFreeTierLimit] = useState(settings.freeTierConnectionsLimit || 30);
+  const [whatsappSupportNumber, setWhatsappSupportNumber] = useState(settings.whatsappSupportNumber || '+92 300 1234567');
 
   // Tax Settings (Section 35)
   const [taxEnabled, setTaxEnabled] = useState(settings.tax?.taxEnabled ?? false);
@@ -52,9 +54,12 @@ export default function AdminSystemSettingsPage() {
       siteName,
       minAge,
       profileIdPrefix: profilePrefix,
+      allowNewRegistrations: allowRegistrations,
       requireEmailVerification,
       requireWhatsAppVerification: requireWhatsappVerification,
       requireAdminProfileApproval: requireProfileApproval,
+      freeTierConnectionsLimit: Number(freeTierLimit),
+      whatsappSupportNumber: whatsappSupportNumber.trim(),
       tax: {
         taxEnabled,
         taxPercentage: Number(taxPercent),
@@ -122,6 +127,28 @@ export default function AdminSystemSettingsPage() {
                 className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-white font-mono uppercase"
               />
               <span className="text-[10px] text-zinc-500 mt-1 block">Output format: {profilePrefix}000001</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-zinc-400 font-semibold block mb-1">Free Tier Connections</label>
+                <input
+                  type="number"
+                  min={0}
+                  value={freeTierLimit}
+                  onChange={(e) => setFreeTierLimit(Number(e.target.value))}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-white font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-zinc-400 font-semibold block mb-1">WhatsApp Support Line</label>
+                <input
+                  type="text"
+                  value={whatsappSupportNumber}
+                  onChange={(e) => setWhatsappSupportNumber(e.target.value)}
+                  className="w-full rounded-xl border border-zinc-700 bg-zinc-950 p-2.5 text-white font-mono"
+                />
+              </div>
             </div>
 
             <div className="space-y-3 pt-2 border-t border-zinc-800">

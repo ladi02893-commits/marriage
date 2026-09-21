@@ -209,7 +209,7 @@ export default function AdminSubscriptionsPage() {
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-emerald-400 block mb-1">
-                        Connection / Interest Quota Limit (Monthly) *
+                        Package Connection Credits Limit *
                       </label>
                       <input
                         type="number"
@@ -262,7 +262,7 @@ export default function AdminSubscriptionsPage() {
                         <span className="text-2xl font-black font-serif text-white">
                           PKR {p.monthlyPrice.toLocaleString()}
                         </span>
-                        <span className="text-xs text-zinc-400">/ month</span>
+                        <span className="text-xs text-zinc-400 font-semibold">Fixed Package</span>
                       </div>
                       <div className="text-[11px] text-zinc-400 flex items-center justify-between">
                         <span>Annual: <strong>PKR {p.yearlyPrice.toLocaleString()}</strong></span>
@@ -280,7 +280,7 @@ export default function AdminSubscriptionsPage() {
                         <Zap className="h-3.5 w-3.5 text-emerald-400" /> Connection Limit:
                       </span>
                       <span className="font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-lg border border-emerald-800/60">
-                        {p.limits?.monthlyInterests || 2} Connections / mo
+                        {p.connectionsLimit ?? (p.slug === 'BASIC' ? 30 : p.slug === 'PREMIUM' ? 100 : 300)} Connection Credits
                       </span>
                     </div>
 
