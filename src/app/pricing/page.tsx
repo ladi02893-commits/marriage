@@ -83,14 +83,21 @@ export default function PricingPage() {
       id: pack.id,
       name: pack.name,
       slug: pack.id,
+      description: `${pack.connections} Extra Connection Credits Top-Up`,
+      currency: 'PKR',
       monthlyPrice: pack.pricePKR,
       yearlyPrice: pack.pricePKR,
+      connectionsLimit: pack.connections,
       connectionLimit: pack.connections,
       features: [`${pack.connections} Additional Connection Credits`, 'Valid with your current package', 'No monthly expiry'],
       badge: 'Top-Up Pack',
       isPopular: false,
       isActive: true,
       order: 10,
+      limits: {
+        connectionsCount: pack.connections,
+        directContactAccess: true,
+      },
     };
     setSelectedPlanForCheckout(pseudoPlan);
     setIsCheckoutOpen(true);

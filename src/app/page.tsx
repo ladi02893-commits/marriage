@@ -54,7 +54,9 @@ export default function HomePage() {
     router.push(`/search?profileId=${encodeURIComponent(quickProfileId.trim().toUpperCase())}`);
   };
 
-  const verifiedProfiles = profiles.filter((p) => p.isVerified).slice(0, 4);
+  const verifiedProfiles = profiles
+    .filter((p) => p.verificationBadge === 'APPROVED' || p.isWhatsappVerified || p.isVIPVerified || p.isVerified)
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">

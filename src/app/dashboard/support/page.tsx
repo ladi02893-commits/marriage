@@ -230,7 +230,7 @@ export default function SupportTicketsPage() {
               {/* Message Thread */}
               <div className="space-y-3 pt-1">
                 {t.messages.map((m) => {
-                  const isStaff = m.sender === 'AGENT' || m.sender === 'STAFF';
+                  const isStaff = m.sender === 'AGENT';
 
                   return (
                     <div

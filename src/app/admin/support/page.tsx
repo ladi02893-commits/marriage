@@ -44,7 +44,7 @@ export default function AdminSupportManagementPage() {
     e.preventDefault();
     if (!selectedTicket || !staffReply.trim()) return;
 
-    replySupportTicket(selectedTicket.id, staffReply.trim());
+    replySupportTicket(selectedTicket.id, staffReply.trim(), 'AGENT');
     toast.success(`Staff reply sent to ticket ${selectedTicket.id}`);
     setStaffReply('');
 
@@ -186,7 +186,7 @@ export default function AdminSupportManagementPage() {
               {/* Messages Thread */}
               <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                 {selectedTicket.messages.map((m) => {
-                  const isStaff = m.sender === 'AGENT' || m.sender === 'STAFF';
+                  const isStaff = m.sender === 'AGENT';
 
                   return (
                     <div

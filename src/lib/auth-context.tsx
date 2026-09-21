@@ -170,8 +170,8 @@ interface AuthContextType {
   refreshDatabase: () => Promise<void>;
 
   // Helpdesk & Tickets (Sections 46-49)
-  createSupportTicket: (ticketData: Partial<SupportTicket>) => SupportTicket;
-  replySupportTicket: (ticketId: string, text: string, sender: 'USER' | 'AGENT', attachmentUrl?: string) => void;
+  createSupportTicket: (ticketData: Partial<SupportTicket> & { message?: string }) => SupportTicket;
+  replySupportTicket: (ticketId: string, text: string, sender?: 'USER' | 'AGENT', attachmentUrl?: string) => void;
   updateTicketStatus: (ticketId: string, status: SupportTicketStatus) => void;
 
   // Family Member Access (Section 28)
@@ -720,7 +720,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Support Helpdesk (Sections 46-49)
-  const createSupportTicket = (data: Partial<SupportTicket>): SupportTicket => {
+  const createSupportTicket = (data: Partial<SupportTicket> & { message?: string }): SupportTicket => {
     const ticketCode = `SUP-${String(tickets.length + 124).padStart(6, '0')}`;
     const newTicket: SupportTicket = {
       id: `ticket-${Date.now()}`,
@@ -742,7 +742,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: `msg-t-${Date.now()}`,
           sender: 'USER',
           senderName: currentUser?.name || 'Member',
-          text: data.subject || 'Ticket created',
+          text: data.message || data.subject || 'Ticket created',
           timestamp: new Date().toISOString(),
         },
       ],
@@ -752,7 +752,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return newTicket;
   };
 
-  const replySupportTicket = (ticketId: string, text: string, sender: 'USER' | 'AGENT', attachmentUrl?: string) => {
+  const replySupportTicket = (ticketId: string, text: string, sender: 'USER' | 'AGENT' = 'USER', attachmentUrl?: string) => {
     setTickets((prev) =>
       prev.map((t) => {
         if (t.id === ticketId) {

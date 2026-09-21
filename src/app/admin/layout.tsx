@@ -21,6 +21,8 @@ import {
   X,
   Heart,
   ChevronRight,
+  Crown,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';

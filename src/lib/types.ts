@@ -164,11 +164,13 @@ export interface MatrimonialProfile {
   isFeatured: boolean;
   isBoosted: boolean;
   verificationBadge: VerificationStatus;
+  isVerified?: boolean;
   isWhatsappVerified?: boolean;
   isEmailVerified?: boolean;
   isIdentityVerified?: boolean;
   isVIPVerified?: boolean;
   approvalStatus: ProfileApprovalStatus;
+  isApproved?: boolean;
   viewCount: number;
   likeCount: number;
   fraudScore?: number;
@@ -431,6 +433,7 @@ export interface SubscriptionPlan {
   currency: string;
   durationMonths?: number;
   connectionsLimit?: number; // Primary connection quota (e.g. 30, 100, 300)
+  connectionLimit?: number;
   hasConsultant?: boolean;
   features: string[];
   limits: {
@@ -451,6 +454,7 @@ export interface SubscriptionPlan {
   isActive?: boolean;
   isPopular?: boolean;
   popular?: boolean;
+  order?: number;
 }
 
 export interface Invoice {
@@ -523,7 +527,8 @@ export type SupportCategory =
   | 'TECHNICAL'
   | 'REPORT_USER'
   | 'ACCOUNT'
-  | 'OTHER';
+  | 'OTHER'
+  | 'GENERAL';
 
 export type SupportTicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_FOR_USER' | 'RESOLVED' | 'CLOSED';
 
