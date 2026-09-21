@@ -1,6 +1,6 @@
 /**
  * Comprehensive Country-to-Currency Mapping and Location-Based Pricing Engine
- * Handles accurate mathematical localization of income, subscription packages, and financial ledgers
+ * Handles accurate mathematical localization of income, connection packages, and financial ledgers
  * based on candidate's country of residence or selected viewing country.
  */
 
@@ -16,8 +16,8 @@ export interface CurrencyConfig {
 
 export const COUNTRY_CURRENCY_MAP: Record<string, CurrencyConfig> = {
   // Pakistan (Domestic Reference Currency)
-  pakistan: { code: 'PKR', symbol: 'PKR', name: 'Pakistani Rupee', rateFromPKR: 1, rateToPKR: 1 },
-  pk: { code: 'PKR', symbol: 'PKR', name: 'Pakistani Rupee', rateFromPKR: 1, rateToPKR: 1 },
+  pakistan: { code: 'PKR', symbol: 'Rs.', name: 'Pakistani Rupee', rateFromPKR: 1, rateToPKR: 1 },
+  pk: { code: 'PKR', symbol: 'Rs.', name: 'Pakistani Rupee', rateFromPKR: 1, rateToPKR: 1 },
 
   // United States (1 USD = 278 PKR)
   'united states': { code: 'USD', symbol: '$', name: 'US Dollar', rateFromPKR: 1 / 278, rateToPKR: 278 },
@@ -73,28 +73,6 @@ export const COUNTRY_CURRENCY_MAP: Record<string, CurrencyConfig> = {
 
   // Bahrain (1 BHD = 737 PKR)
   bahrain: { code: 'BHD', symbol: 'BHD', name: 'Bahraini Dinar', rateFromPKR: 1 / 737, rateToPKR: 737 },
-
-  // New Zealand (1 NZD = 166 PKR)
-  'new zealand': { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar', rateFromPKR: 1 / 166, rateToPKR: 166 },
-  nz: { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar', rateFromPKR: 1 / 166, rateToPKR: 166 },
-
-  // Switzerland (1 CHF = 320 PKR)
-  switzerland: { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc', rateFromPKR: 1 / 320, rateToPKR: 320 },
-
-  // Malaysia (1 MYR = 64 PKR)
-  malaysia: { code: 'MYR', symbol: 'RM', name: 'Malaysian Ringgit', rateFromPKR: 1 / 64, rateToPKR: 64 },
-
-  // Singapore (1 SGD = 214 PKR)
-  singapore: { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', rateFromPKR: 1 / 214, rateToPKR: 214 },
-
-  // Turkey (1 TRY = 8 PKR)
-  turkey: { code: 'TRY', symbol: '₺', name: 'Turkish Lira', rateFromPKR: 1 / 8, rateToPKR: 8 },
-
-  // Sweden (1 SEK = 27 PKR)
-  sweden: { code: 'SEK', symbol: 'kr', name: 'Swedish Krona', rateFromPKR: 1 / 27, rateToPKR: 27 },
-
-  // Norway (1 NOK = 26 PKR)
-  norway: { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone', rateFromPKR: 1 / 26, rateToPKR: 26 },
 };
 
 /**
@@ -111,7 +89,6 @@ export function getCurrencyForCountry(country?: string): CurrencyConfig {
     return COUNTRY_CURRENCY_MAP[normalized];
   }
 
-  // Substring search for country match
   for (const [key, config] of Object.entries(COUNTRY_CURRENCY_MAP)) {
     if (normalized.includes(key)) {
       return config;
@@ -134,8 +111,8 @@ export function convertPKRToCountryCurrency(
   if (config.code === 'PKR') {
     return {
       amount: amountInPKR,
-      formatted: `PKR ${amountInPKR.toLocaleString()}`,
-      symbol: 'PKR',
+      formatted: `Rs. ${amountInPKR.toLocaleString()}`,
+      symbol: 'Rs.',
       code: 'PKR',
     };
   }
@@ -154,9 +131,6 @@ export function convertPKRToCountryCurrency(
 
 /**
  * Format a given amount in PKR into localized currency string
- * e.g. formatCurrencyByCountry(15000, 'Pakistan') -> "PKR 15,000"
- * e.g. formatCurrencyByCountry(15000, 'United States') -> "$54"
- * e.g. formatCurrencyByCountry(15000, 'United Kingdom') -> "£42"
  */
 export function formatCurrencyByCountry(
   amountInPKR: number,
@@ -171,10 +145,29 @@ export function formatCurrencyByCountry(
 }
 
 /**
+ * Primary Connection Packages & Additional Packs Base Prices (PKR)
+ * Section 2:
+ * Basic: Rs. 2,000 (30 Connections)
+ * Premium: Rs. 5,000 (100 Connections)
+ * VIP Royal: Rs. 10,000 (300 Connections)
+ */
+export const DEFAULT_PACKAGE_BASE_PRICES: Record<string, { price: number; connections: number; name: string }> = {
+  BASIC: { price: 2000, connections: 30, name: 'Basic Package' },
+  PREMIUM: { price: 5000, connections: 100, name: 'Premium Package' },
+  VIP: { price: 10000, connections: 300, name: 'VIP Royal Package' },
+  PREMIUM_PLUS: { price: 10000, connections: 300, name: 'VIP Royal Package' },
+  // Extra Connection Packs (Section 38)
+  PACK_10: { price: 800, connections: 10, name: '10 Extra Connections' },
+  PACK_30: { price: 2000, connections: 30, name: '30 Extra Connections' },
+  PACK_50: { price: 3200, connections: 50, name: '50 Extra Connections' },
+  PACK_100: { price: 5500, connections: 100, name: '100 Extra Connections' },
+};
+
+/**
  * Subscription package price calculation based on country and optional custom PKR base
  */
 export function getPackagePriceForCountry(
-  planSlug: 'BASIC' | 'PREMIUM' | 'VIP' | string,
+  planSlug: string,
   country?: string,
   customBasePKR?: number
 ): {
@@ -183,36 +176,27 @@ export function getPackagePriceForCountry(
   symbol: string;
   formatted: string;
   billingPeriod: string;
+  connections: number;
   rawPKR: number;
 } {
   const config = getCurrencyForCountry(country);
-
-  // Standard PKR defaults if no custom PKR price is passed
-  const defaultBasePrices: Record<string, number> = {
-    BASIC: 0,
-    FREE: 0,
-    PREMIUM: 15000,
-    VIP: 35000,
-    PREMIUM_PLUS: 35000,
+  const rawKey = (planSlug || '').toUpperCase();
+  const pkgMeta = DEFAULT_PACKAGE_BASE_PRICES[rawKey] || {
+    price: rawKey.includes('VIP') ? 10000 : rawKey.includes('PREMIUM') ? 5000 : 2000,
+    connections: rawKey.includes('VIP') ? 300 : rawKey.includes('PREMIUM') ? 100 : 30,
+    name: 'Connection Package',
   };
 
-  const rawKey = (planSlug || '').toUpperCase();
-  let defaultPrice = defaultBasePrices[rawKey];
-  if (defaultPrice === undefined) {
-    if (rawKey.includes('VIP') || rawKey.includes('ROYAL') || rawKey.includes('PLUS')) defaultPrice = 35000;
-    else if (rawKey.includes('PREMIUM') || rawKey.includes('ELITE')) defaultPrice = 15000;
-    else defaultPrice = 0;
-  }
-
-  const pkrPrice = customBasePKR !== undefined ? customBasePKR : defaultPrice;
+  const pkrPrice = customBasePKR !== undefined ? customBasePKR : pkgMeta.price;
 
   if (pkrPrice === 0) {
     return {
       amount: 0,
       currency: config.code,
       symbol: config.symbol,
-      formatted: 'Free Forever',
-      billingPeriod: 'Free Starter Plan',
+      formatted: 'Free Connections',
+      billingPeriod: 'Free Starter Quota',
+      connections: pkgMeta.connections,
       rawPKR: 0,
     };
   }
@@ -221,9 +205,10 @@ export function getPackagePriceForCountry(
     return {
       amount: pkrPrice,
       currency: 'PKR',
-      symbol: 'PKR',
-      formatted: `PKR ${pkrPrice.toLocaleString()}`,
-      billingPeriod: 'per month',
+      symbol: 'Rs.',
+      formatted: `Rs. ${pkrPrice.toLocaleString()}`,
+      billingPeriod: `${pkgMeta.connections} Connections Included`,
+      connections: pkgMeta.connections,
       rawPKR: pkrPrice,
     };
   }
@@ -235,7 +220,8 @@ export function getPackagePriceForCountry(
     currency: config.code,
     symbol: config.symbol,
     formatted: `${config.symbol}${convertedAmount.toLocaleString()}`,
-    billingPeriod: 'per month',
+    billingPeriod: `${pkgMeta.connections} Connections Included`,
+    connections: pkgMeta.connections,
     rawPKR: pkrPrice,
   };
 }
@@ -260,7 +246,7 @@ export function calculateAnnualPricing(monthlyPKR: number, yearlyPKR: number) {
 }
 
 /**
- * Parses and formats candidate income numbers and ranges according to candidate/viewer country
+ * Format candidate income numbers and ranges according to candidate/viewer country
  */
 export function formatIncomeByCountry(incomeText?: string, country?: string): string {
   if (!incomeText || incomeText.trim() === '' || incomeText === 'Open' || incomeText === 'Confidential') {
@@ -269,14 +255,11 @@ export function formatIncomeByCountry(incomeText?: string, country?: string): st
 
   const config = getCurrencyForCountry(country);
 
-  // If candidate is domestic Pakistani or currency is PKR, display original clean text
   if (config.code === 'PKR') {
     return incomeText;
   }
 
-  // If incomeText contains PKR and needs localization for overseas viewer
-  if (incomeText.includes('PKR')) {
-    // Extract all numbers
+  if (incomeText.includes('PKR') || incomeText.includes('Rs.')) {
     const numbers = incomeText.match(/\d+[\d,]*/g);
     if (numbers && numbers.length > 0) {
       let localized = incomeText;
@@ -287,7 +270,7 @@ export function formatIncomeByCountry(incomeText?: string, country?: string): st
           localized = localized.replace(numStr, converted.toLocaleString());
         }
       }
-      return localized.replace(/PKR/g, config.symbol).trim();
+      return localized.replace(/PKR|Rs\./g, config.symbol).trim();
     }
   }
 

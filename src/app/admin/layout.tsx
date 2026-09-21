@@ -51,11 +51,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const adminLinks = [
     { name: 'Executive Overview', href: '/admin', icon: LayoutDashboard },
     { name: 'Payment Verifications', href: '/admin/payments', icon: CreditCard, badge: pendingPaymentsCount },
-    { name: 'User Directory', href: '/admin/users', icon: Users },
-    { name: 'Profile Moderation', href: '/admin/profiles', icon: UserCheck },
+    { name: 'User Directory & Credits', href: '/admin/users', icon: Users },
+    { name: 'Senior Consultants', href: '/admin/consultants', icon: Crown },
+    { name: 'Helpdesk & Support', href: '/admin/support', icon: HelpCircle },
+    { name: 'Profile Approvals', href: '/admin/profiles', icon: UserCheck },
     { name: 'ID Verifications', href: '/admin/verifications', icon: FileCheck, badge: pendingVerifsCount },
     { name: 'Abuse Reports', href: '/admin/reports', icon: AlertTriangle, badge: openReportsCount },
-    { name: 'Subscriptions & Revenue', href: '/admin/subscriptions', icon: CreditCard },
+    { name: 'Packages & Revenue', href: '/admin/subscriptions', icon: CreditCard },
     { name: 'Coupons & Vouchers', href: '/admin/coupons', icon: Tag },
     { name: 'CMS & Content', href: '/admin/cms', icon: FileText },
     { name: 'SaaS Analytics', href: '/admin/analytics', icon: BarChart3 },
@@ -75,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <div className="text-base font-bold tracking-tight text-white font-serif">
-                TRUE<span className="text-amber-500">PAIR</span>
+                VIP ROYAL
               </div>
               <div className="text-[9px] tracking-widest text-amber-400/80 uppercase font-mono">
                 Admin Control Room

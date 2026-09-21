@@ -1,4 +1,7 @@
-'use client';
+import fs from 'fs';
+import path from 'path';
+
+const authContextContent = `'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
@@ -517,7 +520,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updatedUser : u)));
 
     const newTx: ConnectionTransaction = {
-      id: `ctx-${Date.now()}`,
+      id: \`ctx-\${Date.now()}\`,
       userId: currentUser.id,
       userProfileIdCode: currentUser.profileIdCode || currentProfile?.profileIdCode || 'VRM-000000',
       connectedUserId: target.userId,
@@ -533,11 +536,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (newRemaining === 0) {
       toast.error('You have reached your connection limit (100% used). New contact unlocks are now locked.');
     } else if (newRemaining <= Math.round(totalConn * 0.1)) {
-      toast.warning(`Strong Warning: Only ${newRemaining} connections remaining.`);
+      toast.warning(\`Strong Warning: Only \${newRemaining} connections remaining.\`);
     } else if (newRemaining <= Math.round(totalConn * 0.2)) {
-      toast.warning(`Warning: You have used ${newUsed} of your ${totalConn} connections.`);
+      toast.warning(\`Warning: You have used \${newUsed} of your \${totalConn} connections.\`);
     } else if (newRemaining <= Math.round(totalConn * 0.3)) {
-      toast.info(`70% Connection Usage: ${newRemaining} connections remaining.`);
+      toast.info(\`70% Connection Usage: \${newRemaining} connections remaining.\`);
     } else {
       toast.success('Contact details unlocked successfully. 1 connection credit deducted.');
     }
@@ -573,18 +576,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     const notif: NotificationItem = {
-      id: `notif-${Date.now()}`,
+      id: \`notif-\${Date.now()}\`,
       userId,
       type: 'SYSTEM',
       title: 'Connection Credit Refunded',
-      description: `1 Connection credit has been restored to your account. Reason: ${reason}`,
+      description: \`1 Connection credit has been restored to your account. Reason: \${reason}\`,
       linkUrl: '/dashboard/connections',
       isRead: false,
       createdAt: new Date().toISOString(),
     };
     setNotifications((prev) => [notif, ...prev]);
 
-    logAdminAction('REFUND_CONNECTION_CREDIT', 'USER', userId, `Refunded 1 connection credit for profile ${targetProfileId}. Reason: ${reason}`);
+    logAdminAction('REFUND_CONNECTION_CREDIT', 'USER', userId, \`Refunded 1 connection credit for profile \${targetProfileId}. Reason: \${reason}\`);
     toast.success('Connection credit refunded successfully.');
     return true;
   };
@@ -612,8 +615,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : null
       );
     }
-    toast.success(`Added ${count} connection credits to account!`);
-    logAdminAction('ADD_EXTRA_CONNECTIONS', 'USER', userId, `Added ${count} connection credits to user balance.`);
+    toast.success(\`Added \${count} connection credits to account!\`);
+    logAdminAction('ADD_EXTRA_CONNECTIONS', 'USER', userId, \`Added \${count} connection credits to user balance.\`);
   };
 
   // WhatsApp OTP Verification (Section 5)
@@ -640,7 +643,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!currentUser) return;
     const target = profiles.find((p) => p.id === targetProfileId) || INITIAL_PROFILES.find((p) => p.id === targetProfileId);
     const newBlock: BlockedUser = {
-      id: `block-${Date.now()}`,
+      id: \`block-\${Date.now()}\`,
       userId: currentUser.id,
       blockedUserId: target?.userId || targetProfileId,
       blockedProfileId: targetProfileId,
@@ -675,13 +678,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
     );
     toast.success('Senior Consultant assigned successfully!');
-    logAdminAction('ASSIGN_CONSULTANT', 'CONSULTANT', consultantId, `Assigned consultant ${consultantId} to client ${userId}`);
+    logAdminAction('ASSIGN_CONSULTANT', 'CONSULTANT', consultantId, \`Assigned consultant \${consultantId} to client \${userId}\`);
   };
 
   const addConsultantRecommendation = (userId: string, targetProfileId: string, note: string) => {
     const consultant = consultants.find((c) => c.assignedClientIds.includes(userId)) || consultants[0];
     const newRec: ConsultantRecommendation = {
-      id: `crec-${Date.now()}`,
+      id: \`crec-\${Date.now()}\`,
       consultantId: consultant?.id || 'consultant-1',
       consultantName: consultant?.name || 'Senior Family Consultant',
       userId,
@@ -692,11 +695,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setConsultantRecommendations((prev) => [newRec, ...prev]);
 
     const notif: NotificationItem = {
-      id: `notif-${Date.now()}`,
+      id: \`notif-\${Date.now()}\`,
       userId,
       type: 'CONSULTANT_RECOMMENDATION',
       title: 'New Consultant Recommendation',
-      description: `${consultant?.name || 'Senior Consultant'} handpicked a matching candidate for your family.`,
+      description: \`\${consultant?.name || 'Senior Consultant'} handpicked a matching candidate for your family.\`,
       linkUrl: '/dashboard/connections',
       isRead: false,
       createdAt: new Date().toISOString(),
@@ -707,7 +710,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const addConsultantNote = (userId: string, consultantId: string, note: string, isPrivate: boolean = true) => {
     const newNote: ConsultantNote = {
-      id: `cnote-${Date.now()}`,
+      id: \`cnote-\${Date.now()}\`,
       consultantId,
       consultantName: consultants.find((c) => c.id === consultantId)?.name || 'Consultant',
       userId,
@@ -721,9 +724,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Support Helpdesk (Sections 46-49)
   const createSupportTicket = (data: Partial<SupportTicket>): SupportTicket => {
-    const ticketCode = `SUP-${String(tickets.length + 124).padStart(6, '0')}`;
+    const ticketCode = \`SUP-\${String(tickets.length + 124).padStart(6, '0')}\`;
     const newTicket: SupportTicket = {
-      id: `ticket-${Date.now()}`,
+      id: \`ticket-\${Date.now()}\`,
       ticketCode,
       userId: currentUser?.id || 'guest',
       userName: currentUser?.name || 'Member',
@@ -739,7 +742,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updatedAt: new Date().toISOString(),
       messages: [
         {
-          id: `msg-t-${Date.now()}`,
+          id: \`msg-t-\${Date.now()}\`,
           sender: 'USER',
           senderName: currentUser?.name || 'Member',
           text: data.subject || 'Ticket created',
@@ -748,7 +751,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ],
     };
     setTickets((prev) => [newTicket, ...prev]);
-    toast.success(`Support ticket ${ticketCode} created successfully.`);
+    toast.success(\`Support ticket \${ticketCode} created successfully.\`);
     return newTicket;
   };
 
@@ -757,7 +760,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       prev.map((t) => {
         if (t.id === ticketId) {
           const newMsg = {
-            id: `msg-reply-${Date.now()}`,
+            id: \`msg-reply-\${Date.now()}\`,
             sender,
             senderName: sender === 'AGENT' ? (currentUser?.name || 'VIP Support Desk') : (currentUser?.name || 'Member'),
             text,
@@ -781,7 +784,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTickets((prev) =>
       prev.map((t) => (t.id === ticketId ? { ...t, status, updatedAt: new Date().toISOString() } : t))
     );
-    toast.success(`Ticket status set to ${status}`);
+    toast.success(\`Ticket status set to \${status}\`);
   };
 
   // Profile Approval Workflow (Section 12)
@@ -795,22 +798,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         prev.map((u) => (u.id === prof.userId ? { ...u, profileApprovalStatus: status } : u))
       );
       const notif: NotificationItem = {
-        id: `notif-${Date.now()}`,
+        id: \`notif-\${Date.now()}\`,
         userId: prof.userId,
         type: status === 'APPROVED' ? 'PROFILE_APPROVED' : 'PROFILE_CHANGES_REQUESTED',
         title: status === 'APPROVED' ? 'Profile Approved! 🎉' : 'Profile Status Update',
         description:
           status === 'APPROVED'
             ? 'Your profile is now live in the VIP Royal Matchmaking directory.'
-            : `Status changed to ${status}. ${notes || ''}`,
+            : \`Status changed to \${status}. \${notes || ''}\`,
         linkUrl: '/dashboard/profile',
         isRead: false,
         createdAt: new Date().toISOString(),
       };
       setNotifications((prev) => [notif, ...prev]);
     }
-    toast.success(`Profile approval updated: ${status}`);
-    logAdminAction('UPDATE_PROFILE_APPROVAL', 'PROFILE', profileId, `Status: ${status}. Notes: ${notes || ''}`);
+    toast.success(\`Profile approval updated: \${status}\`);
+    logAdminAction('UPDATE_PROFILE_APPROVAL', 'PROFILE', profileId, \`Status: \${status}. Notes: \${notes || ''}\`);
   };
 
   // Family Member Access (Section 28)
@@ -818,20 +821,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!currentUser) return;
     const newInv: FamilyMemberInvitation = {
       ...data,
-      id: `finv-${Date.now()}`,
+      id: \`finv-\${Date.now()}\`,
       userId: currentUser.id,
       status: 'ACTIVE',
       createdAt: new Date().toISOString(),
     };
     setFamilyInvitations((prev) => [newInv, ...prev]);
-    toast.success(`Invitation sent to ${data.familyMemberName} (${data.relationship})!`);
+    toast.success(\`Invitation sent to \${data.familyMemberName} (\${data.relationship})!\`);
   };
 
   // Tax Settings (Section 35)
   const updateTaxSettings = (tax: TaxSettings) => {
     setSettings((prev) => ({ ...prev, tax }));
     toast.success('Tax configuration saved.');
-    logAdminAction('UPDATE_TAX_SETTINGS', 'SETTING', 'TAX', `Tax enabled: ${tax.taxEnabled}, ${tax.taxPercentage}%`);
+    logAdminAction('UPDATE_TAX_SETTINGS', 'SETTING', 'TAX', \`Tax enabled: \${tax.taxEnabled}, \${tax.taxPercentage}%\`);
   };
 
   // Auth Operations
@@ -907,10 +910,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ): Promise<{ success: boolean; error?: string; redirectUrl?: string; user?: User }> => {
     try {
       const codeNum = String(users.length + 22).padStart(6, '0');
-      const profileIdCode = `VRM-${codeNum}`;
+      const profileIdCode = \`VRM-\${codeNum}\`;
 
       const newUser: User = {
-        id: `user-${Date.now()}`,
+        id: \`user-\${Date.now()}\`,
         name: userData.name || profileData.fullName || 'Member',
         email: userData.email || '',
         phone: userData.phone || '',
@@ -931,7 +934,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       const newProfile: MatrimonialProfile = {
-        id: `profile-${Date.now()}`,
+        id: \`profile-\${Date.now()}\`,
         userId: newUser.id,
         profileIdCode,
         fullName: newUser.name,
@@ -1025,7 +1028,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setCurrentUser(updated);
     setUsers((prev) => prev.map((u) => (u.id === currentUser.id ? updated : u)));
-    toast.success(`Subscription updated to ${tier}. ${connectionsToAdd} connections available.`);
+    toast.success(\`Subscription updated to \${tier}. \${connectionsToAdd} connections available.\`);
   };
 
   // Interests
@@ -1054,11 +1057,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const newInterest: InterestRequest = {
-      id: `int-${Date.now()}`,
+      id: \`int-\${Date.now()}\`,
       senderId: currentUser.id,
       senderName: currentUser.name,
       senderPhoto: currentUser.avatarUrl || resolvedCurrentProfile?.photos?.[0]?.url,
-      senderProfileId: resolvedCurrentProfile?.id || `profile-${currentUser.id}`,
+      senderProfileId: resolvedCurrentProfile?.id || \`profile-\${currentUser.id}\`,
       senderProfileIdCode: currentUser.profileIdCode || resolvedCurrentProfile?.profileIdCode,
       receiverId: target.userId,
       receiverName: target.fullName,
@@ -1066,7 +1069,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       receiverProfileId: target.id,
       receiverProfileIdCode: target.profileIdCode,
       status: 'PENDING',
-      message: message || `Assalam-o-Alaikum ${target.displayName}, our family would be honored to connect with you.`,
+      message: message || \`Assalam-o-Alaikum \${target.displayName}, our family would be honored to connect with you.\`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -1074,11 +1077,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setInterests((prev) => [newInterest, ...prev]);
 
     const newNotif: NotificationItem = {
-      id: `notif-${Date.now()}`,
+      id: \`notif-\${Date.now()}\`,
       userId: target.userId,
       type: 'INTEREST',
       title: 'New Matrimonial Interest Received',
-      description: `${currentUser.name} expressed interest in your profile dossier.`,
+      description: \`\${currentUser.name} expressed interest in your profile dossier.\`,
       linkUrl: '/dashboard/connections',
       isRead: false,
       createdAt: new Date().toISOString(),
@@ -1096,11 +1099,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (intReq) {
       startOrGetConversation(intReq.senderId);
       const notif: NotificationItem = {
-        id: `notif-${Date.now()}`,
+        id: \`notif-\${Date.now()}\`,
         userId: intReq.senderId,
         type: 'INTEREST_ACCEPTED',
         title: 'Interest Accepted! 🎉',
-        description: `${intReq.receiverName} accepted your connection interest. Direct contact details are now unlocked.`,
+        description: \`\${intReq.receiverName} accepted your connection interest. Direct contact details are now unlocked.\`,
         linkUrl: '/dashboard/connections',
         isRead: false,
         createdAt: new Date().toISOString(),
@@ -1134,7 +1137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const target = profiles.find((p) => p.id === targetProfileId) || INITIAL_PROFILES.find((p) => p.id === targetProfileId);
       if (!target) return false;
       const newFav: FavoriteItem = {
-        id: `fav-${Date.now()}`,
+        id: \`fav-\${Date.now()}\`,
         userId: currentUser.id,
         targetProfileId,
         targetProfile: target,
@@ -1155,7 +1158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendMessage = (conversationId: string, text: string) => {
     if (!currentUser || !text.trim()) return;
     const newMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
+      id: \`msg-\${Date.now()}\`,
       conversationId,
       senderId: currentUser.id,
       senderName: currentUser.name,
@@ -1182,7 +1185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
     if (existing) return existing.id;
 
-    const newConvId = `conv-${Date.now()}`;
+    const newConvId = \`conv-\${Date.now()}\`;
     const newConv: Conversation = {
       id: newConvId,
       participantAId: currentUser.id,
@@ -1217,7 +1220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   ) => {
     if (!currentUser) return;
     const newReq: VerificationRequest = {
-      id: `verif-${Date.now()}`,
+      id: \`verif-\${Date.now()}\`,
       userId: currentUser.id,
       userName: currentUser.name,
       userEmail: currentUser.email,
@@ -1254,17 +1257,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Payment Proof Flow (Sections 29-34)
   const submitPaymentProof = (data: Omit<PaymentProof, 'id' | 'status' | 'submittedAt'>) => {
     const now = new Date().toISOString();
-    const invoiceNum = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const invoiceNum = \`INV-\${new Date().getFullYear()}-\${Math.floor(100000 + Math.random() * 900000)}\`;
 
     const newProof: PaymentProof = {
       ...data,
-      id: `pay-proof-${Date.now()}`,
+      id: \`pay-proof-\${Date.now()}\`,
       status: 'PENDING',
       submittedAt: now,
     };
 
     const newInvoice: Invoice = {
-      id: `inv-${Date.now()}`,
+      id: \`inv-\${Date.now()}\`,
       userId: data.userId || currentUser?.id || 'guest',
       userProfileIdCode: currentUser?.profileIdCode,
       userName: currentUser?.name || data.userName,
@@ -1282,10 +1285,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setInvoices((prev) => [newInvoice, ...prev]);
 
     const newNotif: NotificationItem = {
-      id: `notif-${Date.now()}`,
+      id: \`notif-\${Date.now()}\`,
       userId: data.userId || currentUser?.id || '',
       title: 'Payment Proof Submitted',
-      description: `Payment proof for ${data.planName} (TRX: ${data.transactionId}) submitted for admin approval.`,
+      description: \`Payment proof for \${data.planName} (TRX: \${data.transactionId}) submitted for admin approval.\`,
       type: 'SYSTEM',
       isRead: false,
       createdAt: now,
@@ -1364,10 +1367,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Notification to user
     const newNotif: NotificationItem = {
-      id: `notif-${Date.now()}`,
+      id: \`notif-\${Date.now()}\`,
       userId: proof.userId,
       title: '🎉 Payment Approved & Package Active!',
-      description: `Your payment of ${proof.currency} ${proof.amount} has been approved. ${connectionsToAdd} Connections have been credited to your balance.`,
+      description: \`Your payment of \${proof.currency} \${proof.amount} has been approved. \${connectionsToAdd} Connections have been credited to your balance.\`,
       type: 'PAYMENT_APPROVED',
       isRead: false,
       createdAt: now,
@@ -1375,8 +1378,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
     setNotifications((prev) => [newNotif, ...prev]);
 
-    logAdminAction('APPROVE_PAYMENT', 'PAYMENT', proofId, `Approved payment of ${proof.amount} for ${proof.userName}. Added ${connectionsToAdd} connections.`);
-    toast.success(`Payment approved! ${connectionsToAdd} connections credited to ${proof.userName}.`);
+    logAdminAction('APPROVE_PAYMENT', 'PAYMENT', proofId, \`Approved payment of \${proof.amount} for \${proof.userName}. Added \${connectionsToAdd} connections.\`);
+    toast.success(\`Payment approved! \${connectionsToAdd} connections credited to \${proof.userName}.\`);
   };
 
   const rejectPaymentProof = (proofId: string, reason?: string) => {
@@ -1396,11 +1399,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const proof = paymentProofs.find((p) => p.id === proofId);
     if (proof) {
       const notif: NotificationItem = {
-        id: `notif-${Date.now()}`,
+        id: \`notif-\${Date.now()}\`,
         userId: proof.userId,
         type: 'PAYMENT_REJECTED',
         title: 'Payment Verification Unsuccessful',
-        description: `Reason: ${reason || 'Receipt unreadable or transaction ID not found.'}`,
+        description: \`Reason: \${reason || 'Receipt unreadable or transaction ID not found.'}\`,
         linkUrl: '/dashboard/subscription',
         isRead: false,
         createdAt: new Date().toISOString(),
@@ -1408,7 +1411,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setNotifications((prev) => [notif, ...prev]);
     }
     toast.info('Payment proof marked as rejected.');
-    logAdminAction('REJECT_PAYMENT', 'PAYMENT', proofId, `Rejected proof: ${reason || 'Unverified'}`);
+    logAdminAction('REJECT_PAYMENT', 'PAYMENT', proofId, \`Rejected proof: \${reason || 'Unverified'}\`);
   };
 
   const processInstantPayment = async (params: {
@@ -1420,10 +1423,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }): Promise<{ success: boolean; invoice: Invoice }> => {
     const connectionsToAdd = params.planSlug.includes('VIP') ? 300 : params.planSlug.includes('PREMIUM') ? 100 : 30;
     const targetTier: SubscriptionTier = params.planSlug.includes('VIP') ? 'PREMIUM_PLUS' : params.planSlug.includes('PREMIUM') ? 'PREMIUM' : 'BASIC';
-    const invoiceNum = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const invoiceNum = \`INV-\${new Date().getFullYear()}-\${Math.floor(100000 + Math.random() * 900000)}\`;
 
     const newInvoice: Invoice = {
-      id: `inv-${Date.now()}`,
+      id: \`inv-\${Date.now()}\`,
       userId: currentUser?.id || 'guest',
       userProfileIdCode: currentUser?.profileIdCode,
       userName: currentUser?.name || 'Member',
@@ -1456,7 +1459,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const addReceivingAccount = (accountData: Omit<ReceivingAccount, 'id' | 'createdAt'>) => {
     const newAcc: ReceivingAccount = {
       ...accountData,
-      id: `acc-${Date.now()}`,
+      id: \`acc-\${Date.now()}\`,
       createdAt: new Date().toISOString(),
     };
     setReceivingAccounts((prev) => [newAcc, ...prev]);
@@ -1482,8 +1485,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Moderation
   const updateUserStatus = (userId: string, status: 'ACTIVE' | 'SUSPENDED' | 'BANNED') => {
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, accountStatus: status } : u)));
-    toast.info(`User status changed to ${status}`);
-    logAdminAction('UPDATE_USER_STATUS', 'USER', userId, `Status set to ${status}`);
+    toast.info(\`User status changed to \${status}\`);
+    logAdminAction('UPDATE_USER_STATUS', 'USER', userId, \`Status set to \${status}\`);
   };
 
   const verifyUserBadge = (userId: string, isVerified: boolean) => {
@@ -1499,7 +1502,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const target = users.find((u) => u.id === reportedUserId);
     const targetProfile = profiles.find((p) => p.userId === reportedUserId);
     const newReport: AbuseReport = {
-      id: `rep-${Date.now()}`,
+      id: \`rep-\${Date.now()}\`,
       reporterId: currentUser.id,
       reporterName: currentUser.name,
       reporterProfileIdCode: currentUser.profileIdCode,
@@ -1551,7 +1554,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       valid: true,
       discountPercent: c.discountPercent,
       fixedDiscount: c.fixedDiscount,
-      message: `Promo Code applied: ${c.discountPercent ? `${c.discountPercent}% OFF` : `Rs. ${c.fixedDiscount} OFF`}`,
+      message: \`Promo Code applied: \${c.discountPercent ? \`\${c.discountPercent}% OFF\` : \`Rs. \${c.fixedDiscount} OFF\`}\`,
     };
   };
 
@@ -1566,7 +1569,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logAdminAction = (action: string, targetType: any, targetId: string, details: string) => {
     const newLog: AdminAuditLog = {
-      id: `log-${Date.now()}`,
+      id: \`log-\${Date.now()}\`,
       adminId: currentUser?.id || 'admin',
       adminName: currentUser?.name || 'Administrator',
       action,
@@ -1683,3 +1686,7 @@ export function useAuth() {
   }
   return context;
 }
+`;
+
+fs.writeFileSync(path.join(process.cwd(), 'src/lib/auth-context.tsx'), authContextContent);
+console.log('✅ src/lib/auth-context.tsx successfully updated with complete VIP Royal Matchmaking engine!');

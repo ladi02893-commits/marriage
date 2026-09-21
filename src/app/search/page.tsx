@@ -35,6 +35,7 @@ function SearchContent() {
 
   // Filter State
   const [searchTerm, setSearchTerm] = useState('');
+  const [profileIdSearch, setProfileIdSearch] = useState('');
   const [gender, setGender] = useState<string>(initialGender);
   const [minAge, setMinAge] = useState<number>(initialMinAge);
   const [maxAge, setMaxAge] = useState<number>(initialMaxAge);
@@ -46,6 +47,7 @@ function SearchContent() {
   const [city, setCity] = useState<string>(initialCity);
   const [profession, setProfession] = useState<string>('ALL');
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
+  const [whatsappVerifiedOnly, setWhatsappVerifiedOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>('COMPATIBILITY');
   const [mobileFilterOpen, setMobileFilterOpen] = useState<boolean>(false);
 
@@ -55,6 +57,13 @@ function SearchContent() {
       .filter((p) => {
         // Exclude current user's own profile
         if (currentProfile && p.id === currentProfile.id) return false;
+
+        // Specific Profile ID Search (Section 59)
+        if (profileIdSearch.trim()) {
+          const pQuery = profileIdSearch.trim().toLowerCase();
+          const matchesPId = (p.profileIdCode && p.profileIdCode.toLowerCase().includes(pQuery)) || p.id.toLowerCase().includes(pQuery);
+          if (!matchesPId) return false;
+        }
 
         // Gender filter
         if (gender !== 'ALL' && p.gender !== gender) return false;
@@ -90,14 +99,19 @@ function SearchContent() {
         // Verified filter
         if (verifiedOnly && p.verificationBadge !== 'APPROVED') return false;
 
-        // Search term filter
+        // WhatsApp verified filter
+        if (whatsappVerifiedOnly && !p.isWhatsappVerified) return false;
+
+        // Search term filter (Section 59: also searches by VRM profile code)
         if (searchTerm.trim()) {
           const term = searchTerm.toLowerCase();
+          const matchCode = p.profileIdCode && p.profileIdCode.toLowerCase().includes(term);
           const matchName = p.fullName.toLowerCase().includes(term);
           const matchCity = p.city.toLowerCase().includes(term);
           const matchProf = p.educationCareer?.profession?.toLowerCase().includes(term);
           const matchBio = p.aboutMe.toLowerCase().includes(term);
-          if (!matchName && !matchCity && !matchProf && !matchBio) return false;
+          const matchCaste = p.caste && p.caste.toLowerCase().includes(term);
+          if (!matchCode && !matchName && !matchCity && !matchProf && !matchBio && !matchCaste) return false;
         }
 
         return true;
@@ -116,15 +130,19 @@ function SearchContent() {
   }, [
     profiles,
     currentProfile,
+    profileIdSearch,
     gender,
     minAge,
     maxAge,
     religion,
+    sect,
+    caste,
     maritalStatus,
     country,
     city,
     profession,
     verifiedOnly,
+    whatsappVerifiedOnly,
     searchTerm,
     sortBy,
   ]);
@@ -267,6 +285,21 @@ function SearchContent() {
               >
                 <RotateCcw className="h-3 w-3" /> Reset
               </button>
+            </div>
+
+            {/* Search by Profile ID (Section 59) */}
+            <div>
+              <label className="text-xs font-semibold text-foreground block mb-1.5 flex items-center justify-between">
+                <span>Profile ID Search</span>
+                <span className="font-mono text-[10px] text-brand-600">VRM-XXXXXX</span>
+              </label>
+              <input
+                type="text"
+                value={profileIdSearch}
+                onChange={(e) => setProfileIdSearch(e.target.value)}
+                placeholder="e.g. VRM-000001"
+                className="w-full rounded-xl border border-border bg-muted/40 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none font-mono uppercase"
+              />
             </div>
 
             {/* Gender */}

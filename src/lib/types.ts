@@ -1,8 +1,10 @@
-export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'CONSULTANT' | 'FAMILY_MEMBER';
 
-export type SubscriptionTier = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS';
+export type SubscriptionTier = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS' | 'BASIC' | 'VIP';
 
 export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'BANNED' | 'DELETED';
+
+export type ProfileApprovalStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED' | 'SUSPENDED';
 
 export type Gender = 'MALE' | 'FEMALE' | 'OTHER';
 
@@ -18,16 +20,28 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  whatsappNumber?: string;
+  profileIdCode?: string; // e.g. "VRM-000001"
   role: UserRole;
   subscriptionTier: SubscriptionTier;
   accountStatus: AccountStatus;
+  profileApprovalStatus?: ProfileApprovalStatus;
   isVerified: boolean;
+  isWhatsappVerified?: boolean;
+  isEmailVerified?: boolean;
+  isIdentityVerified?: boolean;
   avatarUrl?: string;
   createdAt: string;
   lastActive: string;
   profileId?: string;
   subscriptionExpiresAt?: string;
   billingCycle?: 'MONTHLY' | 'ANNUAL';
+  // Connection Credits
+  totalConnections?: number;
+  usedConnections?: number;
+  remainingConnections?: number;
+  assignedConsultantId?: string;
 }
 
 export interface ProfilePhoto {
@@ -47,6 +61,7 @@ export interface EducationCareer {
   company?: string;
   annualIncome?: string;
   monthlyIncome?: string;
+  isIncomePrivate?: boolean;
   currency?: string;
   employmentSector?: 'PRIVATE' | 'GOVERNMENT' | 'BUSINESS' | 'SELF_EMPLOYED' | 'NOT_WORKING';
   workingLocation?: string;
@@ -75,6 +90,7 @@ export interface FamilyInfo {
   brothersCount?: number;
   sistersCount?: number;
   familyLocation?: string;
+  familyCity?: string;
   livingStatus?: string;
   aboutFamily?: string;
 }
@@ -99,18 +115,23 @@ export interface PartnerPreferences {
 }
 
 export interface PrivacySettings {
-  photoVisibility?: 'ALL' | 'MEMBERS_ONLY' | 'APPROVED_INTERESTS_ONLY';
-  contactVisibility?: 'ONLY_ACCEPTED_INTERESTS' | 'PREMIUM_ONLY' | 'HIDDEN';
+  photoVisibility?: 'ALL' | 'MEMBERS_ONLY' | 'CONNECTIONS_ONLY' | 'PRIVATE' | 'BLURRED_UNTIL_APPROVED';
+  contactVisibility?: 'ONLY_ACCEPTED_INTERESTS' | 'ONLY_UNLOCKED' | 'PREMIUM_ONLY' | 'HIDDEN';
+  showPhone?: boolean;
+  showWhatsapp?: boolean;
+  showEmail?: boolean;
   showAge?: boolean;
   showIncome?: boolean;
   showLastSeen?: boolean;
   searchEngineIndex?: boolean;
   hideProfileTemporarily?: boolean;
+  profileVisibility?: 'PUBLIC' | 'VERIFIED_ONLY' | 'CONNECTIONS_ONLY' | 'HIDDEN';
 }
 
 export interface MatrimonialProfile {
   id: string;
   userId: string;
+  profileIdCode?: string; // e.g. "VRM-000001"
   fullName: string;
   displayName: string;
   gender: Gender;
@@ -123,12 +144,14 @@ export interface MatrimonialProfile {
   subClan?: string;
   motherTongue: string;
   phone?: string;
+  whatsappNumber?: string;
   city: string;
   state: string;
   province?: string;
   area?: string;
   country: string;
   citizenship: string;
+  nationality?: string;
   aboutMe: string;
   bioHeadline: string;
   photos: ProfilePhoto[];
@@ -141,14 +164,124 @@ export interface MatrimonialProfile {
   isFeatured: boolean;
   isBoosted: boolean;
   verificationBadge: VerificationStatus;
+  isWhatsappVerified?: boolean;
+  isEmailVerified?: boolean;
+  isIdentityVerified?: boolean;
+  isVIPVerified?: boolean;
+  approvalStatus: ProfileApprovalStatus;
   viewCount: number;
   likeCount: number;
   fraudScore?: number;
   profileQualityScore?: number;
   aiSummary?: string;
   personalityInsights?: string[];
+  assignedConsultantId?: string;
+  consultantRecommended?: boolean;
+  consultantNote?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+// Connection Transactions Log (Section 81 & 82)
+export interface ConnectionTransaction {
+  id: string;
+  userId: string;
+  userProfileIdCode: string;
+  connectedUserId: string;
+  connectedProfileId: string;
+  connectedProfileIdCode: string;
+  creditsUsed: number;
+  reason: string; // "Contact Details Unlocked" or "Connection Interest Accepted"
+  date: string;
+}
+
+export interface ExtraConnectionPack {
+  id: string;
+  name: string;
+  connectionsCount: number;
+  pricePKR: number;
+  popular?: boolean;
+  description?: string;
+}
+
+// Dedicated Senior Family Consultant (Sections 24-27)
+export interface Consultant {
+  id: string;
+  name: string;
+  title: string;
+  email: string;
+  phone: string;
+  whatsappNumber: string;
+  avatarUrl: string;
+  bio: string;
+  specialization: string;
+  assignedClientIds: string[];
+  isActive: boolean;
+  rating?: number;
+  consultationsCompleted?: number;
+  availableDays?: string[];
+  workingHours?: string;
+}
+
+export interface ConsultantRecommendation {
+  id: string;
+  consultantId: string;
+  consultantName: string;
+  userId: string;
+  targetProfileId: string;
+  note: string;
+  recommendedAt: string;
+}
+
+export interface ConsultantNote {
+  id: string;
+  consultantId: string;
+  consultantName: string;
+  userId: string;
+  note: string;
+  isPrivate: boolean; // Only visible to consultant and admin
+  createdAt: string;
+}
+
+export interface ConsultantAppointment {
+  id: string;
+  consultantId: string;
+  userId: string;
+  userName: string;
+  requestedDate: string;
+  requestedTime: string;
+  topic: string;
+  status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
+  meetingLink?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface BlockedUser {
+  id: string;
+  userId: string;
+  blockedUserId: string;
+  blockedProfileId: string;
+  blockedAt: string;
+  reason?: string;
+}
+
+export interface FamilyMemberInvitation {
+  id: string;
+  userId: string;
+  familyMemberName: string;
+  relationship: 'FATHER' | 'MOTHER' | 'GUARDIAN' | 'SIBLING' | string;
+  email: string;
+  phone?: string;
+  accessCode: string;
+  status: 'PENDING' | 'ACTIVE' | 'REVOKED';
+  permissions: {
+    canViewMatches: boolean;
+    canViewConnections: boolean;
+    canFavoriteProfiles: boolean;
+    canChatConsultant: boolean;
+  };
+  createdAt: string;
 }
 
 export interface PaymentProof {
@@ -157,16 +290,23 @@ export interface PaymentProof {
   userName: string;
   userEmail: string;
   userPhone: string;
-  planSlug: 'BASIC' | 'PREMIUM' | 'VIP' | string;
+  userProfileIdCode?: string;
+  planSlug: 'BASIC' | 'PREMIUM' | 'VIP' | 'PACK_10' | 'PACK_30' | 'PACK_50' | 'PACK_100' | string;
   planName: string;
+  connectionsAdded?: number;
   amount: number;
   currency: string;
-  paymentMethod: 'JAZZCASH' | 'EASYPAISA' | 'BANK_TRANSFER' | 'RAAST' | string;
-  transactionId: string;
+  paymentMethod: 'BANK_TRANSFER' | 'JAZZCASH' | 'EASYPAISA' | 'RAAST' | string;
+  senderBank?: string;
+  senderName?: string;
+  senderMobileNumber?: string;
   senderAccountNumber?: string;
+  transactionId: string;
+  transactionDate?: string;
   screenshotUrl: string;
-  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  status: 'PENDING' | 'APPROVED' | 'VERIFIED' | 'REJECTED' | 'NEEDS_REVIEW';
   rejectionReason?: string;
+  adminNotes?: string;
   submittedAt: string;
   reviewedAt?: string;
   reviewedBy?: string;
@@ -174,7 +314,7 @@ export interface PaymentProof {
 
 export interface ReceivingAccount {
   id: string;
-  provider: 'JAZZCASH' | 'EASYPAISA' | 'BANK_TRANSFER' | 'RAAST' | 'SADAPAY' | 'NAYAPAY' | 'OTHER';
+  provider: 'BANK_TRANSFER' | 'JAZZCASH' | 'EASYPAISA' | 'RAAST' | 'SADAPAY' | 'NAYAPAY' | 'OTHER';
   bankName: string;
   accountTitle: string;
   accountNumber: string;
@@ -206,14 +346,17 @@ export interface InterestRequest {
   senderName: string;
   senderPhoto?: string;
   senderProfileId: string;
+  senderProfileIdCode?: string;
   receiverId: string;
   receiverName: string;
   receiverPhoto?: string;
   receiverProfileId: string;
+  receiverProfileIdCode?: string;
   status: InterestStatus;
   message?: string;
   createdAt: string;
   updatedAt: string;
+  relationshipStatus?: 'TALKING' | 'FAMILY_CONTACTED' | 'MATCH_IN_PROGRESS' | 'SUCCESSFUL_MATCH';
 }
 
 export interface FavoriteItem {
@@ -251,7 +394,22 @@ export interface Conversation {
 export interface NotificationItem {
   id: string;
   userId: string;
-  type: 'INTEREST' | 'MESSAGE' | 'MATCH' | 'SYSTEM' | 'SUBSCRIPTION' | 'VERIFICATION';
+  type:
+    | 'INTEREST'
+    | 'INTEREST_ACCEPTED'
+    | 'INTEREST_DECLINED'
+    | 'MESSAGE'
+    | 'MATCH'
+    | 'CONSULTANT'
+    | 'CONSULTANT_RECOMMENDATION'
+    | 'PAYMENT_APPROVED'
+    | 'PAYMENT_REJECTED'
+    | 'PROFILE_APPROVED'
+    | 'PROFILE_CHANGES_REQUESTED'
+    | 'CONNECTION_WARNING'
+    | 'SUPPORT_REPLY'
+    | 'SUBSCRIPTION'
+    | 'SYSTEM';
   title: string;
   description: string;
   linkUrl: string;
@@ -270,18 +428,24 @@ export interface SubscriptionPlan {
   yearlyPrice: number;
   currency: string;
   durationMonths?: number;
+  connectionsLimit?: number; // Primary connection quota (e.g. 30, 100, 300)
+  hasConsultant?: boolean;
   features: string[];
   limits: {
-    monthlyInterests: number;
+    monthlyInterests?: number;
+    connectionsCount?: number;
+    directContactAccess: boolean;
+    canChat?: boolean;
+    isFeatured?: boolean;
+    dedicatedConsultant?: boolean;
     dailyDirectMessages?: number;
     canViewVisitors?: boolean;
     hasPriorityMatching?: boolean;
     hasFeaturedBadge?: boolean;
-    directContactAccess: boolean;
     viewProfileLimit?: number;
-    canChat?: boolean;
-    isFeatured?: boolean;
   };
+  discountType?: 'FIXED' | 'PERCENT';
+  discountValue?: number;
   isActive?: boolean;
   isPopular?: boolean;
   popular?: boolean;
@@ -290,12 +454,18 @@ export interface SubscriptionPlan {
 export interface Invoice {
   id: string;
   userId: string;
+  userProfileIdCode?: string;
+  userName?: string;
   planName: string;
   amount: number;
+  subtotal?: number;
+  taxAmount?: number;
+  discountAmount?: number;
   currency: string;
   status: 'PAID' | 'PENDING' | 'REFUNDED';
   date: string;
   paymentMethod: string;
+  transactionId?: string;
   invoiceNumber: string;
   downloadUrl?: string;
 }
@@ -305,7 +475,8 @@ export interface VerificationRequest {
   userId: string;
   userName: string;
   userEmail: string;
-  documentType: 'PASSPORT' | 'DRIVING_LICENSE' | 'NATIONAL_ID';
+  userProfileIdCode?: string;
+  documentType: 'PASSPORT' | 'DRIVING_LICENSE' | 'NATIONAL_ID' | 'CNIC';
   documentFrontUrl: string;
   documentBackUrl?: string;
   selfieUrl: string;
@@ -319,33 +490,65 @@ export interface AbuseReport {
   id: string;
   reporterId: string;
   reporterName: string;
+  reporterProfileIdCode?: string;
   reportedUserId: string;
   reportedUserName: string;
   reportedProfileId: string;
-  category: 'FAKE_PROFILE' | 'HARASSMENT' | 'INAPPROPRIATE_CONTENT' | 'SCAM' | 'MISREPRESENTATION' | 'OTHER';
+  reportedProfileIdCode?: string;
+  category:
+    | 'FAKE_PROFILE'
+    | 'INCORRECT_INFORMATION'
+    | 'HARASSMENT'
+    | 'FRAUD'
+    | 'INAPPROPRIATE_BEHAVIOUR'
+    | 'ALREADY_MARRIED'
+    | 'SPAM'
+    | 'OTHER';
   description: string;
+  comments?: string;
   evidenceUrl?: string;
   status: 'OPEN' | 'RESOLVED' | 'DISMISSED';
   timestamp: string;
   adminActionTaken?: string;
 }
 
+export type SupportCategory =
+  | 'PAYMENT'
+  | 'PROFILE'
+  | 'VERIFICATION'
+  | 'CONNECTION_ISSUE'
+  | 'CONSULTANT'
+  | 'TECHNICAL'
+  | 'REPORT_USER'
+  | 'ACCOUNT'
+  | 'OTHER';
+
+export type SupportTicketStatus = 'OPEN' | 'IN_PROGRESS' | 'WAITING_FOR_USER' | 'RESOLVED' | 'CLOSED';
+
 export interface SupportTicket {
   id: string;
+  ticketCode: string; // e.g. "SUP-000123"
   userId: string;
   userName: string;
   userEmail: string;
+  userProfileIdCode?: string;
   subject: string;
-  category: 'BILLING' | 'PROFILE' | 'VERIFICATION' | 'TECHNICAL' | 'GENERAL';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  status: 'OPEN' | 'IN_PROGRESS' | 'WAITING' | 'RESOLVED';
+  category: SupportCategory;
+  relatedProfileId?: string; // Optional linked Profile ID (e.g. "VRM-000153")
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  status: SupportTicketStatus;
+  attachmentUrl?: string;
+  assignedStaff?: string;
+  internalNotes?: string;
   createdAt: string;
+  updatedAt: string;
   messages: {
     id: string;
-    sender: 'USER' | 'AGENT';
+    sender: 'USER' | 'AGENT' | 'SYSTEM';
     senderName: string;
     text: string;
     timestamp: string;
+    attachmentUrl?: string;
   }[];
 }
 
@@ -357,6 +560,7 @@ export interface Coupon {
   expiresAt: string;
   usageLimit: number;
   timesUsed: number;
+  applicablePackages?: string[];
   isActive: boolean;
 }
 
@@ -373,6 +577,7 @@ export interface CMSContent {
     story: string;
     photoUrl: string;
     city: string;
+    isApproved?: boolean;
   }[];
   faqs: {
     question: string;
@@ -394,22 +599,35 @@ export interface AdminAuditLog {
   adminId: string;
   adminName: string;
   action: string;
-  targetType: 'USER' | 'PROFILE' | 'SUBSCRIPTION' | 'SETTING' | 'VERIFICATION' | 'REPORT';
+  targetType: 'USER' | 'PROFILE' | 'SUBSCRIPTION' | 'PAYMENT' | 'SETTING' | 'VERIFICATION' | 'REPORT' | 'CONSULTANT';
   targetId: string;
   ipAddress: string;
   timestamp: string;
   details: string;
 }
 
+export interface TaxSettings {
+  taxEnabled: boolean;
+  taxPercentage: number;
+  taxFixed: number;
+  taxLabel: string; // e.g. "Service Fee (5%)"
+}
+
 export interface SystemSettings {
-  siteName?: string;
+  siteName: string;
   tagline?: string;
   contactEmail?: string;
   supportPhone?: string;
-  minAge?: number;
-  requireEmailVerification?: boolean;
-  requireAdminProfileApproval?: boolean;
-  freeTierMonthlyInterestLimit: number;
+  profileIdPrefix: string; // "VRM-" or "VIP-"
+  minAge: number;
+  requireEmailVerification: boolean;
+  requireWhatsAppVerification: boolean;
+  requireAdminProfileApproval: boolean;
+  tax: TaxSettings;
+  whatsappNotificationsEnabled: boolean;
+  emailNotificationsEnabled: boolean;
+  freeTierConnectionsLimit: number;
+  freeTierMonthlyInterestLimit?: number;
   matchingWeights: {
     ageWeight: number;
     locationWeight: number;
@@ -420,7 +638,6 @@ export interface SystemSettings {
     maritalWeight: number;
   };
   maintenanceMode?: boolean;
-  requireVerificationForContact?: boolean;
   allowNewRegistrations?: boolean;
   whatsappSupportNumber?: string;
   supportEmail?: string;

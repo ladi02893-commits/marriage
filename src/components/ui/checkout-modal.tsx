@@ -60,7 +60,7 @@ export function CheckoutModal({
     applyCoupon,
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<PaymentTab>('CARD');
+  const [activeTab, setActiveTab] = useState<PaymentTab>('BANK_TRANSFER');
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'ANNUAL'>(initialBillingCycle);
   const [couponCode, setCouponCode] = useState(initialDiscount?.code || '');
   const [discountInfo, setDiscountInfo] = useState<{ percent?: number; fixed?: number; code?: string } | null>(
@@ -313,37 +313,43 @@ export function CheckoutModal({
                 <h3 className="text-2xl font-bold font-serif text-foreground">
                   {submissionResult.type === 'INSTANT'
                     ? 'Account Upgraded Successfully!'
-                    : 'Payment Proof Received!'}
+                    : 'Payment proof submitted successfully.'}
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                   {submissionResult.type === 'INSTANT'
                     ? `Congratulations! Your profile is now upgraded to ${submissionResult.planName}. You have immediate access to direct contact unlocks, priority matching, and verified features.`
-                    : `Your payment proof (TRX: ${submissionResult.trxId}) for ${submissionResult.planName} has been queued for verification. Our admin team will verify it within 1-2 hours.`}
+                    : 'Payment proof submitted successfully. Please wait for approval from Admin. Your package and connection credits will be activated upon verification.'}
                 </p>
               </div>
 
               {/* Action Cards */}
               <div className="max-w-lg mx-auto rounded-2xl bg-muted/40 p-4 border border-border text-xs space-y-3 text-left">
                 <div className="flex justify-between items-center pb-2 border-b border-border text-foreground font-semibold">
-                  <span>Selected Membership</span>
+                  <span>Selected Package</span>
                   <span className="text-brand-600 font-bold">{submissionResult.planName}</span>
                 </div>
                 <div className="flex justify-between items-center text-muted-foreground">
-                  <span>Billing Amount</span>
+                  <span>Payable Amount</span>
                   <span className="font-mono font-bold text-foreground">
                     {currencyConfig.symbol} {finalAmount.toLocaleString()} ({currencyConfig.code})
                   </span>
                 </div>
+                {submissionResult.trxId && (
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Transaction ID</span>
+                    <span className="font-mono font-bold text-foreground">{submissionResult.trxId}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-muted-foreground">
                   <span>Status</span>
                   <span
-                    className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${
+                    className={`font-bold px-2.5 py-0.5 rounded-full text-[10px] ${
                       submissionResult.type === 'INSTANT'
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
                         : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
                     }`}
                   >
-                    {submissionResult.type === 'INSTANT' ? 'Active (Paid)' : 'Pending Verification'}
+                    {submissionResult.type === 'INSTANT' ? 'Active (Paid)' : 'Payment Pending Approval'}
                   </span>
                 </div>
               </div>
@@ -507,18 +513,33 @@ export function CheckoutModal({
                     Select Payment Gateway:
                   </label>
                   <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {/* Section 29: Bank Transfer Payment Top Priority */}
                     <button
                       type="button"
-                      onClick={() => setActiveTab('CARD')}
+                      onClick={() => setActiveTab('BANK_TRANSFER')}
                       className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition ${
-                        activeTab === 'CARD'
-                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300'
+                        activeTab === 'BANK_TRANSFER'
+                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 shadow-sm'
                           : 'border-border bg-card hover:bg-muted/40 text-foreground'
                       }`}
                     >
-                      <CreditCard className="h-5 w-5 mb-1 text-brand-600" />
-                      <span className="text-[11px] font-bold">Debit / Card</span>
-                      <span className="text-[9px] text-emerald-600 font-semibold">Instant</span>
+                      <Landmark className="h-5 w-5 mb-1 text-sky-600" />
+                      <span className="text-[11px] font-bold">Bank Transfer</span>
+                      <span className="text-[9px] text-emerald-600 font-bold">Priority Top</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('RAAST')}
+                      className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition ${
+                        activeTab === 'RAAST'
+                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 shadow-sm'
+                          : 'border-border bg-card hover:bg-muted/40 text-foreground'
+                      }`}
+                    >
+                      <Zap className="h-5 w-5 mb-1 text-amber-500" />
+                      <span className="text-[11px] font-bold">Raast / Sada</span>
+                      <span className="text-[9px] text-muted-foreground">Zero Fee</span>
                     </button>
 
                     <button
@@ -526,7 +547,7 @@ export function CheckoutModal({
                       onClick={() => setActiveTab('JAZZCASH')}
                       className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition ${
                         activeTab === 'JAZZCASH'
-                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300'
+                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 shadow-sm'
                           : 'border-border bg-card hover:bg-muted/40 text-foreground'
                       }`}
                     >
@@ -540,7 +561,7 @@ export function CheckoutModal({
                       onClick={() => setActiveTab('EASYPAISA')}
                       className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition ${
                         activeTab === 'EASYPAISA'
-                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300'
+                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 shadow-sm'
                           : 'border-border bg-card hover:bg-muted/40 text-foreground'
                       }`}
                     >
@@ -551,30 +572,16 @@ export function CheckoutModal({
 
                     <button
                       type="button"
-                      onClick={() => setActiveTab('BANK_TRANSFER')}
+                      onClick={() => setActiveTab('CARD')}
                       className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition ${
-                        activeTab === 'BANK_TRANSFER'
-                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300'
+                        activeTab === 'CARD'
+                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 shadow-sm'
                           : 'border-border bg-card hover:bg-muted/40 text-foreground'
                       }`}
                     >
-                      <Landmark className="h-5 w-5 mb-1 text-sky-600" />
-                      <span className="text-[11px] font-bold">Bank IBFT</span>
-                      <span className="text-[9px] text-muted-foreground">Online Transfer</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('RAAST')}
-                      className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition ${
-                        activeTab === 'RAAST'
-                          ? 'border-brand-600 bg-brand-50/80 ring-2 ring-brand-500/20 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300'
-                          : 'border-border bg-card hover:bg-muted/40 text-foreground'
-                      }`}
-                    >
-                      <Zap className="h-5 w-5 mb-1 text-amber-500" />
-                      <span className="text-[11px] font-bold">Raast / Sada</span>
-                      <span className="text-[9px] text-muted-foreground">Zero Fee</span>
+                      <CreditCard className="h-5 w-5 mb-1 text-brand-600" />
+                      <span className="text-[11px] font-bold">Debit / Card</span>
+                      <span className="text-[9px] text-muted-foreground">Secondary</span>
                     </button>
                   </div>
                 </div>
