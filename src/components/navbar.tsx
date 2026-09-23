@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Crown,
   Heart,
-  Search,
   ShieldCheck,
   User as UserIcon,
   Bell,
@@ -17,13 +16,7 @@ import {
   ShieldAlert,
   LogOut,
   ChevronDown,
-  MessageSquare,
-  Bookmark,
-  Compass,
-  PhoneCall,
   HelpCircle,
-  CreditCard,
-  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
@@ -39,9 +32,7 @@ export function Navbar() {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const isAdmin =
     currentUser?.role === 'SUPER_ADMIN' ||
-    currentUser?.role === 'ADMIN' ||
-    currentUser?.role === 'MODERATOR' ||
-    currentUser?.email === 'ladi02893@gmail.com';
+    currentUser?.role === 'ADMIN';
   const isConsultant = currentUser?.role === 'CONSULTANT';
 
   // Guest nav links
@@ -229,7 +220,7 @@ export function Navbar() {
                   <img
                     src={
                       currentUser.avatarUrl ||
-                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'
+                      '/avatar-placeholder.svg'
                     }
                     alt={currentUser.name}
                     className="h-7 w-7 rounded-full object-cover ring-1 ring-gold-400"
@@ -245,7 +236,7 @@ export function Navbar() {
                   <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-border bg-card p-2 shadow-2xl z-50">
                     <div className="p-2 border-b border-border/80 mb-1">
                       <div className="font-bold text-xs text-foreground truncate">{currentUser.name}</div>
-                      <div className="text-[10px] font-mono text-gold-700 font-bold">{currentUser.profileIdCode || 'VRM-000000'}</div>
+                      <div className="text-[10px] font-mono text-gold-700 font-bold">{currentUser.profileIdCode || 'ID pending'}</div>
                       <div className="mt-1 flex items-center gap-1.5">
                         <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[9px] font-bold text-brand-800 border border-brand-200">
                           {currentUser.subscriptionTier.replace('_', ' ')}
@@ -385,7 +376,7 @@ export function Navbar() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs px-2">
                   <span className="font-bold text-foreground">{currentUser.name}</span>
-                  <span className="font-mono text-gold-700 font-bold">{currentUser.profileIdCode || 'VRM-000000'}</span>
+                  <span className="font-mono text-gold-700 font-bold">{currentUser.profileIdCode || 'ID pending'}</span>
                 </div>
                 <Link
                   href="/dashboard"

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-labelledby="title description">
+  <title id="title">Profile photo placeholder</title>
+  <desc id="description">A neutral silhouette used when a member has not provided a profile photo.</desc>
+  <rect width="400" height="400" fill="#f1f5f9"/>
+  <circle cx="200" cy="145" r="72" fill="#94a3b8"/>
+  <path d="M70 370c8-88 57-135 130-135s122 47 130 135" fill="#94a3b8"/>
+</svg>

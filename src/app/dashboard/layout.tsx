@@ -7,25 +7,20 @@ import {
   LayoutDashboard,
   User,
   Compass,
-  Heart,
   Bookmark,
   MessageSquare,
   Bell,
   Crown,
   ShieldCheck,
   Lock,
-  BarChart3,
   HelpCircle,
   Settings,
   LogOut,
-  ChevronRight,
   Menu,
   X,
-  Sparkles,
   ShieldAlert,
   Users,
   CreditCard,
-  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
@@ -56,7 +51,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Account Settings', href: '/dashboard/settings', icon: Settings },
   ];
 
-  const profileIdCode = currentProfile?.profileIdCode || currentUser?.profileIdCode || 'VRM-000012';
+  const profileIdCode = currentProfile?.profileIdCode || currentUser?.profileIdCode || 'ID pending';
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
@@ -85,7 +80,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <img
               src={
                 currentUser?.avatarUrl ||
-                'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'
+                '/avatar-placeholder.svg'
               }
               alt="Avatar"
               className="h-11 w-11 rounded-2xl object-cover ring-2 ring-gold-500/40"
@@ -158,7 +153,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             Senior Consultant Portal
           </Link>
 
-          {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'MODERATOR') && (
+          {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && (
             <Link
               href="/admin"
               className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-brand-300 bg-brand-50 py-2 text-[11px] font-semibold text-brand-800 shadow-sm transition hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950 dark:text-brand-300"

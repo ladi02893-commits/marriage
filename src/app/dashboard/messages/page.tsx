@@ -1,20 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import {
-  MessageSquare,
   Send,
   ShieldCheck,
   Phone,
   Video,
-  Info,
-  Sparkles,
-  Lock,
-  MoreVertical,
-  Check,
   CheckCheck,
-  Smile,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
@@ -110,7 +102,7 @@ export default function MessagesChatPage() {
                     <img
                       src={
                         photo ||
-                        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200'
+                        '/avatar-placeholder.svg'
                       }
                       alt={name}
                       className="h-12 w-12 rounded-2xl object-cover ring-2 ring-brand-500/20 shrink-0"
@@ -141,7 +133,7 @@ export default function MessagesChatPage() {
                   <img
                     src={
                       otherPersonPhoto ||
-                      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200'
+                      '/avatar-placeholder.svg'
                     }
                     alt={otherPersonName}
                     className="h-10 w-10 rounded-2xl object-cover ring-1 ring-brand-500/20"

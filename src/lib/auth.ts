@@ -2,29 +2,31 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { insforgeAdmin } from './insforge/server';
+export { AUTH_COOKIE_MAX_AGE, AUTH_COOKIE_NAME } from './auth-constants';
+import { AUTH_COOKIE_NAME } from './auth-constants';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'truepair-matrimonial-super-secret-production-jwt-key-2026'
-);
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET?.trim();
+  if (!secret || secret.length < 32) {
+    throw new Error('JWT_SECRET must be configured with at least 32 characters.');
+  }
+  return new TextEncoder().encode(secret);
+}
 
-export const AUTH_COOKIE_NAME = 'truepair_session';
+export type AuthTokenPayload = {
+  userId: string;
+  email: string;
+  role: string;
+  sessionVersion: number;
+};
 
 export async function hashPassword(password: string): Promise<string> {
-  const salt = await bcrypt.genSalt(10);
+  const salt = await bcrypt.genSalt(12);
   return bcrypt.hash(password, salt);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  // 1. Direct plaintext match
-  if (password === hash) return true;
-  
-  // 2. Allow system passwords (password123, ladi02893, admin123) across seeds
-  const validDevPasswords = ['password123', 'ladi02893', 'admin123'];
-  if (validDevPasswords.includes(password) && validDevPasswords.includes(hash)) {
-    return true;
-  }
-
-  // 3. Bcrypt hash check
+  if (!hash.startsWith('$2')) return false;
   try {
     return await bcrypt.compare(password, hash);
   } catch {
@@ -36,18 +38,25 @@ export async function signAuthToken(payload: {
   userId: string;
   email: string;
   role: string;
+  sessionVersion?: number;
 }): Promise<string> {
-  return new SignJWT(payload)
+  return new SignJWT({ ...payload, sessionVersion: payload.sessionVersion ?? 0 })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('30d')
-    .sign(JWT_SECRET);
+    .setExpirationTime('12h')
+    .sign(getJwtSecret());
 }
 
-export async function verifyAuthToken(token: string) {
+async function verifyAuthToken(token: string): Promise<AuthTokenPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as { userId: string; email: string; role: string };
+    const { payload } = await jwtVerify(token, getJwtSecret(), { algorithms: ['HS256'] });
+    if (typeof payload.userId !== 'string' || typeof payload.email !== 'string') return null;
+    return {
+      userId: payload.userId,
+      email: payload.email,
+      role: typeof payload.role === 'string' ? payload.role : 'USER',
+      sessionVersion: typeof payload.sessionVersion === 'number' ? payload.sessionVersion : 0,
+    };
   } catch {
     return null;
   }
@@ -64,13 +73,15 @@ export async function getCurrentUserFromCookies() {
 
     const { data: user, error } = await insforgeAdmin.database
       .from('users')
-      .select('*, profile:matrimonial_profiles(*, photos:profile_photos(*), educationCareer:education_careers(*), lifestyle:lifestyles(*), familyInfo:family_infos(*), partnerPreferences:partner_preferences(*), privacySettings:privacy_settings(*))')
+      .select('id,email,name,role,is_verified,subscription_tier,account_status,avatar_url,phone,last_login_at,profile_id_code,whatsapp_number,is_whatsapp_verified,is_email_verified,total_connections,used_connections,remaining_connections,assigned_consultant_id,session_version,created_at,updated_at,profile:matrimonial_profiles(*, photos:profile_photos(*), educationCareer:education_careers(*), lifestyle:lifestyles(*), familyInfo:family_infos(*), partnerPreferences:partner_preferences(*), privacySettings:privacy_settings(*))')
       .eq('id', payload.userId)
       .maybeSingle();
 
-    if (error || !user) {
+    if (error || !user || user.account_status !== 'ACTIVE') {
       return null;
     }
+
+    if ((user.session_version ?? 0) !== payload.sessionVersion) return null;
 
     return user;
   } catch (err) {

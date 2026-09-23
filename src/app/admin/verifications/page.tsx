@@ -1,14 +1,8 @@
 'use client';
 
 import React from 'react';
-import {
-  FileCheck,
-  ShieldCheck,
-  CheckCircle2,
-  XCircle,
-  ExternalLink,
-  Clock,
-} from 'lucide-react';
+
+
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 
@@ -91,7 +85,6 @@ export default function AdminVerificationsPage() {
                   <button
                     onClick={() => {
                       approveVerification(v.id, 'Government ID and biometric selfie matched successfully.');
-                      toast.success(`Verified identity for ${v.userName}! Blue Shield issued.`);
                     }}
                     className="rounded-xl bg-emerald-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-emerald-700"
                   >

@@ -6,7 +6,7 @@ export interface CountryWithCities {
   cities: string[];
 }
 
-export const COUNTRY_CITIES_MAP: Record<string, string[]> = {
+const COUNTRY_CITIES_MAP: Record<string, string[]> = {
   Pakistan: [
     'Lahore',
     'Karachi',
@@ -629,7 +629,7 @@ export const PRIORITY_COUNTRIES = [
   'South Africa',
 ];
 
-export const OTHER_GLOBAL_COUNTRIES = [
+const OTHER_GLOBAL_COUNTRIES = [
   'Afghanistan',
   'Albania',
   'Algeria',
@@ -785,13 +785,6 @@ export const OTHER_GLOBAL_COUNTRIES = [
 export function getAllCountries(): string[] {
   const combined = Array.from(new Set([...PRIORITY_COUNTRIES, ...OTHER_GLOBAL_COUNTRIES]));
   return combined;
-}
-
-/**
- * Returns sorted list of all countries strictly in alphabetical order
- */
-export function getAllCountriesAlphabetical(): string[] {
-  return getAllCountries().sort((a, b) => a.localeCompare(b));
 }
 
 /**

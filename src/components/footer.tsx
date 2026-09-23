@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Crown, ShieldCheck, Lock, Phone, Mail, MapPin, Award, CheckCircle2, Sparkles } from 'lucide-react';
+import { Crown, ShieldCheck, Lock, Phone, Mail, MapPin, Sparkles } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -82,7 +82,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="h-3.5 w-3.5 text-gold-600 shrink-0" />
-                <span>Royal Concierge Desk: +92 300 1234567</span>
+                <span>Concierge contact details are provided after assignment.</span>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="h-3.5 w-3.5 text-gold-600 shrink-0" />
@@ -162,7 +162,7 @@ export function Footer() {
         <div className="mt-12 border-t border-border/80 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <p>© {new Date().getFullYear()} VIP Royal Matchmaking Pvt Ltd. All rights reserved.</p>
           <div className="flex items-center gap-4 text-[11px]">
-            <span>100% Shariah Compliant Process</span>
+            <span>Consent-based introductions</span>
             <span>•</span>
             <span>No Monthly Expiry on Connections</span>
             <span>•</span>

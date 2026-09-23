@@ -2,7 +2,7 @@
 
 import React, { useRef } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Sparkles, MapPin, Briefcase, GraduationCap, Heart, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, MapPin, Briefcase, GraduationCap, ShieldCheck } from 'lucide-react';
 import { MatrimonialProfile } from '@/lib/types';
 import { MatchingService } from '@/lib/matching-service';
 
@@ -19,7 +19,7 @@ export function RecommendationScroller({
   profiles,
   excludeProfileId,
   title = 'You May Also Like',
-  subtitle = 'AI-recommended similar profiles based on mutual background, education & lifestyle compatibility.',
+  subtitle = 'Profiles selected by your stated preferences and available profile details.',
 }: RecommendationScrollerProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -41,13 +41,13 @@ export function RecommendationScroller({
     .map((candidate) => {
       const compatibility = currentProfile
         ? MatchingService.calculateCompatibility(currentProfile, candidate)
-        : { overallScore: 88 + Math.floor(Math.random() * 10) };
+        : null;
       return {
         ...candidate,
-        compatibilityScore: compatibility.overallScore,
+        compatibilityScore: compatibility?.overallScore ?? null,
       };
     })
-    .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+    .sort((a, b) => (b.compatibilityScore ?? 0) - (a.compatibilityScore ?? 0));
 
   if (candidates.length === 0) return null;
 
@@ -90,7 +90,7 @@ export function RecommendationScroller({
         {candidates.map((profile) => {
           const photoUrl =
             profile.photos?.[0]?.url ||
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400';
+            '/avatar-placeholder.svg';
 
           return (
             <Link
@@ -108,10 +108,10 @@ export function RecommendationScroller({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
 
                 {/* Compatibility Score Tag */}
-                <div className="absolute top-2.5 right-2.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-bold text-gold-300 backdrop-blur-md border border-gold-500/30 flex items-center gap-1">
+                {profile.compatibilityScore !== null && <div className="absolute top-2.5 right-2.5 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-bold text-gold-300 backdrop-blur-md border border-gold-500/30 flex items-center gap-1">
                   <Sparkles className="h-3 w-3 text-gold-400" />
                   {profile.compatibilityScore}%
-                </div>
+                </div>}
 
                 {/* Verified Badge */}
                 {profile.verificationBadge === 'APPROVED' && (

@@ -1,20 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import {
   UserCheck,
   ShieldCheck,
-  Crown,
   Eye,
-  CheckCircle2,
-  XCircle,
   MessageCircle,
   Search,
   Sparkles,
-  AlertTriangle,
-  Flame,
-  ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
@@ -22,12 +15,27 @@ import { AdminUserDossierModal } from '@/components/admin/admin-user-dossier-mod
 import { User, MatrimonialProfile } from '@/lib/types';
 
 export default function AdminProfilesModerationPage() {
-  const { profiles, users, updateUserStatus, updateProfileApproval } = useAuth();
+  const { profiles, users, updateProfileApproval, refreshDatabase } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMode, setFilterMode] = useState<'ALL' | 'VERIFIED' | 'NEEDS_REVIEW' | 'PENDING_APPROVAL'>('ALL');
   const [selectedUserForDossier, setSelectedUserForDossier] = useState<User | null>(null);
   const [selectedProfileForDossier, setSelectedProfileForDossier] = useState<MatrimonialProfile | null>(null);
   const [isDossierModalOpen, setIsDossierModalOpen] = useState(false);
+  const reviewPhoto = async (photoId: string, isApproved: boolean) => {
+    try {
+      const response = await fetch('/api/profile-photos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: photoId, isApproved }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Review failed.');
+      await refreshDatabase();
+      toast.success(isApproved ? 'Photo approved.' : 'Photo hidden.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Photo review failed.');
+    }
+  };
 
   const filteredProfiles = profiles.filter((p) => {
     if (filterMode === 'PENDING_APPROVAL' && p.approvalStatus !== 'PENDING_APPROVAL') return false;
@@ -50,10 +58,10 @@ export default function AdminProfilesModerationPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
         <div>
           <h1 className="text-2xl font-bold font-serif text-white flex items-center gap-2">
-            <UserCheck className="h-6 w-6 text-amber-500" /> Matrimonial Profile Screening & AI Audit
+            <UserCheck className="h-6 w-6 text-amber-500" /> Matrimonial Profile Screening
           </h1>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Screen photos, biographies, AI fraud risk scores, and contact applicants directly via WhatsApp.
+            Review photos, biographies, approval status, and applicant contact details.
           </p>
         </div>
 
@@ -104,10 +112,10 @@ export default function AdminProfilesModerationPage() {
       {/* Profiles Grid */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {filteredProfiles.map((p) => {
-          const cleanPhone = (p.phone || '923001234567').replace(/[^0-9]/g, '');
-          const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
+          const cleanPhone = p.phone?.replace(/[^0-9]/g, '');
+          const whatsappUrl = cleanPhone ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
             `Assalam-o-Alaikum ${p.fullName}, this is the Concierge from VIP Royal Matchmaking regarding your matrimonial profile (#${p.id}).`
-          )}`;
+          )}` : null;
 
           return (
             <div key={p.id} className="rounded-3xl border border-zinc-800 bg-zinc-900 p-6 space-y-4 shadow-xl flex flex-col justify-between">
@@ -117,7 +125,7 @@ export default function AdminProfilesModerationPage() {
                     <img
                       src={
                         p.photos?.[0]?.url ||
-                        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'
+                        '/avatar-placeholder.svg'
                       }
                       alt={p.fullName}
                       className="h-14 w-14 rounded-2xl object-cover ring-2 ring-amber-500/20"
@@ -132,17 +140,17 @@ export default function AdminProfilesModerationPage() {
                       <p className="text-xs text-zinc-400">
                         {p.age} yrs • {p.caste || 'Caste Specified'} • {p.city}, {p.country}
                       </p>
-                      <p className="text-[11px] text-zinc-500 font-mono">{p.phone || '+92 300 1234567'}</p>
+                      <p className="text-[11px] text-zinc-500 font-mono">{p.phone || 'Not provided'}</p>
                     </div>
                   </div>
 
                   {/* AI Trust Metrics */}
                   <div className="text-right">
                     <div className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/20">
-                      <Sparkles className="h-2.5 w-2.5" /> Quality: {p.profileQualityScore || 98}%
+                      <Sparkles className="h-2.5 w-2.5" /> Quality: {p.profileQualityScore ?? 'Not assessed'}{p.profileQualityScore != null ? '%' : ''}
                     </div>
                     <div className="text-[10px] text-zinc-500 mt-1">
-                      Fraud Risk: <span className="text-emerald-400 font-bold">0% (Safe)</span>
+                      Fraud Risk: <span className="text-zinc-300 font-bold">Not assessed</span>
                     </div>
                   </div>
                 </div>
@@ -153,34 +161,40 @@ export default function AdminProfilesModerationPage() {
                 </div>
               </div>
 
+              {p.photos?.some((photo) => !photo.isApproved) && (
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-amber-300">Photos awaiting review</p>
+                  <div className="flex flex-wrap gap-3">
+                    {p.photos.filter((photo) => !photo.isApproved).map((photo) => (
+                      <div key={photo.id} className="space-y-1">
+                        <img src={photo.url} alt="Pending profile photo" className="h-20 w-20 rounded-xl object-cover" />
+                        <button type="button" onClick={() => void reviewPhoto(photo.id, true)} className="rounded-lg bg-emerald-600 px-2 py-1 text-[11px] font-bold text-white">Approve</button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex items-center justify-between pt-3 border-t border-zinc-800 text-xs">
-                <a
+                {whatsappUrl ? <a
                   href={whatsappUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1.5 rounded-xl border border-emerald-600/30 bg-emerald-950/40 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-900/40 transition"
                 >
                   <MessageCircle className="h-3.5 w-3.5" /> WhatsApp Applicant
-                </a>
+                </a> : <span className="text-zinc-500">No phone provided</span>}
 
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
-                      const matchedUser =
-                        users.find((u) => u.id === p.userId || u.profileId === p.id) ||
-                        ({
-                          id: p.userId || `user-${p.id}`,
-                          email: `${p.displayName.toLowerCase().replace(/\s+/g, '')}@example.com`,
-                          name: p.fullName,
-                          role: 'USER',
-                          subscriptionTier: 'FREE',
-                          isVerified: p.verificationBadge === 'APPROVED',
-                          accountStatus: 'ACTIVE',
-                          createdAt: p.createdAt,
-                          profileId: p.id,
-                        } as User);
+                      const matchedUser = users.find((u) => u.id === p.userId || u.profileId === p.id);
+                      if (!matchedUser) {
+                        toast.error('The user record for this profile could not be loaded.');
+                        return;
+                      }
 
                       setSelectedUserForDossier(matchedUser);
                       setSelectedProfileForDossier(p);
@@ -196,7 +210,6 @@ export default function AdminProfilesModerationPage() {
                         type="button"
                         onClick={() => {
                           updateProfileApproval(p.id, 'APPROVED');
-                          toast.success(`Approved profile for ${p.displayName}`);
                         }}
                         className="rounded-xl bg-emerald-600 px-3.5 py-1.5 font-bold text-white shadow-md hover:bg-emerald-700 transition cursor-pointer"
                       >
@@ -206,7 +219,6 @@ export default function AdminProfilesModerationPage() {
                         type="button"
                         onClick={() => {
                           updateProfileApproval(p.id, 'REJECTED', 'Profile rejected by moderation desk.');
-                          toast.error(`Rejected profile for ${p.displayName}`);
                         }}
                         className="rounded-xl border border-rose-800 bg-rose-950/60 px-2.5 py-1.5 font-bold text-rose-300 hover:bg-rose-900 transition cursor-pointer"
                       >

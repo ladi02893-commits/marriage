@@ -1,113 +1,89 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rejectCrossSiteMutation, requireAdmin, requireUser } from '@/lib/api-auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
-import { INITIAL_REPORTS } from '@/lib/data-store';
+
+function mapReport(report: Record<string, any>) {
+  return {
+    ...report,
+    reporterId: report.reporter_id,
+    reportedUserId: report.reported_user_id,
+    reportedUserName: report.reportedUser?.name ?? 'Reported user',
+    reportedUserEmail: report.reportedUser?.email ?? '',
+    reporterName: report.reporter?.name ?? 'Reporter',
+    reporterEmail: report.reporter?.email ?? '',
+    evidenceUrl: report.evidence_url,
+    adminActionTaken: report.admin_action_taken,
+    createdAt: report.created_at,
+  };
+}
 
 export async function GET() {
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
   try {
-    let dbReports: any[] = [];
-    try {
-      const { data, error } = await insforgeAdmin.database
-        .from('abuse_reports')
-        .select('*, reporter:users!reporter_id(id, name, email), reportedUser:users!reported_user_id(id, name, email)')
-        .order('created_at', { ascending: false });
-
-      if (!error && data) {
-        dbReports = data.map((r: any) => ({
-          ...r,
-          reporterId: r.reporter_id || r.reporterId,
-          reportedUserId: r.reported_user_id || r.reportedUserId,
-          reportedUserName: r.reportedUser?.name || 'Reported User',
-          reportedUserEmail: r.reportedUser?.email || '',
-          reporterName: r.reporter?.name || 'Reporter',
-          reporterEmail: r.reporter?.email || '',
-          evidenceUrl: r.evidence_url || r.evidenceUrl,
-          adminActionTaken: r.admin_action_taken || r.adminActionTaken,
-          createdAt: r.created_at || r.createdAt,
-        }));
-      }
-    } catch (err) {
-      console.warn('InsForge reports fallback:', err);
-    }
-
-    const data = dbReports.length > 0 ? dbReports : INITIAL_REPORTS;
-
-    return NextResponse.json({
-      success: true,
-      data,
-      total: data.length,
-      source: dbReports.length > 0 ? 'INSFORGE_DATABASE' : 'DATA_STORE',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch abuse reports.' },
-      { status: 500 }
-    );
+    const { data, error } = await insforgeAdmin.database.from('abuse_reports')
+      .select('*,reporter:users!reporter_id(id,name,email),reportedUser:users!reported_user_id(id,name,email)')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return NextResponse.json({ success: true, data: (data ?? []).map(mapReport), total: data?.length ?? 0 });
+  } catch (error) {
+    console.error('Reports fetch failed:', error);
+    return NextResponse.json({ success: false, error: 'Reports could not be loaded.' }, { status: 503 });
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
   try {
-    const body = await req.json();
-    const { reporterId, reportedUserId, category, description, evidenceUrl } = body;
-
-    const { data: created, error } = await insforgeAdmin.database
-      .from('abuse_reports')
-      .insert([{
-        reporter_id: reporterId,
-        reported_user_id: reportedUserId,
-        category: category || 'FAKE_PROFILE',
-        description: description || '',
-        evidence_url: evidenceUrl || null,
-        status: 'OPEN',
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const body = await request.json();
+    const reportedUserId = typeof body.reportedUserId === 'string' ? body.reportedUserId : '';
+    const category = typeof body.category === 'string' ? body.category.toUpperCase() : '';
+    const description = typeof body.description === 'string' ? body.description.trim().slice(0, 2000) : '';
+    const categories = ['FAKE_PROFILE', 'HARASSMENT', 'INAPPROPRIATE_CONTENT', 'SPAM', 'SCAM', 'OTHER'];
+    if (!reportedUserId || reportedUserId === auth.user.id || !categories.includes(category) || description.length < 10) {
+      return NextResponse.json({ success: false, error: 'A valid report target, category, and description are required.' }, { status: 400 });
     }
-
-    return NextResponse.json({
-      success: true,
-      data: created,
-      message: 'Abuse report logged in InsForge database.',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to submit abuse report.' },
-      { status: 500 }
-    );
+    const { data: target, error: targetError } = await insforgeAdmin.database.from('users').select('id').eq('id', reportedUserId).maybeSingle();
+    if (targetError) throw targetError;
+    if (!target) return NextResponse.json({ success: false, error: 'Reported user not found.' }, { status: 404 });
+    const { data: created, error } = await insforgeAdmin.database.from('abuse_reports').insert([{
+      reporter_id: auth.user.id,
+      reported_user_id: reportedUserId,
+      category,
+      description,
+      evidence_url: typeof body.evidenceUrl === 'string' ? body.evidenceUrl.trim().slice(0, 500) || null : null,
+      status: 'OPEN',
+    }]).select().single();
+    if (error) throw error;
+    return NextResponse.json({ success: true, data: mapReport(created), message: 'Report submitted for review.' }, { status: 201 });
+  } catch (error) {
+    console.error('Report submission failed:', error);
+    return NextResponse.json({ success: false, error: 'Report could not be submitted.' }, { status: 500 });
   }
 }
 
-export async function PATCH(req: NextRequest) {
+export async function PATCH(request: NextRequest) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
   try {
-    const body = await req.json();
-    const { id, status, adminActionTaken } = body;
-
-    const { data: updated, error } = await insforgeAdmin.database
-      .from('abuse_reports')
-      .update({
-        status,
-        admin_action_taken: adminActionTaken || null,
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const body = await request.json();
+    const status = typeof body.status === 'string' ? body.status.toUpperCase() : '';
+    if (typeof body.id !== 'string' || !['OPEN', 'INVESTIGATING', 'RESOLVED', 'DISMISSED'].includes(status)) {
+      return NextResponse.json({ success: false, error: 'Valid report ID and status are required.' }, { status: 400 });
     }
-
-    return NextResponse.json({
-      success: true,
-      data: updated,
-      message: `Report status updated to ${status} in InsForge database.`,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update abuse report.' },
-      { status: 500 }
-    );
+    const { data, error } = await insforgeAdmin.database.from('abuse_reports').update({
+      status,
+      admin_action_taken: typeof body.adminActionTaken === 'string' ? body.adminActionTaken.trim().slice(0, 1000) : null,
+    }).eq('id', body.id).select().single();
+    if (error) throw error;
+    return NextResponse.json({ success: true, data: mapReport(data) });
+  } catch (error) {
+    console.error('Report review failed:', error);
+    return NextResponse.json({ success: false, error: 'Report could not be updated.' }, { status: 500 });
   }
 }

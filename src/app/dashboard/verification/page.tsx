@@ -3,13 +3,8 @@
 import React, { useState } from 'react';
 import {
   ShieldCheck,
-  UploadCloud,
-  FileCheck,
-  CheckCircle2,
-  AlertCircle,
   Clock,
   Lock,
-  Camera,
 } from 'lucide-react';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useAuth } from '@/lib/auth-context';
@@ -18,13 +13,15 @@ import { toast } from 'sonner';
 export default function VerificationHubPage() {
   const { currentUser, verifications, submitVerification } = useAuth();
   const [docType, setDocType] = useState<'PASSPORT' | 'DRIVING_LICENSE' | 'NATIONAL_ID'>('PASSPORT');
-  const [docUrl, setDocUrl] = useState('https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=400');
-  const [selfieUrl, setSelfieUrl] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400');
+  const [docUrl, setDocUrl] = useState('');
+  const [docKey, setDocKey] = useState('');
+  const [selfieUrl, setSelfieUrl] = useState('');
+  const [selfieKey, setSelfieKey] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const userVerif = verifications.find((v) => v.userId === currentUser?.id);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!docUrl || !selfieUrl) {
       toast.error('Please provide both document and live selfie images.');
@@ -32,11 +29,10 @@ export default function VerificationHubPage() {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      submitVerification(docType, docUrl, selfieUrl);
-      setIsSubmitting(false);
-      toast.success('Verification dossier submitted for compliance review.');
-    }, 500);
+    const result = await submitVerification(docType, docUrl, selfieUrl, docKey, selfieKey);
+    setIsSubmitting(false);
+    if (result.success) toast.success(result.message);
+    else toast.error(result.message);
   };
 
   return (
@@ -86,7 +82,7 @@ export default function VerificationHubPage() {
             Submit Government ID for Audit
           </h3>
           <p className="text-xs text-muted-foreground mb-6">
-            All files are encrypted with AES-256 and never shared with other users.
+            Verification files are stored in a private, access-controlled bucket and are not shown to other members.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -122,7 +118,7 @@ export default function VerificationHubPage() {
                   bucket="verifications"
                   folder="documents"
                   value={docUrl}
-                  onUploadSuccess={(url) => setDocUrl(url)}
+                  onUploadSuccess={(url, key) => { setDocUrl(url); setDocKey(key ?? ''); }}
                 />
               </div>
 
@@ -136,14 +132,14 @@ export default function VerificationHubPage() {
                   bucket="verifications"
                   folder="selfies"
                   value={selfieUrl}
-                  onUploadSuccess={(url) => setSelfieUrl(url)}
+                  onUploadSuccess={(url, key) => { setSelfieUrl(url); setSelfieKey(key ?? ''); }}
                 />
               </div>
             </div>
 
             <div className="flex items-center justify-between pt-4 border-t border-border">
               <span className="text-[11px] text-muted-foreground flex items-center gap-1">
-                <Lock className="h-3.5 w-3.5 text-emerald-600" /> End-to-end encrypted storage
+                <Lock className="h-3.5 w-3.5 text-emerald-600" /> Private, access-controlled storage
               </span>
 
               <button

@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Lock, EyeOff, ShieldCheck, UserX, AlertCircle, Save } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Lock, ShieldCheck, Save } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { toast } from 'sonner';
 
 export default function PrivacySettingsPage() {
   const { currentProfile, updateCurrentUserProfile } = useAuth();
 
   const [photoVisibility, setPhotoVisibility] = useState(
-    currentProfile?.privacy?.photoVisibility || 'ALL'
+    currentProfile?.privacy?.photoVisibility || 'ONLY_ACCEPTED_INTERESTS'
   );
   const [contactVisibility, setContactVisibility] = useState(
     currentProfile?.privacy?.contactVisibility || 'ONLY_ACCEPTED_INTERESTS'
@@ -19,6 +18,15 @@ export default function PrivacySettingsPage() {
   const [hideProfile, setHideProfile] = useState(
     currentProfile?.privacy?.hideProfileTemporarily ?? false
   );
+
+  useEffect(() => {
+    if (!currentProfile) return;
+    setPhotoVisibility(currentProfile.privacy?.photoVisibility || 'ONLY_ACCEPTED_INTERESTS');
+    setContactVisibility(currentProfile.privacy?.contactVisibility || 'ONLY_ACCEPTED_INTERESTS');
+    setShowAge(currentProfile.privacy?.showAge ?? true);
+    setShowIncome(currentProfile.privacy?.showIncome ?? false);
+    setHideProfile(currentProfile.privacy?.hideProfileTemporarily ?? false);
+  }, [currentProfile]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +41,6 @@ export default function PrivacySettingsPage() {
         hideProfileTemporarily: hideProfile,
       },
     });
-    toast.success('Privacy & Visibility settings updated successfully!');
   };
 
   return (
@@ -67,9 +74,9 @@ export default function PrivacySettingsPage() {
 
           <div className="space-y-2">
             {[
-              { id: 'ALL', label: 'Visible to All Registered Members', desc: 'Maximizes your match inquiries.' },
-              { id: 'MEMBERS_ONLY', label: 'Visible to ID-Verified Members Only', desc: 'Restricts views to verified profiles.' },
-              { id: 'APPROVED_INTERESTS_ONLY', label: 'Visible to Accepted Matches Only', desc: 'Photos remain blurred until you accept connection interest.' },
+              { id: 'ALL', label: 'Visible to all members', desc: 'Other signed-in members can view approved photos.' },
+              { id: 'ONLY_ACCEPTED_INTERESTS', label: 'Accepted matches only', desc: 'Only accepted matches can view approved photos.' },
+              { id: 'NONE', label: 'Hidden from other members', desc: 'Only you and administrators can view your photos.' },
             ].map((opt) => (
               <label
                 key={opt.id}
@@ -108,8 +115,7 @@ export default function PrivacySettingsPage() {
           <div className="space-y-2">
             {[
               { id: 'ONLY_ACCEPTED_INTERESTS', label: 'Only Mutual Accepted Matches', desc: 'Direct contact is disclosed strictly after mutual acceptance.' },
-              { id: 'PREMIUM_ONLY', label: 'Premium Verified Members with Permission', desc: 'Allows verified VIP candidates to request contact permission.' },
-              { id: 'HIDDEN', label: 'Keep Fully Confidential', desc: 'All communications remain on-platform exclusively.' },
+              { id: 'NONE', label: 'Keep fully confidential', desc: 'Contact details remain hidden from other members.' },
             ].map((opt) => (
               <label
                 key={opt.id}

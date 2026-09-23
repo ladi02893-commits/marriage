@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import {
-  Heart,
   ShieldCheck,
   MapPin,
   Briefcase,
@@ -14,7 +13,6 @@ import {
   Eye,
   Crown,
   Lock,
-  Unlock,
   Phone,
   Bookmark,
   MessageCircle,
@@ -41,13 +39,11 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
     isFavorited,
     interests,
     connectionQuota,
-    unlockContactDetails,
     isContactUnlocked,
   } = useAuth();
 
   const [interestModalOpen, setInterestModalOpen] = useState(false);
   const [quotaModalOpen, setQuotaModalOpen] = useState(false);
-  const [unlockConfirmOpen, setUnlockConfirmOpen] = useState(false);
 
   const favorited = isFavorited(profile.id);
   const contactUnlocked = isContactUnlocked(profile.id);
@@ -55,7 +51,7 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
   // Compute compatibility score if current user has a profile (Section 15)
   const compatibility = currentProfile
     ? MatchingService.calculateCompatibility(currentProfile, profile)
-    : { overallScore: 88, matchReasons: ['High lifestyle & family values match', 'Same region preference'] };
+    : null;
 
   const hasSentInterest = interests.some(
     (i) =>
@@ -66,15 +62,16 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
   const primaryPhoto =
     profile.photos?.find((p) => p.isPrimary)?.url ||
     profile.photos?.[0]?.url ||
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=600';
+    '/avatar-placeholder.svg';
 
-  const profileIdCode = profile.profileIdCode || 'VRM-000001';
+  const profileIdCode = profile.profileIdCode || 'ID pending';
 
   // Section 19: Favorite Connections (replaces shortlist)
-  const handleFavoriteClick = (e: React.MouseEvent) => {
+  const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const added = toggleFavorite(profile.id);
+    const added = await toggleFavorite(profile.id);
+    if (added === null) return;
     if (added) {
       toast.success(`Added ${profile.displayName} (${profileIdCode}) to Favorite Connections!`);
     } else {
@@ -82,7 +79,7 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
     }
   };
 
-  // Section 4 & 20: Contact Unlock Logic (1 connection credit deducted)
+  // Contact is disclosed after an interest is accepted, subject to privacy settings.
   const handleUnlockClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -92,22 +89,7 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
       return;
     }
 
-    if (connectionQuota.isReached) {
-      setQuotaModalOpen(true);
-      return;
-    }
-
-    setUnlockConfirmOpen(true);
-  };
-
-  const confirmUnlock = () => {
-    const res = unlockContactDetails(profile.id);
-    setUnlockConfirmOpen(false);
-    if (res.success) {
-      toast.success(res.message);
-    } else {
-      toast.error(res.message);
-    }
+    toast.info('Contact details become available after this member accepts your interest request, unless their privacy settings hide contact.');
   };
 
   const handleInterestAction = () => {
@@ -176,7 +158,7 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
           </button>
 
           {/* Compatibility Meter Tag (Section 15) */}
-          {showScore && (
+          {showScore && compatibility && (
             <div className="absolute bottom-2.5 left-3 z-10">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-black/80 backdrop-blur-md px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
                 <Sparkles className="h-3.5 w-3.5 text-gold-400" />
@@ -286,44 +268,6 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
           </div>
         </div>
       </div>
-
-      {/* Unlock Confirmation Modal (Section 4: 1 credit deduction confirmation) */}
-      {unlockConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-card border border-border rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-2xl bg-brand-50 dark:bg-brand-950 text-brand-600 flex items-center justify-center">
-                <Lock className="h-5 w-5" />
-              </div>
-              <div>
-                <h4 className="font-bold text-sm text-foreground font-serif">Unlock Contact Details</h4>
-                <p className="text-[11px] text-muted-foreground">{profile.fullName} ({profileIdCode})</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Unlocking will deduct <strong>1 Connection Credit</strong> from your balance (Remaining: {connectionQuota.remaining}). Once unlocked, you can view phone, WhatsApp, and family contact details anytime with zero further deduction.
-            </p>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setUnlockConfirmOpen(false)}
-                className="rounded-xl border border-border px-4 py-2 text-xs font-medium text-foreground hover:bg-muted"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmUnlock}
-                className="rounded-xl bg-brand-600 hover:bg-brand-700 px-5 py-2 text-xs font-bold text-white shadow-md"
-              >
-                Confirm & Unlock
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Send Interest Modal */}
       {interestModalOpen && (

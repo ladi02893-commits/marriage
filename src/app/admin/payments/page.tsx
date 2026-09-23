@@ -7,16 +7,12 @@ import {
   XCircle,
   Clock,
   Search,
-  ExternalLink,
   MessageCircle,
   Eye,
-  Filter,
   ShieldCheck,
-  DollarSign,
   AlertCircle,
   Download,
   Plus,
-  ArrowUpRight,
   TrendingUp,
   Receipt,
   FileSpreadsheet,
@@ -33,12 +29,11 @@ import {
   Power,
   Copy,
   Landmark,
-  ShieldAlert,
   Star,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
-import { PaymentProof, ReceivingAccount, SubscriptionTier } from '@/lib/types';
+import { PaymentProof, ReceivingAccount } from '@/lib/types';
 import { PaymentSlipDisplay } from '@/components/ui/payment-slip-display';
 
 export default function AdminPaymentsManagementPage() {
@@ -46,13 +41,11 @@ export default function AdminPaymentsManagementPage() {
     paymentProofs,
     approvePaymentProof,
     rejectPaymentProof,
-    submitPaymentProof,
     receivingAccounts,
     addReceivingAccount,
     updateReceivingAccount,
     deleteReceivingAccount,
     toggleReceivingAccountStatus,
-    users,
   } = useAuth();
 
   // Tabs & Filters
@@ -66,7 +59,6 @@ export default function AdminPaymentsManagementPage() {
   const [previewProof, setPreviewProof] = useState<PaymentProof | null>(null);
   const [rejectingProofId, setRejectingProofId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<PaymentProof | null>(null);
 
   // Receiving Accounts Modals & State
@@ -94,19 +86,6 @@ export default function AdminPaymentsManagementPage() {
     instructions: 'Send fee via App or Online Banking & attach receipt with Trx ID.',
     isActive: true,
     isPrimary: false,
-  });
-
-  // Manual payment form state
-  const [manualForm, setManualForm] = useState({
-    userName: '',
-    userEmail: '',
-    userPhone: '',
-    planSlug: 'VIP',
-    amount: 10000,
-    paymentMethod: 'BANK_TRANSFER',
-    transactionId: '',
-    senderAccountNumber: '',
-    notes: 'Manually logged by Administrator',
   });
 
   // Filtered payments list
@@ -187,68 +166,14 @@ export default function AdminPaymentsManagementPage() {
   // Actions
   const handleApprove = (proof: PaymentProof) => {
     approvePaymentProof(proof.id);
-    toast.success(`Payment verified! ${proof.userName}'s membership has been upgraded to ${proof.planName}.`);
   };
 
   const handleConfirmReject = (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingProofId) return;
     rejectPaymentProof(rejectingProofId, rejectionReason || 'Payment verification unconfirmed.');
-    toast.error('Payment rejected and reason logged.');
     setRejectingProofId(null);
     setRejectionReason('');
-  };
-
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!manualForm.userName || !manualForm.userEmail || !manualForm.transactionId) {
-      toast.error('Please fill in applicant name, email, and transaction ID.');
-      return;
-    }
-
-    const planNames: Record<string, string> = {
-      BASIC: 'Basic Package (30 Connections)',
-      PREMIUM: 'Premium Package (100 Connections)',
-      VIP: 'VIP Royal Package (300 Connections)',
-      PACK_10: '10 Extra Connections Pack',
-      PACK_30: '30 Extra Connections Pack',
-      PACK_50: '50 Extra Connections Pack',
-      PACK_100: '100 Extra Connections Pack',
-    };
-
-    // Link with existing user if email matches
-    const existingUser = users.find(
-      (u) => u.email.toLowerCase() === manualForm.userEmail.trim().toLowerCase()
-    );
-
-    submitPaymentProof({
-      userId: existingUser?.id || `user-${Date.now()}`,
-      userName: manualForm.userName.trim(),
-      userEmail: manualForm.userEmail.trim(),
-      userPhone: manualForm.userPhone.trim() || '+92 300 0000000',
-      planSlug: manualForm.planSlug,
-      planName: planNames[manualForm.planSlug] || manualForm.planSlug,
-      amount: Number(manualForm.amount),
-      currency: 'PKR',
-      paymentMethod: manualForm.paymentMethod as any,
-      transactionId: manualForm.transactionId.trim(),
-      senderAccountNumber: manualForm.senderAccountNumber.trim(),
-      screenshotUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800',
-    });
-
-    toast.success(`Logged manual payment of PKR ${Number(manualForm.amount).toLocaleString()} for ${manualForm.userName}!`);
-    setIsManualModalOpen(false);
-    setManualForm({
-      userName: '',
-      userEmail: '',
-      userPhone: '',
-      planSlug: 'VIP',
-      amount: 10000,
-      paymentMethod: 'BANK_TRANSFER',
-      transactionId: '',
-      senderAccountNumber: '',
-      notes: 'Manually logged by Administrator',
-    });
   };
 
   const handleSaveAccount = (e: React.FormEvent) => {
@@ -270,7 +195,6 @@ export default function AdminPaymentsManagementPage() {
         isActive: accountForm.isActive,
         isPrimary: accountForm.isPrimary,
       });
-      toast.success('Receiving account details updated successfully!');
     } else {
       addReceivingAccount({
         provider: accountForm.provider,
@@ -283,7 +207,6 @@ export default function AdminPaymentsManagementPage() {
         isActive: accountForm.isActive,
         isPrimary: accountForm.isPrimary,
       });
-      toast.success('New receiving account added and live in registration portal!');
     }
 
     setIsAccountModalOpen(false);
@@ -320,7 +243,6 @@ export default function AdminPaymentsManagementPage() {
   const handleDeleteAccount = (acc: ReceivingAccount) => {
     if (confirm(`Are you sure you want to delete "${acc.bankName} (${acc.accountNumber})"?`)) {
       deleteReceivingAccount(acc.id);
-      toast.error('Receiving account removed.');
     }
   };
 
@@ -397,12 +319,6 @@ export default function AdminPaymentsManagementPage() {
             className="flex items-center gap-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-bold text-blue-400 hover:bg-blue-500/20 transition shadow-sm"
           >
             <Landmark className="h-4 w-4" /> + Add Receiving Account
-          </button>
-          <button
-            onClick={() => setIsManualModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-xs font-bold text-black shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition"
-          >
-            <Plus className="h-4 w-4" /> Record Manual Payment
           </button>
         </div>
       </div>
@@ -1472,167 +1388,6 @@ export default function AdminPaymentsManagementPage() {
                 Done
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL 4: RECORD MANUAL PAYMENT ================= */}
-      {isManualModalOpen && (
-        <div
-          onClick={() => setIsManualModalOpen(false)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg rounded-3xl border border-zinc-800 bg-zinc-900 p-6 space-y-5 shadow-2xl text-xs text-zinc-300"
-          >
-            <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
-              <div className="flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-amber-400" />
-                <h3 className="text-base font-bold font-serif text-white">Record Manual / Direct Payment</h3>
-              </div>
-              <button onClick={() => setIsManualModalOpen(false)} className="text-zinc-400 hover:text-white">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleManualSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-300 mb-1">Applicant Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={manualForm.userName}
-                    onChange={(e) => setManualForm({ ...manualForm, userName: e.target.value })}
-                    placeholder="e.g. Dr. Bilal Ahmed"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white placeholder-zinc-600 focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-300 mb-1">Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    value={manualForm.userEmail}
-                    onChange={(e) => setManualForm({ ...manualForm, userEmail: e.target.value })}
-                    placeholder="bilal@gmail.com"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white placeholder-zinc-600 focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-300 mb-1">Phone Number</label>
-                  <input
-                    type="text"
-                    value={manualForm.userPhone}
-                    onChange={(e) => setManualForm({ ...manualForm, userPhone: e.target.value })}
-                    placeholder="+92 300 1234567"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white placeholder-zinc-600 focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-300 mb-1">Package Tier *</label>
-                  <select
-                    value={manualForm.planSlug}
-                    onChange={(e) => {
-                      const slug = e.target.value;
-                      const amounts: Record<string, number> = {
-                        BASIC: 2000,
-                        PREMIUM: 5000,
-                        VIP: 10000,
-                        PACK_10: 1000,
-                        PACK_30: 2500,
-                        PACK_50: 4000,
-                        PACK_100: 7500,
-                      };
-                      setManualForm({
-                        ...manualForm,
-                        planSlug: slug,
-                        amount: amounts[slug] ?? 5000,
-                      });
-                    }}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white focus:border-amber-500 focus:outline-none"
-                  >
-                    <option value="VIP">VIP Royal Package (300 Connections) — PKR 10,000</option>
-                    <option value="PREMIUM">Premium Package (100 Connections) — PKR 5,000</option>
-                    <option value="BASIC">Basic Package (30 Connections) — PKR 2,000</option>
-                    <option value="PACK_10">Top-Up: 10 Connections Pack — PKR 1,000</option>
-                    <option value="PACK_30">Top-Up: 30 Connections Pack — PKR 2,500</option>
-                    <option value="PACK_50">Top-Up: 50 Connections Pack — PKR 4,000</option>
-                    <option value="PACK_100">Top-Up: 100 Connections Pack — PKR 7,500</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-300 mb-1">Payment Method</label>
-                  <select
-                    value={manualForm.paymentMethod}
-                    onChange={(e) => setManualForm({ ...manualForm, paymentMethod: e.target.value })}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white focus:border-amber-500 focus:outline-none"
-                  >
-                    <option value="BANK_TRANSFER">Direct Bank Transfer (Meezan/IBFT)</option>
-                    <option value="JAZZCASH">JazzCash</option>
-                    <option value="EASYPAISA">Easypaisa</option>
-                    <option value="RAAST">Raast Instant</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-300 mb-1">Amount (PKR) *</label>
-                  <input
-                    type="number"
-                    required
-                    value={manualForm.amount}
-                    onChange={(e) => setManualForm({ ...manualForm, amount: Number(e.target.value) })}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white font-mono focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-300 mb-1">Transaction ID / Ref *</label>
-                  <input
-                    type="text"
-                    required
-                    value={manualForm.transactionId}
-                    onChange={(e) => setManualForm({ ...manualForm, transactionId: e.target.value })}
-                    placeholder="e.g. TRX-99882211"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white font-mono placeholder-zinc-600 focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-300 mb-1">Sender Account (Optional)</label>
-                  <input
-                    type="text"
-                    value={manualForm.senderAccountNumber}
-                    onChange={(e) => setManualForm({ ...manualForm, senderAccountNumber: e.target.value })}
-                    placeholder="0300-XXXXXXX"
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-2.5 text-xs text-white font-mono placeholder-zinc-600 focus:border-amber-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsManualModalOpen(false)}
-                  className="rounded-xl border border-zinc-700 bg-zinc-800 px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-amber-500 px-5 py-2 text-xs font-bold text-black hover:bg-amber-400 shadow-md"
-                >
-                  Record Payment & Upgrade
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

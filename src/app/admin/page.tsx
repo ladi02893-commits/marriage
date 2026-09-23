@@ -9,23 +9,9 @@ import {
   AlertTriangle,
   TrendingUp,
   ShieldCheck,
-  ArrowRight,
-  Activity,
   DollarSign,
-  Heart,
   Receipt,
 } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
 import { useAuth } from '@/lib/auth-context';
 
 export default function AdminDashboardPage() {
@@ -62,27 +48,7 @@ export default function AdminDashboardPage() {
   const premiumUsers = liveStats?.premiumUsers ?? users.filter((u) => u.subscriptionTier !== 'FREE').length;
   const pendingVerifs = liveStats?.pendingVerifs ?? verifications.filter((v) => v.status === 'PENDING').length;
   const pendingPayments = liveStats?.pendingPayments ?? paymentProofs.filter((p) => p.status === 'PENDING').length;
-  const openReports = liveStats?.openReports ?? reports.filter((r) => r.status === 'OPEN').length;
   const totalRevenue = liveStats?.totalRevenue ?? paymentProofs.filter((p) => p.status === 'VERIFIED').reduce((acc, curr) => acc + curr.amount, 0);
-
-  const revenueGrowthData = [
-    { month: 'Sep', revenue: 0, subscribers: 0 },
-    { month: 'Oct', revenue: 0, subscribers: 0 },
-    { month: 'Nov', revenue: 0, subscribers: 0 },
-    { month: 'Dec', revenue: 0, subscribers: 0 },
-    { month: 'Jan', revenue: 0, subscribers: 0 },
-    { month: 'Feb', revenue: totalRevenue, subscribers: premiumUsers },
-  ];
-
-  const activityData = [
-    { day: 'Mon', registrations: 2, matches: 4 },
-    { day: 'Tue', registrations: 3, matches: 6 },
-    { day: 'Wed', registrations: 4, matches: 8 },
-    { day: 'Thu', registrations: 2, matches: 5 },
-    { day: 'Fri', registrations: 5, matches: 12 },
-    { day: 'Sat', registrations: 8, matches: 18 },
-    { day: 'Sun', registrations: 6, matches: 14 },
-  ];
 
   return (
     <div className="space-y-8">
@@ -126,9 +92,9 @@ export default function AdminDashboardPage() {
               <Users className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-2xl font-black font-serif text-white">{totalUsers} Active</div>
+          <div className="text-2xl font-black font-serif text-white">{totalUsers} Registered</div>
           <div className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" /> 20 Pakistani Candidates
+            <TrendingUp className="h-3 w-3" /> Current account count
           </div>
         </div>
 
@@ -179,78 +145,8 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Recharts Analytics Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Revenue Growth Chart */}
-        <div className="lg:col-span-8 rounded-3xl border border-zinc-800 bg-zinc-900 p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-white">Revenue Ledger Trend (PKR)</h3>
-              <p className="text-xs text-zinc-400">Connection package & top-up proceeds across all tiers</p>
-            </div>
-            <Link
-              href="/admin/payments"
-              className="text-xs font-bold text-amber-400 hover:underline"
-            >
-              Open Ledger →
-            </Link>
-          </div>
-
-          <div className="h-[280px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueGrowthData}>
-                <defs>
-                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} stroke="#ffffff" />
-                <XAxis dataKey="month" fontSize={11} stroke="#71717a" />
-                <YAxis fontSize={11} stroke="#71717a" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#18181b',
-                    borderRadius: '12px',
-                    fontSize: '11px',
-                    borderColor: '#10b981',
-                    color: '#ffffff',
-                  }}
-                  formatter={(value: any) => [`PKR ${Number(value).toLocaleString()}`, 'Revenue']}
-                />
-                <Area type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2.5} fill="url(#colorRev)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Weekly Match & Registration Activity */}
-        <div className="lg:col-span-4 rounded-3xl border border-zinc-800 bg-zinc-900 p-6 shadow-sm space-y-4">
-          <div>
-            <h3 className="text-sm font-bold text-white">Daily Rishta Match Activity</h3>
-            <p className="text-xs text-zinc-400">Interests sent vs new registrations</p>
-          </div>
-
-          <div className="h-[280px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} stroke="#ffffff" />
-                <XAxis dataKey="day" fontSize={11} stroke="#71717a" />
-                <YAxis fontSize={11} stroke="#71717a" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#18181b',
-                    borderRadius: '12px',
-                    fontSize: '11px',
-                    borderColor: '#e11d48',
-                    color: '#ffffff',
-                  }}
-                />
-                <Bar dataKey="matches" fill="#e11d48" radius={[4, 4, 0, 0]} name="Interests Sent" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-200">
+        Daily activity and historical revenue charts are hidden until time-series reporting is connected to real transaction and registration records.
       </div>
 
       {/* Moderation & Quick Action Desk */}
@@ -314,7 +210,7 @@ export default function AdminDashboardPage() {
           <div className="space-y-3">
             {reports.length === 0 ? (
               <div className="py-8 text-center text-xs text-zinc-500">
-                No open reports. Platform trust & safety standards are 100% compliant.
+                No open reports are currently recorded.
               </div>
             ) : (
               reports.slice(0, 3).map((r) => (

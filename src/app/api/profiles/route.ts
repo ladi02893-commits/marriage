@@ -1,285 +1,205 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ADMIN_ROLES, rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
-import { INITIAL_PROFILES } from '@/lib/data-store';
+import { toProfileDto } from '@/lib/profile-dto';
+
+const PROFILE_SELECT = '*,photos:profile_photos(*),educationCareer:education_careers(*),lifestyle:lifestyles(*),familyInfo:family_infos(*),partnerPreferences:partner_preferences(*),privacySettings:privacy_settings(*),user:users(id,phone,whatsapp_number,profile_id_code,is_verified,is_whatsapp_verified,is_email_verified,account_status)';
+
+function normalizedFilter(value: string | null): string | null {
+  if (!value || value === 'ALL') return null;
+  const trimmed = value.trim().slice(0, 80);
+  return /^[\p{L}\p{N} .'-]+$/u.test(trimmed) ? trimmed : null;
+}
+
 
 export async function GET(request: NextRequest) {
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
+  const isAdmin = ADMIN_ROLES.has(auth.user.role);
+
   try {
-    const { searchParams } = new URL(request.url);
-    const gender = searchParams.get('gender');
-    const religion = searchParams.get('religion');
-    const country = searchParams.get('country');
-    const city = searchParams.get('city');
-    const search = searchParams.get('search');
+    const params = request.nextUrl.searchParams;
+    const gender = normalizedFilter(params.get('gender'));
+    const religion = normalizedFilter(params.get('religion'));
+    const country = normalizedFilter(params.get('country'));
+    const city = normalizedFilter(params.get('city'));
+    const search = normalizedFilter(params.get('search'))?.toLowerCase();
 
-    // Attempt fetching from InsForge Database
-    let dbProfiles: any[] = [];
-    try {
-      let query = insforgeAdmin.database
-        .from('matrimonial_profiles')
-        .select('*, photos:profile_photos(*), educationCareer:education_careers(*), lifestyle:lifestyles(*), familyInfo:family_infos(*), partnerPreferences:partner_preferences(*), privacySettings:privacy_settings(*), user:users(is_verified)');
+    let query = insforgeAdmin.database.from('matrimonial_profiles').select(PROFILE_SELECT);
+    if (!isAdmin) query = query.or(`approval_status.eq.APPROVED,user_id.eq.${auth.user.id}`);
+    if (gender) query = query.eq('gender', gender);
+    if (religion) query = query.eq('religion', religion);
+    if (country) query = query.eq('country', country);
+    if (city) query = query.eq('city', city);
+    const { data: profiles, error } = await query.order('created_at', { ascending: false }).limit(200);
+    if (error) throw error;
 
-      if (gender && gender !== 'ALL') query = query.eq('gender', gender);
-      if (religion && religion !== 'ALL') query = query.eq('religion', religion);
-      if (country && country !== 'ALL') query = query.ilike('country', `%${country}%`);
-      if (city && city !== 'ALL') query = query.ilike('city', `%${city}%`);
-
-      const { data: rawProfiles, error } = await query.order('created_at', { ascending: false });
-
-      if (!error && rawProfiles) {
-        dbProfiles = rawProfiles.map((p: any) => ({
-          ...p,
-          userId: p.user_id || p.userId,
-          fullName: p.full_name || p.fullName,
-          displayName: p.display_name || p.displayName,
-          bioHeadline: p.bio_headline || p.bioHeadline,
-          aboutMe: p.about_me || p.aboutMe,
-          caste: p.caste_or_sub_clan || p.caste,
-          sectOrCommunity: p.sect_or_community || p.sectOrCommunity,
-          motherTongue: p.mother_tongue || p.motherTongue,
-          state: p.state_province || p.state || p.province,
-          province: p.state_province || p.province,
-          dateOfBirth: p.date_of_birth || p.dateOfBirth,
-          completionPercentage: p.completion_percentage ?? p.completionPercentage ?? 85,
-          viewCount: p.view_count ?? p.viewCount ?? 0,
-          likeCount: p.like_count ?? p.likeCount ?? 0,
-          isFeatured: p.is_featured ?? p.isFeatured ?? true,
-          isBoosted: p.is_boosted ?? p.isBoosted ?? false,
-          verificationBadge: (p.user?.is_verified ?? p.user?.isVerified) ? 'APPROVED' : 'UNVERIFIED',
-        }));
-      }
-    } catch (dbErr) {
-      console.warn('InsForge DB query fallback to initial store:', dbErr);
+    const { data: accepted, error: acceptedError } = await insforgeAdmin.database
+      .from('interest_requests')
+      .select('sender_id,receiver_id')
+      .eq('status', 'ACCEPTED')
+      .or(`sender_id.eq.${auth.user.id},receiver_id.eq.${auth.user.id}`);
+    if (acceptedError) throw acceptedError;
+    const connectedUserIds = new Set<string>([auth.user.id]);
+    for (const connection of accepted ?? []) {
+      connectedUserIds.add(connection.sender_id === auth.user.id ? connection.receiver_id : connection.sender_id);
     }
 
-    let results = dbProfiles.length > 0 ? dbProfiles : INITIAL_PROFILES;
-
-    if (gender && gender !== 'ALL') {
-      results = results.filter((p) => p.gender === gender);
-    }
-    if (religion && religion !== 'ALL') {
-      results = results.filter((p) => p.religion === religion);
-    }
-    if (country && country !== 'ALL') {
-      results = results.filter((p) => p.country && p.country.toLowerCase().includes(country.toLowerCase()));
-    }
-    if (city && city !== 'ALL') {
-      results = results.filter((p) => p.city && p.city.toLowerCase().includes(city.toLowerCase()));
-    }
-    if (search && search.trim()) {
-      const term = search.toLowerCase();
-      results = results.filter(
-        (p) =>
-          (p.fullName && p.fullName.toLowerCase().includes(term)) ||
-          (p.displayName && p.displayName.toLowerCase().includes(term)) ||
-          (p.city && p.city.toLowerCase().includes(term)) ||
-          (p.bioHeadline && p.bioHeadline.toLowerCase().includes(term)) ||
-          (p.educationCareer?.profession && p.educationCareer.profession.toLowerCase().includes(term))
+    let visibleProfiles = (profiles ?? []).filter((profile) => {
+      if (isAdmin || profile.user_id === auth.user.id) return true;
+      return profile.user?.account_status === 'ACTIVE' && !profile.privacySettings?.hide_profile_temporarily;
+    });
+    if (search) {
+      visibleProfiles = visibleProfiles.filter((profile) =>
+        [profile.display_name, profile.city, profile.bio_headline, profile.educationCareer?.profession]
+          .some((value) => typeof value === 'string' && value.toLowerCase().includes(search)),
       );
     }
 
     return NextResponse.json({
       success: true,
-      data: results,
-      total: results.length,
-      source: dbProfiles.length > 0 ? 'INSFORGE_DATABASE' : 'DATA_STORE',
-      message: 'Profiles retrieved successfully.',
+      data: await Promise.all(visibleProfiles.map((profile) => toProfileDto(
+        profile,
+        isAdmin || connectedUserIds.has(profile.user_id),
+        isAdmin || profile.user_id === auth.user.id,
+      ))),
+      total: visibleProfiles.length,
     });
   } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch profiles.' },
-      { status: 500 }
-    );
+    console.error('Profiles fetch failed:', error);
+    return NextResponse.json({ success: false, error: 'Profiles could not be loaded.' }, { status: 503 });
   }
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { userId, fullName, displayName, gender, dateOfBirth, maritalStatus, religion, motherTongue, city, country, bioHeadline, aboutMe, photos, educationCareer } = body;
-
-    const { data: created, error } = await insforgeAdmin.database
-      .from('matrimonial_profiles')
-      .insert([{
-        user_id: userId,
-        full_name: fullName || displayName,
-        display_name: displayName || fullName,
-        gender: gender || 'FEMALE',
-        date_of_birth: new Date(dateOfBirth || '1998-01-01').toISOString(),
-        marital_status: maritalStatus || 'NEVER_MARRIED',
-        religion: religion || 'ISLAM',
-        mother_tongue: motherTongue || 'Urdu',
-        city: city || 'Islamabad',
-        country: country || 'Pakistan',
-        bio_headline: bioHeadline || 'Matrimonial Candidate',
-        about_me: aboutMe || 'Family-oriented individual',
-      }])
-      .select()
-      .single();
-
-    if (error || !created) {
-      return NextResponse.json({ success: false, error: error?.message || 'Failed to create profile' }, { status: 500 });
-    }
-
-    if (photos?.length) {
-      await insforgeAdmin.database.from('profile_photos').insert(
-        photos.map((ph: any, idx: number) => ({
-          profile_id: created.id,
-          url: typeof ph === 'string' ? ph : ph.url,
-          is_primary: idx === 0,
-          order_num: idx + 1,
-        }))
-      );
-    }
-
-    if (educationCareer) {
-      await insforgeAdmin.database.from('education_careers').insert([{
-        profile_id: created.id,
-        highest_degree: educationCareer.highestDegree || "Bachelor's",
-        institution: educationCareer.institution,
-        profession: educationCareer.profession || 'Executive',
-        annual_income: educationCareer.annualIncome?.toString(),
-      }]);
-    }
-
-    return NextResponse.json({
-      success: true,
-      profile: created,
-      message: 'Profile created successfully in InsForge database.',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create profile in database.' },
-      { status: 500 }
-    );
-  }
+export async function POST() {
+  return NextResponse.json(
+    { success: false, error: 'Profiles are created only during account registration.' },
+    { status: 405, headers: { Allow: 'GET, PATCH' } },
+  );
 }
 
-export async function PATCH(req: NextRequest) {
+export async function PATCH(request: NextRequest) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
+
   try {
-    const body = await req.json();
-    const {
-      id,
-      fullName,
-      displayName,
-      gender,
-      dateOfBirth,
-      maritalStatus,
-      religion,
-      sectOrCommunity,
-      motherTongue,
-      city,
-      country,
-      stateProvince,
-      bioHeadline,
-      aboutMe,
-      completionPercentage,
-      educationCareer,
-      lifestyle,
-      familyInfo,
-      partnerPreferences,
-      privacySettings,
-    } = body;
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Profile id is required.' }, { status: 400 });
+    const body = await request.json();
+    if (typeof body.id !== 'string') {
+      return NextResponse.json({ success: false, error: 'Profile ID is required.' }, { status: 400 });
+    }
+    const { data: existing, error: existingError } = await insforgeAdmin.database
+      .from('matrimonial_profiles').select('id,user_id').eq('id', body.id).maybeSingle();
+    if (existingError) throw existingError;
+    if (!existing) return NextResponse.json({ success: false, error: 'Profile not found.' }, { status: 404 });
+    const isAdmin = ADMIN_ROLES.has(auth.user.role);
+    if (existing.user_id !== auth.user.id && !isAdmin) {
+      return NextResponse.json({ success: false, error: 'You cannot edit this profile.' }, { status: 403 });
     }
 
-    const profileData: any = {};
-    if (fullName !== undefined) profileData.full_name = fullName;
-    if (displayName !== undefined) profileData.display_name = displayName;
-    if (gender !== undefined) profileData.gender = gender;
-    if (dateOfBirth !== undefined) profileData.date_of_birth = new Date(dateOfBirth).toISOString();
-    if (maritalStatus !== undefined) profileData.marital_status = maritalStatus;
-    if (religion !== undefined) profileData.religion = religion;
-    if (sectOrCommunity !== undefined) profileData.sect_or_community = sectOrCommunity;
-    if (motherTongue !== undefined) profileData.mother_tongue = motherTongue;
-    if (city !== undefined) profileData.city = city;
-    if (country !== undefined) profileData.country = country;
-    if (stateProvince !== undefined) profileData.state_province = stateProvince;
-    if (bioHeadline !== undefined) profileData.bio_headline = bioHeadline;
-    if (aboutMe !== undefined) profileData.about_me = aboutMe;
-    if (completionPercentage !== undefined) profileData.completion_percentage = completionPercentage;
-
-    const { data: updated, error } = await insforgeAdmin.database
-      .from('matrimonial_profiles')
-      .update(profileData)
-      .eq('id', id)
-      .select('*, photos:profile_photos(*), educationCareer:education_careers(*), lifestyle:lifestyles(*), familyInfo:family_infos(*), partnerPreferences:partner_preferences(*), privacySettings:privacy_settings(*)')
-      .single();
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const profileData: Record<string, unknown> = {};
+    const fields: Record<string, string> = {
+      fullName: 'full_name', displayName: 'display_name', gender: 'gender',
+      maritalStatus: 'marital_status', religion: 'religion', sectOrCommunity: 'sect_or_community',
+      motherTongue: 'mother_tongue', city: 'city', country: 'country', stateProvince: 'state_province',
+      bioHeadline: 'bio_headline', aboutMe: 'about_me',
+    };
+    for (const [clientKey, dbKey] of Object.entries(fields)) {
+      if (typeof body[clientKey] === 'string') profileData[dbKey] = body[clientKey].trim().slice(0, clientKey === 'aboutMe' ? 2000 : 180);
+    }
+    if (typeof body.dateOfBirth === 'string') {
+      const parsed = new Date(`${body.dateOfBirth.slice(0, 10)}T00:00:00.000Z`);
+      if (Number.isNaN(parsed.getTime())) return NextResponse.json({ success: false, error: 'Invalid date of birth.' }, { status: 400 });
+      profileData.date_of_birth = parsed.toISOString();
+    }
+    if (body.approvalStatus !== undefined) {
+      if (!isAdmin) return NextResponse.json({ success: false, error: 'Administrator access required.' }, { status: 403 });
+      if (!['PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED'].includes(body.approvalStatus)) {
+        return NextResponse.json({ success: false, error: 'Invalid approval status.' }, { status: 400 });
+      }
+      profileData.approval_status = body.approvalStatus;
     }
 
-    if (educationCareer) {
-      await insforgeAdmin.database.from('education_careers').upsert([{
-        profile_id: id,
-        highest_degree: educationCareer.highestDegree || "Bachelor's",
-        institution: educationCareer.institution,
-        profession: educationCareer.profession || 'Professional',
-        job_title: educationCareer.jobTitle,
-        field_of_study: educationCareer.fieldOfStudy,
-        annual_income: educationCareer.annualIncome?.toString(),
-      }], { onConflict: 'profile_id' });
+    const relatedWrites = [];
+    if (body.educationCareer && typeof body.educationCareer === 'object') {
+      const value = body.educationCareer;
+      relatedWrites.push(insforgeAdmin.database.from('education_careers').upsert([{
+        profile_id: body.id,
+        highest_degree: String(value.highestDegree || 'Not specified').slice(0, 120),
+        institution: value.institution ? String(value.institution).slice(0, 160) : null,
+        profession: String(value.profession || 'Not specified').slice(0, 120),
+        job_title: value.jobTitle ? String(value.jobTitle).slice(0, 120) : null,
+        field_of_study: value.fieldOfStudy ? String(value.fieldOfStudy).slice(0, 120) : null,
+        annual_income: value.annualIncome ? String(value.annualIncome).slice(0, 80) : null,
+      }], { onConflict: 'profile_id' }));
+    }
+    if (body.lifestyle && typeof body.lifestyle === 'object') {
+      const value = body.lifestyle;
+      relatedWrites.push(insforgeAdmin.database.from('lifestyles').upsert([{
+        profile_id: body.id,
+        height: String(value.height || 'Not specified').slice(0, 30),
+        diet: ['VEGETARIAN', 'NON_VEGETARIAN', 'HALAL_ONLY', 'EGGETARIAN', 'VEGAN'].includes(value.diet) ? value.diet : 'HALAL_ONLY',
+        smoking: ['NO', 'OCCASIONALLY', 'REGULARLY'].includes(value.smoking) ? value.smoking : 'NO',
+        drinking: ['NO', 'OCCASIONALLY', 'SOCIALLY', 'REGULARLY'].includes(value.drinking) ? value.drinking : 'NO',
+      }], { onConflict: 'profile_id' }));
+    }
+    if (body.familyInfo && typeof body.familyInfo === 'object') {
+      const value = body.familyInfo;
+      relatedWrites.push(insforgeAdmin.database.from('family_infos').upsert([{
+        profile_id: body.id,
+        family_type: String(value.familyType || 'NUCLEAR').slice(0, 40),
+        family_values: String(value.familyValues || 'MODERATE').slice(0, 40),
+        father_occupation: value.fatherOccupation ? String(value.fatherOccupation).slice(0, 160) : null,
+        mother_occupation: value.motherOccupation ? String(value.motherOccupation).slice(0, 160) : null,
+        family_location: value.familyLocation ? String(value.familyLocation).slice(0, 160) : null,
+        about_family: value.aboutFamily ? String(value.aboutFamily).slice(0, 1000) : null,
+      }], { onConflict: 'profile_id' }));
+    }
+    if (body.partnerPreferences && typeof body.partnerPreferences === 'object') {
+      const value = body.partnerPreferences;
+      const minAge = Number(value.ageRange?.min);
+      const maxAge = Number(value.ageRange?.max);
+      if (!Number.isInteger(minAge) || !Number.isInteger(maxAge) || minAge < 18 || maxAge > 100 || minAge > maxAge) {
+        return NextResponse.json({ success: false, error: 'Invalid preferred age range.' }, { status: 400 });
+      }
+      relatedWrites.push(insforgeAdmin.database.from('partner_preferences').upsert([{
+        profile_id: body.id,
+        min_age: minAge,
+        max_age: maxAge,
+        expectations_notes: value.expectationsNotes ? String(value.expectationsNotes).slice(0, 1000) : null,
+      }], { onConflict: 'profile_id' }));
+    }
+    const privacyValue = body.privacy ?? body.privacySettings;
+    if (privacyValue && typeof privacyValue === 'object') {
+      const value = privacyValue;
+      const photoVisibility = ['ALL', 'REGISTERED_ONLY', 'ONLY_ACCEPTED_INTERESTS', 'NONE'].includes(value.photoVisibility)
+        ? value.photoVisibility : 'ONLY_ACCEPTED_INTERESTS';
+      relatedWrites.push(insforgeAdmin.database.from('privacy_settings').upsert([{
+        profile_id: body.id,
+        photo_visibility: photoVisibility,
+        contact_visibility: value.contactVisibility === 'NONE' ? 'NONE' : 'ONLY_ACCEPTED_INTERESTS',
+        show_age: value.showAge === true,
+        show_income: value.showIncome === true,
+        show_last_seen: value.showLastSeen === true,
+        hide_profile_temporarily: value.hideProfileTemporarily === true,
+      }], { onConflict: 'profile_id' }));
+    }
+    const results = await Promise.all(relatedWrites);
+    const relatedError = results.find((result) => result.error)?.error;
+    if (relatedError) throw relatedError;
+
+    if (Object.keys(profileData).length) {
+      const { error } = await insforgeAdmin.database.from('matrimonial_profiles').update(profileData).eq('id', body.id);
+      if (error) throw error;
     }
 
-    if (lifestyle) {
-      await insforgeAdmin.database.from('lifestyles').upsert([{
-        profile_id: id,
-        height: lifestyle.height || "5' 6\"",
-        weight: lifestyle.weight,
-        body_type: lifestyle.bodyType,
-        diet: lifestyle.diet || 'HALAL_ONLY',
-        smoking: lifestyle.smoking || 'NO',
-        drinking: lifestyle.drinking || 'NO',
-        mother_tongue: lifestyle.motherTongue || 'Urdu',
-      }], { onConflict: 'profile_id' });
-    }
-
-    if (familyInfo) {
-      await insforgeAdmin.database.from('family_infos').upsert([{
-        profile_id: id,
-        family_type: familyInfo.familyType || 'NUCLEAR',
-        family_values: familyInfo.familyValues || 'MODERATE',
-        father_occupation: familyInfo.fatherOccupation,
-        mother_occupation: familyInfo.motherOccupation,
-        brothers_count: familyInfo.brothersCount || 0,
-        sisters_count: familyInfo.sistersCount || 0,
-        family_location: familyInfo.familyLocation,
-        about_family: familyInfo.aboutFamily,
-      }], { onConflict: 'profile_id' });
-    }
-
-    if (partnerPreferences) {
-      await insforgeAdmin.database.from('partner_preferences').upsert([{
-        profile_id: id,
-        min_age: partnerPreferences.ageRange?.min || partnerPreferences.minAge || 20,
-        max_age: partnerPreferences.ageRange?.max || partnerPreferences.maxAge || 38,
-        expectations_notes: partnerPreferences.expectationsNotes,
-      }], { onConflict: 'profile_id' });
-    }
-
-    if (privacySettings) {
-      await insforgeAdmin.database.from('privacy_settings').upsert([{
-        profile_id: id,
-        photo_visibility: privacySettings.photoVisibility || 'ALL',
-        contact_visibility: privacySettings.contactVisibility || 'ONLY_ACCEPTED_INTERESTS',
-        show_age: privacySettings.showAge ?? true,
-        show_income: privacySettings.showIncome ?? true,
-        show_last_seen: privacySettings.showLastSeen ?? true,
-        hide_profile_temporarily: privacySettings.hideProfileTemporarily ?? false,
-      }], { onConflict: 'profile_id' });
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: updated,
-      message: 'Profile updated successfully in InsForge database.',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update profile in database.' },
-      { status: 500 }
-    );
+    const { data: updated, error: updatedError } = await insforgeAdmin.database
+      .from('matrimonial_profiles').select(PROFILE_SELECT).eq('id', body.id).single();
+    if (updatedError) throw updatedError;
+    return NextResponse.json({ success: true, data: await toProfileDto(updated, true, true) });
+  } catch (error) {
+    console.error('Profile update failed:', error);
+    return NextResponse.json({ success: false, error: 'Profile could not be updated.' }, { status: 500 });
   }
 }

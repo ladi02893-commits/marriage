@@ -1,100 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
-import { INITIAL_MESSAGES } from '@/lib/data-store';
 
-export async function GET(req: NextRequest) {
+async function getOwnedConversation(conversationId: string, userId: string) {
+  const { data, error } = await insforgeAdmin.database.from('conversations')
+    .select('id,participant_a_id,participant_b_id')
+    .eq('id', conversationId)
+    .maybeSingle();
+  if (error) throw error;
+  return data && (data.participant_a_id === userId || data.participant_b_id === userId) ? data : null;
+}
+
+export async function GET(request: NextRequest) {
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
+  const conversationId = request.nextUrl.searchParams.get('conversationId') ?? '';
+  if (!conversationId) return NextResponse.json({ success: false, error: 'Conversation ID is required.' }, { status: 400 });
   try {
-    const { searchParams } = new URL(req.url);
-    const conversationId = searchParams.get('conversationId');
-
-    let dbMessages: any[] = [];
-    try {
-      if (conversationId) {
-        const { data, error } = await insforgeAdmin.database
-          .from('messages')
-          .select('*, sender:users(id, name, avatar_url)')
-          .eq('conversation_id', conversationId)
-          .order('created_at', { ascending: true });
-
-        if (!error && data) {
-          dbMessages = data.map((msg: any) => ({
-            ...msg,
-            conversationId: msg.conversation_id || msg.conversationId,
-            senderId: msg.sender_id || msg.senderId,
-            isRead: msg.is_read ?? msg.isRead ?? false,
-            createdAt: msg.created_at || msg.createdAt,
-          }));
-        }
-      }
-    } catch (err) {
-      console.warn('InsForge messages fallback:', err);
+    if (!(await getOwnedConversation(conversationId, auth.user.id))) {
+      return NextResponse.json({ success: false, error: 'Conversation not found.' }, { status: 404 });
     }
-
-    const fallbackData = conversationId && INITIAL_MESSAGES[conversationId]
-      ? INITIAL_MESSAGES[conversationId]
-      : Object.values(INITIAL_MESSAGES).flat();
-
-    const data = dbMessages.length > 0 ? dbMessages : fallbackData;
-
-    return NextResponse.json({
-      success: true,
-      data,
-      total: data.length,
-      source: dbMessages.length > 0 ? 'INSFORGE_DATABASE' : 'DATA_STORE',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch messages.' },
-      { status: 500 }
-    );
+    const { data, error } = await insforgeAdmin.database.from('messages')
+      .select('*,sender:users(id,name,avatar_url)')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    const messages = (data ?? []).map((message) => ({
+      ...message,
+      conversationId: message.conversation_id,
+      senderId: message.sender_id,
+      isRead: message.is_read,
+      createdAt: message.created_at,
+    }));
+    return NextResponse.json({ success: true, data: messages, total: messages.length });
+  } catch (error) {
+    console.error('Messages fetch failed:', error);
+    return NextResponse.json({ success: false, error: 'Messages could not be loaded.' }, { status: 503 });
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+  const auth = await requireUser();
+  if (auth.response) return auth.response;
   try {
-    const body = await req.json();
-    const { conversationId, senderId, text } = body;
-
-    if (!conversationId || !senderId || !text) {
-      return NextResponse.json(
-        { success: false, error: 'conversationId, senderId, and text are required.' },
-        { status: 400 }
-      );
+    const body = await request.json();
+    const conversationId = typeof body.conversationId === 'string' ? body.conversationId : '';
+    const messageText = typeof body.text === 'string' ? body.text.trim().slice(0, 4000) : '';
+    if (!conversationId || !messageText) {
+      return NextResponse.json({ success: false, error: 'Conversation and message text are required.' }, { status: 400 });
     }
-
-    const { data: message, error } = await insforgeAdmin.database
-      .from('messages')
-      .insert([{
-        conversation_id: conversationId,
-        sender_id: senderId,
-        text: text.trim(),
-        is_read: false,
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (!(await getOwnedConversation(conversationId, auth.user.id))) {
+      return NextResponse.json({ success: false, error: 'Conversation not found.' }, { status: 404 });
     }
-
-    // Update conversation last message
-    await insforgeAdmin.database
-      .from('conversations')
-      .update({
-        last_message_text: text.trim().slice(0, 200),
-        last_message_time: new Date().toISOString(),
-      })
-      .eq('id', conversationId);
-
-    return NextResponse.json({
-      success: true,
-      data: message,
-      message: 'Message sent and stored in InsForge database.',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to send message.' },
-      { status: 500 }
-    );
+    const { data: message, error } = await insforgeAdmin.database.from('messages').insert([{
+      conversation_id: conversationId,
+      sender_id: auth.user.id,
+      text: messageText,
+      is_read: false,
+    }]).select().single();
+    if (error) throw error;
+    const { error: updateError } = await insforgeAdmin.database.from('conversations').update({
+      last_message_text: messageText.slice(0, 200),
+      last_message_time: new Date().toISOString(),
+    }).eq('id', conversationId);
+    if (updateError) throw updateError;
+    return NextResponse.json({ success: true, data: message }, { status: 201 });
+  } catch (error) {
+    console.error('Message send failed:', error);
+    return NextResponse.json({ success: false, error: 'Message could not be sent.' }, { status: 500 });
   }
 }

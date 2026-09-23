@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Upload, X, Loader2, CheckCircle2 } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface FileUploadProps {
-  onUploadSuccess: (url: string) => void;
+  onUploadSuccess: (url: string, key?: string) => void;
   bucket?: string;
   folder?: string;
   accept?: string;
@@ -54,7 +54,7 @@ export function FileUpload({
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Upload failed');
 
-      onUploadSuccess(data.url);
+      onUploadSuccess(data.url, data.key);
     } catch (err: any) {
       setError(err.message || 'Network error');
     } finally {

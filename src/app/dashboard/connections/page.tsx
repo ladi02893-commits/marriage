@@ -5,22 +5,16 @@ import Link from 'next/link';
 import {
   Heart,
   CheckCircle2,
-  XCircle,
-  Clock,
   Send,
   MessageSquare,
   Eye,
   UserX,
   Bookmark,
-  ShieldAlert,
   Phone,
   Mail,
   Lock,
   Unlock,
-  Sparkles,
   Crown,
-  Trash2,
-  Check,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
@@ -190,7 +184,7 @@ export default function ConnectionsHubPage() {
                   <img
                     src={
                       item.senderPhoto ||
-                      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200'
+                      '/avatar-placeholder.svg'
                     }
                     alt={item.senderName}
                     className="h-14 w-14 rounded-2xl object-cover ring-2 ring-brand-500/20 shrink-0"
@@ -244,7 +238,6 @@ export default function ConnectionsHubPage() {
                       <button
                         onClick={() => {
                           acceptInterest(item.id);
-                          toast.success('Interest accepted! Contact details are now unlocked.');
                         }}
                         className="rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-2 text-xs font-bold text-white shadow-md"
                       >
@@ -295,7 +288,7 @@ export default function ConnectionsHubPage() {
                   <img
                     src={
                       item.receiverPhoto ||
-                      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'
+                      '/avatar-placeholder.svg'
                     }
                     alt={item.receiverName}
                     className="h-14 w-14 rounded-2xl object-cover ring-2 ring-brand-500/20 shrink-0"
@@ -401,7 +394,7 @@ export default function ConnectionsHubPage() {
                       <img
                         src={
                           otherPhoto ||
-                          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200'
+                          '/avatar-placeholder.svg'
                         }
                         alt={otherName}
                         className="h-16 w-16 rounded-2xl object-cover ring-2 ring-emerald-500/40 shrink-0"
@@ -410,7 +403,7 @@ export default function ConnectionsHubPage() {
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-bold text-foreground">{otherName}</h4>
                           <span className="font-mono text-[10px] font-bold bg-white/80 dark:bg-card px-2 py-0.5 rounded border border-border">
-                            {targetProfile?.profileIdCode || 'VRM-000002'}
+                            {targetProfile?.profileIdCode || 'ID pending'}
                           </span>
                           <span className="rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-bold">
                             Accepted Connection
@@ -514,17 +507,17 @@ export default function ConnectionsHubPage() {
                     <div>
                       <div className="relative h-48 w-full">
                         <img
-                          src={p.photos?.[0]?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=600'}
+                          src={p.photos?.[0]?.url || '/avatar-placeholder.svg'}
                           alt={p.fullName}
                           className="h-full w-full object-cover"
                         />
                         <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded-lg text-white font-mono text-[10px] font-bold">
-                          {p.profileIdCode || 'VRM-000001'}
+                          {p.profileIdCode || 'ID pending'}
                         </div>
                         <button
-                          onClick={() => {
-                            toggleFavorite(p.id);
-                            toast.info(`Removed ${p.fullName} from Favorite Connections.`);
+                          onClick={async () => {
+                            const added = await toggleFavorite(p.id);
+                            if (added === false) toast.info(`Removed ${p.fullName} from Favorite Connections.`);
                           }}
                           className="absolute top-3 right-3 h-8 w-8 rounded-full bg-white/90 text-rose-600 flex items-center justify-center shadow-md hover:bg-white transition"
                           title="Remove from Favorite Connections"
@@ -612,7 +605,6 @@ export default function ConnectionsHubPage() {
                   <button
                     onClick={() => {
                       unblockUser(block.blockedProfileId);
-                      toast.success('User unblocked successfully.');
                     }}
                     className="rounded-xl border border-border hover:bg-muted px-4 py-1.5 text-xs font-semibold text-foreground transition"
                   >

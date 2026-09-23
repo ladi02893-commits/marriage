@@ -20,7 +20,6 @@ import {
   Menu,
   X,
   Heart,
-  ChevronRight,
   Crown,
   HelpCircle,
 } from 'lucide-react';
@@ -127,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-4 border-b border-zinc-800/80 bg-zinc-950/40">
           <div className="flex items-center gap-3">
             <img
-              src={currentUser?.avatarUrl || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200'}
+              src={currentUser?.avatarUrl || '/avatar-placeholder.svg'}
               alt="Admin Avatar"
               className="h-10 w-10 rounded-xl object-cover ring-2 ring-amber-500/30"
             />

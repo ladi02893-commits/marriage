@@ -1,57 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { insforgeAdmin } from '@/lib/insforge/server';
-import { signAuthToken, AUTH_COOKIE_NAME } from '@/lib/auth';
-import { INITIAL_USERS } from '@/lib/data-store';
+import { AUTH_COOKIE_MAX_AGE, AUTH_COOKIE_NAME, signAuthToken } from '@/lib/auth';
+import { rejectCrossSiteMutation, requireAdmin } from '@/lib/api-auth';
+import { toSafeUser } from '@/lib/user-dto';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
+  if (auth.user.role !== 'SUPER_ADMIN') {
+    return NextResponse.json({ success: false, error: 'Only a super administrator can switch accounts.' }, { status: 403 });
+  }
+
   try {
-    const body = await req.json();
-    const { userId } = body;
-
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
+    const body = await request.json();
+    if (typeof body.userId !== 'string' || !body.userId) {
+      return NextResponse.json({ success: false, error: 'User ID is required.' }, { status: 400 });
     }
-
-    // Try find in InsForge or INITIAL_USERS
-    let targetUser: any = INITIAL_USERS.find((u) => u.id === userId);
-    if (!targetUser) {
-      try {
-        const { data, error } = await insforgeAdmin.database
-          .from('users')
-          .select('*, profile:matrimonial_profiles(*)')
-          .eq('id', userId)
-          .maybeSingle();
-
-        if (!error && data) {
-          targetUser = data;
-        }
-      } catch {
-        // fallback
-      }
+    const { data: targetUser, error } = await insforgeAdmin.database
+      .from('users')
+      .select('id,email,name,role,is_verified,subscription_tier,account_status,avatar_url,phone,profile_id_code,whatsapp_number,is_whatsapp_verified,is_email_verified,total_connections,used_connections,remaining_connections,assigned_consultant_id,session_version,created_at,profile:matrimonial_profiles(id,photos:profile_photos(url,is_primary))')
+      .eq('id', body.userId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!targetUser || targetUser.account_status !== 'ACTIVE') {
+      return NextResponse.json({ success: false, error: 'Active user not found.' }, { status: 404 });
     }
-
-    if (!targetUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    if (targetUser.role !== 'USER') {
+      return NextResponse.json({ success: false, error: 'Only member accounts can be switched into.' }, { status: 403 });
     }
 
     const token = await signAuthToken({
       userId: targetUser.id,
       email: targetUser.email,
       role: targetUser.role,
+      sessionVersion: targetUser.session_version ?? 0,
     });
-
-    const isPrivileged =
-      targetUser.role === 'SUPER_ADMIN' ||
-      targetUser.role === 'ADMIN' ||
-      targetUser.role === 'MODERATOR' ||
-      targetUser.email === 'ladi02893@gmail.com';
-
     const response = NextResponse.json({
       success: true,
-      user: targetUser,
-      redirectUrl: isPrivileged ? '/admin' : '/dashboard',
+      user: toSafeUser(targetUser),
+      redirectUrl: ['SUPER_ADMIN', 'ADMIN'].includes(targetUser.role) ? '/admin' : '/dashboard',
     });
-
     response.cookies.set({
       name: AUTH_COOKIE_NAME,
       value: token,
@@ -59,11 +49,11 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 30 * 24 * 60 * 60,
+      maxAge: AUTH_COOKIE_MAX_AGE,
     });
-
     return response;
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    console.error('Account switch error:', error);
+    return NextResponse.json({ success: false, error: 'Unable to switch account.' }, { status: 500 });
   }
 }

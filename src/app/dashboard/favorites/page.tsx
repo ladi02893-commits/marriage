@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Bookmark, Users, Heart, ArrowRight } from 'lucide-react';
+import { Bookmark, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { ProfileCard } from '@/components/profile/profile-card';
 

@@ -1,34 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import {
   Heart,
   Sparkles,
-  Eye,
   Bookmark,
   MessageSquare,
-  ShieldCheck,
   Crown,
   ArrowRight,
   Send,
   UserCheck,
-  CheckCircle2,
   AlertCircle,
-  TrendingUp,
   AlertTriangle,
-  Lock,
-  PhoneCall,
-  Calendar,
-  User,
   PlusCircle,
   Check,
-  Clock,
-  BadgeCheck,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { ProfileCard } from '@/components/profile/profile-card';
-import { toast } from 'sonner';
 
 export default function DashboardOverviewPage() {
   const {
@@ -41,31 +30,14 @@ export default function DashboardOverviewPage() {
     connectionQuota,
     consultants,
     consultantRecommendations,
-    addExtraConnections,
   } = useAuth();
 
-  const [isAppointmentOpen, setIsAppointmentOpen] = useState(false);
-  const [appointmentDate, setAppointmentDate] = useState('');
-  const [appointmentNotes, setAppointmentNotes] = useState('');
-
-  const completion = currentProfile?.completionPercentage || 85;
+  const completion = currentProfile?.completionPercentage || 0;
 
   // Profile ID code (VRM-000001)
-  const profileIdCode = currentProfile?.profileIdCode || currentUser?.profileIdCode || 'VRM-000012';
+  const profileIdCode = currentProfile?.profileIdCode || currentUser?.profileIdCode || 'ID pending';
 
-  // Consultant Assignment (Section 24)
-  const assignedConsultant =
-    consultants.find((c) => c.id === currentUser?.assignedConsultantId) ||
-    consultants[0] || {
-      id: 'consultant-1',
-      name: 'Begum Bilquis Khan',
-      title: 'Senior Executive Matchmaking Director',
-      photoUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600',
-      phone: '+92 300 8492011',
-      email: 'bilquis.consultant@viproyalmatch.pk',
-      experienceYears: 18,
-      specialization: 'Prominent & Industrial Families Matchmaking',
-    };
+  const assignedConsultant = consultants.find((consultant) => consultant.id === currentUser?.assignedConsultantId);
 
   // Consultant Recommendations (Section 26)
   const userConsultantRecs = consultantRecommendations.filter(
@@ -102,20 +74,6 @@ export default function DashboardOverviewPage() {
   const standardRecommendedMatches = profiles
     .filter((p) => p.id !== currentProfile?.id && p.gender !== currentProfile?.gender)
     .slice(0, 3);
-
-  const handleBookAppointment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!appointmentDate) {
-      toast.error('Please select a preferred consultation date and time.');
-      return;
-    }
-    toast.success(
-      `Consultation requested with ${assignedConsultant.name} for ${appointmentDate}. Our secretariat will confirm on WhatsApp!`
-    );
-    setIsAppointmentOpen(false);
-    setAppointmentDate('');
-    setAppointmentNotes('');
-  };
 
   return (
     <div className="space-y-8">
@@ -275,124 +233,29 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* Section 24: Dedicated Senior Family Consultant VIP Card */}
-      <div className="rounded-3xl border border-gold-500/30 bg-gradient-to-br from-card via-card to-gold-50/20 dark:to-gold-950/10 p-6 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4">
-            <div className="relative">
-              <img
-                src={assignedConsultant.photoUrl}
-                alt={assignedConsultant.name}
-                className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl object-cover border-2 border-gold-500 shadow-md"
-              />
-              <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-gold-500 text-brand-950 flex items-center justify-center shadow-xs">
-                <Crown className="h-3.5 w-3.5" />
+      {/* Consultant assignment */}
+      {assignedConsultant ? (
+        <div className="rounded-3xl border border-gold-500/30 bg-card p-6 shadow-sm">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-4">
+              <img src={assignedConsultant.photoUrl || assignedConsultant.avatarUrl || '/avatar-placeholder.svg'} alt={assignedConsultant.name} className="h-16 w-16 rounded-2xl border-2 border-gold-500 object-cover" />
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gold-600">Assigned consultant</span>
+                <h3 className="text-lg font-bold font-serif text-foreground">{assignedConsultant.name}</h3>
+                <p className="text-xs text-muted-foreground">{assignedConsultant.title}</p>
               </div>
             </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gold-600 dark:text-gold-400 bg-gold-50 dark:bg-gold-950/50 px-2 py-0.5 rounded-md border border-gold-300/40">
-                  Your Dedicated Senior Family Consultant
-                </span>
-              </div>
-              <h3 className="text-base sm:text-lg font-bold font-serif text-foreground">
-                {assignedConsultant.name}
-              </h3>
-              <p className="text-xs text-muted-foreground">{assignedConsultant.title}</p>
-              <p className="text-[11px] text-muted-foreground flex items-center gap-2">
-                <span>Experience: {assignedConsultant.experienceYears || 18}+ Years</span>
-                <span>•</span>
-                <span className="text-emerald-600 font-medium">Direct Family Concierge</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => setIsAppointmentOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 text-xs font-bold shadow-sm transition"
-            >
-              <Calendar className="h-3.5 w-3.5" /> Request Appointment
-            </button>
-
-            <Link
-              href="/dashboard/consultant"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-border hover:bg-muted text-foreground px-4 py-2.5 text-xs font-semibold transition"
-            >
-              <MessageSquare className="h-3.5 w-3.5 text-brand-600" /> Message Consultant
+            <Link href="/dashboard/consultant" className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-brand-700">
+              <MessageSquare className="h-3.5 w-3.5" /> View contact details
             </Link>
           </div>
         </div>
-
-        {/* Appointment Modal Popup */}
-        {isAppointmentOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="bg-card border border-border rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gold-500" />
-                  <h4 className="font-bold text-sm text-foreground">
-                    Book Consultation with {assignedConsultant.name}
-                  </h4>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAppointmentOpen(false)}
-                  className="text-muted-foreground hover:text-foreground text-xs"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <form onSubmit={handleBookAppointment} className="space-y-4">
-                <div>
-                  <label className="text-xs font-semibold text-foreground block mb-1">
-                    Preferred Date & Time *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={appointmentDate}
-                    onChange={(e) => setAppointmentDate(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-semibold text-foreground block mb-1">
-                    Discussion Agenda & Family Requirements
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={appointmentNotes}
-                    onChange={(e) => setAppointmentNotes(e.target.value)}
-                    placeholder="Specific candidate preferences, background verification notes, or family meeting requests..."
-                    className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none resize-none"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsAppointmentOpen(false)}
-                    className="rounded-xl border border-border px-4 py-2 text-xs font-medium text-foreground hover:bg-muted"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-brand-600 hover:bg-brand-700 px-5 py-2 text-xs font-bold text-white shadow-sm"
-                  >
-                    Confirm Appointment Request
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+          <h3 className="font-bold font-serif text-foreground">No consultant assigned</h3>
+          <p className="mt-1 text-xs text-muted-foreground">Consultant details will appear only after a real administrator assignment.</p>
+        </div>
+      )}
 
       {/* Section 26: Recommended by Your Consultant */}
       {recommendedByConsultantProfiles.length > 0 && (
@@ -573,7 +436,7 @@ export default function DashboardOverviewPage() {
               >
                 <div className="flex items-center gap-3">
                   <img
-                    src={intReq.senderPhoto || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200'}
+                    src={intReq.senderPhoto || '/avatar-placeholder.svg'}
                     alt={intReq.senderName}
                     className="h-12 w-12 rounded-xl object-cover"
                   />

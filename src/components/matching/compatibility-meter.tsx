@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sparkles, CheckCircle2 } from 'lucide-react';
 import { CompatibilityBreakdown } from '@/lib/types';
 import { cn } from '@/lib/utils';
 

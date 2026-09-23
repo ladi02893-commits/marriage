@@ -9,12 +9,9 @@ import {
   ShieldCheck,
   Sparkles,
   CheckCheck,
-  CheckCircle2,
-  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { formatRelativeTime } from '@/lib/utils';
-import { toast } from 'sonner';
 
 export default function NotificationsCenterPage() {
   const { notifications, markNotificationRead, markAllNotificationsRead } = useAuth();
@@ -47,7 +44,6 @@ export default function NotificationsCenterPage() {
         <button
           onClick={() => {
             markAllNotificationsRead();
-            toast.success('All notifications marked as read.');
           }}
           className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-muted"
         >

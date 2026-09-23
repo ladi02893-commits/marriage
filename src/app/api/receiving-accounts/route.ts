@@ -1,156 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ADMIN_ROLES, rejectCrossSiteMutation, requireAdmin } from '@/lib/api-auth';
+import { getCurrentUserFromCookies } from '@/lib/auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
-import { INITIAL_RECEIVING_ACCOUNTS } from '@/lib/data-store';
+
+function mapAccount(account: Record<string, any>) {
+  return {
+    ...account,
+    bankName: account.bank_name,
+    accountTitle: account.account_title,
+    accountNumber: account.account_number,
+    branchName: account.branch_name,
+    isActive: account.is_active,
+    isPrimary: account.is_primary,
+    createdAt: account.created_at,
+  };
+}
 
 export async function GET() {
   try {
-    let dbAccounts: any[] = [];
-    try {
-      const { data, error } = await insforgeAdmin.database
-        .from('receiving_accounts')
-        .select('*')
-        .order('created_at', { ascending: true });
-
-      if (!error && data) {
-        dbAccounts = data.map((acc: any) => ({
-          ...acc,
-          bankName: acc.bank_name || acc.bankName,
-          accountTitle: acc.account_title || acc.accountTitle,
-          accountNumber: acc.account_number || acc.accountNumber,
-          branchName: acc.branch_name || acc.branchName,
-          isActive: acc.is_active ?? acc.isActive ?? true,
-          isPrimary: acc.is_primary ?? acc.isPrimary ?? false,
-          createdAt: acc.created_at || acc.createdAt,
-        }));
-      }
-    } catch (err) {
-      console.warn('InsForge receiving accounts fetch fallback:', err);
-    }
-
-    const data = dbAccounts.length > 0 ? dbAccounts : INITIAL_RECEIVING_ACCOUNTS;
-
-    return NextResponse.json({
-      success: true,
-      data,
-      total: data.length,
-      source: dbAccounts.length > 0 ? 'INSFORGE_DATABASE' : 'DATA_STORE',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch receiving accounts.' },
-      { status: 500 }
-    );
+    const user = await getCurrentUserFromCookies();
+    let query = insforgeAdmin.database.from('receiving_accounts').select('*');
+    if (!user || !ADMIN_ROLES.has(user.role)) query = query.eq('is_active', true);
+    const { data, error } = await query.order('is_primary', { ascending: false }).order('created_at', { ascending: true });
+    if (error) throw error;
+    return NextResponse.json({ success: true, data: (data ?? []).map(mapAccount), total: data?.length ?? 0 });
+  } catch (error) {
+    console.error('Receiving accounts fetch failed:', error);
+    return NextResponse.json({ success: false, error: 'Payment accounts could not be loaded.' }, { status: 503 });
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
   try {
-    const body = await req.json();
-    const { provider, bankName, accountTitle, accountNumber, iban, branchName, instructions, isActive, isPrimary } = body;
-
-    const { data: created, error } = await insforgeAdmin.database
-      .from('receiving_accounts')
-      .insert([{
-        provider: provider || 'BANK_TRANSFER',
-        bank_name: bankName || 'Meezan Bank',
-        account_title: accountTitle || 'VIP ROYAL MATCHMAKING PVT LTD',
-        account_number: accountNumber || '0101-0101010101',
-        iban: iban || null,
-        branch_name: branchName || null,
-        instructions: instructions || null,
-        is_active: isActive !== undefined ? isActive : true,
-        is_primary: isPrimary !== undefined ? isPrimary : false,
-      }])
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const body = await request.json();
+    const provider = typeof body.provider === 'string' ? body.provider.toUpperCase() : '';
+    const bankName = typeof body.bankName === 'string' ? body.bankName.trim().slice(0, 120) : '';
+    const accountTitle = typeof body.accountTitle === 'string' ? body.accountTitle.trim().slice(0, 120) : '';
+    const accountNumber = typeof body.accountNumber === 'string' ? body.accountNumber.trim().slice(0, 80) : '';
+    if (!['BANK_TRANSFER', 'JAZZCASH', 'EASYPAISA', 'RAAST', 'SADAPAY'].includes(provider) || !bankName || !accountTitle || !accountNumber) {
+      return NextResponse.json({ success: false, error: 'Complete receiving account details are required.' }, { status: 400 });
     }
-
-    return NextResponse.json({
-      success: true,
-      data: created,
-      message: 'Receiving account added to InsForge database.',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create receiving account.' },
-      { status: 500 }
-    );
+    const { data, error } = await insforgeAdmin.database.from('receiving_accounts').insert([{
+      provider, bank_name: bankName, account_title: accountTitle, account_number: accountNumber,
+      iban: typeof body.iban === 'string' ? body.iban.trim().slice(0, 60) || null : null,
+      branch_name: typeof body.branchName === 'string' ? body.branchName.trim().slice(0, 120) || null : null,
+      instructions: typeof body.instructions === 'string' ? body.instructions.trim().slice(0, 1000) || null : null,
+      is_active: body.isActive !== false,
+      is_primary: body.isPrimary === true,
+    }]).select().single();
+    if (error) throw error;
+    return NextResponse.json({ success: true, data: mapAccount(data) }, { status: 201 });
+  } catch (error) {
+    console.error('Receiving account creation failed:', error);
+    return NextResponse.json({ success: false, error: 'Receiving account could not be created.' }, { status: 500 });
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function PATCH(request: NextRequest) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'id parameter is required.' }, { status: 400 });
+    const body = await request.json();
+    if (typeof body.id !== 'string') return NextResponse.json({ success: false, error: 'Account ID is required.' }, { status: 400 });
+    const update: Record<string, unknown> = {};
+    const stringFields: Record<string, string> = {
+      provider: 'provider', bankName: 'bank_name', accountTitle: 'account_title', accountNumber: 'account_number',
+      iban: 'iban', branchName: 'branch_name', instructions: 'instructions',
+    };
+    for (const [clientKey, dbKey] of Object.entries(stringFields)) {
+      if (typeof body[clientKey] === 'string') update[dbKey] = body[clientKey].trim().slice(0, dbKey === 'instructions' ? 1000 : 120);
     }
-
-    const { error } = await insforgeAdmin.database
-      .from('receiving_accounts')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Receiving account deleted from InsForge database.',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to delete receiving account.' },
-      { status: 500 }
-    );
+    if (typeof body.isActive === 'boolean') update.is_active = body.isActive;
+    if (typeof body.isPrimary === 'boolean') update.is_primary = body.isPrimary;
+    const { data, error } = await insforgeAdmin.database.from('receiving_accounts').update(update).eq('id', body.id).select().single();
+    if (error) throw error;
+    return NextResponse.json({ success: true, data: mapAccount(data) });
+  } catch (error) {
+    console.error('Receiving account update failed:', error);
+    return NextResponse.json({ success: false, error: 'Receiving account could not be updated.' }, { status: 500 });
   }
 }
 
-export async function PATCH(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const { id, isActive, isPrimary, provider, bankName, accountTitle, accountNumber, iban, branchName, instructions } = body;
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'id is required.' }, { status: 400 });
-    }
-
-    const updateData: any = {};
-    if (isActive !== undefined) updateData.is_active = isActive;
-    if (isPrimary !== undefined) updateData.is_primary = isPrimary;
-    if (provider !== undefined) updateData.provider = provider;
-    if (bankName !== undefined) updateData.bank_name = bankName;
-    if (accountTitle !== undefined) updateData.account_title = accountTitle;
-    if (accountNumber !== undefined) updateData.account_number = accountNumber;
-    if (iban !== undefined) updateData.iban = iban;
-    if (branchName !== undefined) updateData.branch_name = branchName;
-    if (instructions !== undefined) updateData.instructions = instructions;
-
-    const { data: updated, error } = await insforgeAdmin.database
-      .from('receiving_accounts')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: updated,
-      message: 'Receiving account updated in InsForge database.',
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update receiving account.' },
-      { status: 500 }
-    );
-  }
+export async function DELETE(request: NextRequest) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
+  const auth = await requireAdmin();
+  if (auth.response) return auth.response;
+  const id = request.nextUrl.searchParams.get('id');
+  if (!id) return NextResponse.json({ success: false, error: 'Account ID is required.' }, { status: 400 });
+  const { error } = await insforgeAdmin.database.from('receiving_accounts').delete().eq('id', id);
+  if (error) return NextResponse.json({ success: false, error: 'Receiving account could not be deleted.' }, { status: 500 });
+  return NextResponse.json({ success: true });
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, MessageSquare, Clock, CheckCircle2 } from 'lucide-react';
+import { Mail, Phone, MapPin, Send } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { toast } from 'sonner';
@@ -20,14 +20,8 @@ export default function ContactPage() {
       return;
     }
 
-    setIsSending(true);
-    setTimeout(() => {
-      setIsSending(false);
-      toast.success('Thank you! Your message has been routed to our matrimonial advisory team.');
-      setName('');
-      setEmail('');
-      setMessage('');
-    }, 500);
+    setIsSending(false);
+    toast.info('The contact delivery service is not configured yet. No message was sent.');
   };
 
   return (
@@ -74,7 +68,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h4 className="font-bold text-foreground">Phone & WhatsApp Concierge</h4>
-                  <p className="text-muted-foreground mt-0.5">+92 300 1234567 (Mon - Sat: 10am - 7pm PKT)</p>
+                  <p className="text-muted-foreground mt-0.5">Phone support is not configured yet. Please use the secure support form.</p>
                 </div>
               </div>
 

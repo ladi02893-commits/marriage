@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { ShieldCheck, Lock, AlertTriangle, EyeOff, UserCheck, PhoneCall, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Lock, AlertTriangle, UserCheck, CheckCircle2 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 
@@ -58,7 +57,7 @@ export default function SafetyPage() {
               </div>
               <h3 className="text-base font-bold text-foreground">3. Privacy Vault Protection</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                All identity documents are encrypted with AES-256 and never stored publicly or shared with other members under any circumstances.
+                Identity documents are kept in private, access-controlled storage and are not shown to other members.
               </p>
             </div>
           </div>

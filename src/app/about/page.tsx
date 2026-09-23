@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { Heart, ShieldCheck, Award, Users, Lock, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Users, Lock, Sparkles } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 

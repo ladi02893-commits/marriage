@@ -1,9 +1,7 @@
 'use client';
 
 import React from 'react';
-import { AlertTriangle, ShieldAlert, CheckCircle2, XCircle, UserX } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { toast } from 'sonner';
 
 export default function AdminReportsPage() {
   const { reports, resolveReport, dismissReport, updateUserStatus } = useAuth();
@@ -65,7 +63,6 @@ export default function AdminReportsPage() {
                   <button
                     onClick={() => {
                       dismissReport(r.id);
-                      toast.info('Report dismissed.');
                     }}
                     className="rounded-xl border border-zinc-700 bg-zinc-800 px-3.5 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-700"
                   >
@@ -75,7 +72,6 @@ export default function AdminReportsPage() {
                     onClick={() => {
                       updateUserStatus(r.reportedUserId, 'SUSPENDED');
                       resolveReport(r.id, 'User account suspended for policy violation.');
-                      toast.warning(`Suspended ${r.reportedUserName} and resolved report.`);
                     }}
                     className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-700"
                   >

@@ -7,12 +7,7 @@ import {
   Smartphone,
   Landmark,
   Zap,
-  Building2,
   Receipt,
-  FileCheck,
-  Calendar,
-  User,
-  QrCode,
 } from 'lucide-react';
 import { PaymentProof } from '@/lib/types';
 

@@ -5,16 +5,7 @@ import {
   HelpCircle,
   MessageSquare,
   Search,
-  CheckCircle2,
-  Clock,
   Send,
-  Lock,
-  UserCheck,
-  Filter,
-  Eye,
-  AlertCircle,
-  ShieldCheck,
-  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { SupportTicket, SupportTicketStatus } from '@/lib/types';
@@ -45,7 +36,6 @@ export default function AdminSupportManagementPage() {
     if (!selectedTicket || !staffReply.trim()) return;
 
     replySupportTicket(selectedTicket.id, staffReply.trim(), 'AGENT');
-    toast.success(`Staff reply sent to ticket ${selectedTicket.id}`);
     setStaffReply('');
 
     // update local reference
@@ -55,7 +45,6 @@ export default function AdminSupportManagementPage() {
 
   const handleStatusChange = (ticketId: string, status: SupportTicketStatus) => {
     updateTicketStatus(ticketId, status);
-    toast.success(`Ticket ${ticketId} status updated to ${status}`);
     if (selectedTicket?.id === ticketId) {
       setSelectedTicket((p) => (p ? { ...p, status } : null));
     }

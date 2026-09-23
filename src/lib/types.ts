@@ -115,8 +115,8 @@ export interface PartnerPreferences {
 }
 
 export interface PrivacySettings {
-  photoVisibility?: 'ALL' | 'MEMBERS_ONLY' | 'CONNECTIONS_ONLY' | 'PRIVATE' | 'BLURRED_UNTIL_APPROVED';
-  contactVisibility?: 'ONLY_ACCEPTED_INTERESTS' | 'ONLY_UNLOCKED' | 'PREMIUM_ONLY' | 'HIDDEN';
+  photoVisibility?: 'ALL' | 'REGISTERED_ONLY' | 'ONLY_ACCEPTED_INTERESTS' | 'NONE';
+  contactVisibility?: 'ONLY_ACCEPTED_INTERESTS' | 'NONE';
   showPhone?: boolean;
   showWhatsapp?: boolean;
   showEmail?: boolean;

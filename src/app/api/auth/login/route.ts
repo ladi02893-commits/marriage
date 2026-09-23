@@ -1,153 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { insforgeAdmin } from '@/lib/insforge/server';
-import { verifyPassword, signAuthToken, AUTH_COOKIE_NAME } from '@/lib/auth';
-import { INITIAL_USERS, INITIAL_PROFILES } from '@/lib/data-store';
+import {
+  AUTH_COOKIE_MAX_AGE,
+  AUTH_COOKIE_NAME,
+  signAuthToken,
+  verifyPassword,
+} from '@/lib/auth';
+import { clearRateLimit, checkRateLimit } from '@/lib/rate-limit';
+import { toSafeUser } from '@/lib/user-dto';
+import { rejectCrossSiteMutation } from '@/lib/api-auth';
 
-export async function POST(req: NextRequest) {
+const LOGIN_SELECT = 'id,email,password_hash,name,role,is_verified,subscription_tier,account_status,avatar_url,phone,profile_id_code,whatsapp_number,is_whatsapp_verified,is_email_verified,total_connections,used_connections,remaining_connections,assigned_consultant_id,session_version,created_at,profile:matrimonial_profiles(id,photos:profile_photos(url,is_primary))';
+
+export async function POST(request: NextRequest) {
+  const crossSite = rejectCrossSiteMutation(request);
+  if (crossSite) return crossSite;
   try {
-    const body = await req.json();
-    const { email, password } = body;
+    const body = await request.json();
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const password = typeof body.password === 'string' ? body.password : '';
+    if (!email || !password || password.length > 128) {
+      return NextResponse.json({ success: false, error: 'Invalid email or password.' }, { status: 400 });
+    }
 
-    if (!email || !password) {
+    const forwardedFor = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+    const rateKey = `${forwardedFor || 'unknown'}:${email}`;
+    const limit = checkRateLimit(rateKey);
+    if (!limit.allowed) {
       return NextResponse.json(
-        { success: false, error: 'Email and password are required.' },
-        { status: 400 }
+        { success: false, error: 'Too many login attempts. Please try again later.' },
+        { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } },
       );
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const inputPassword = String(password).trim();
-
-    // 1. Try finding user in InsForge PostgreSQL
-    let user: any = null;
-    try {
-      const { data, error } = await insforgeAdmin.database
-        .from('users')
-        .select('*, profile:matrimonial_profiles(*, photos:profile_photos(*))')
-        .eq('email', cleanEmail)
-        .maybeSingle();
-
-      if (!error && data) {
-        user = data;
-      }
-    } catch {
-      user = null;
-    }
-
-    // 2. Fallback to INITIAL_USERS in data-store
-    if (!user) {
-      const memoryUser = INITIAL_USERS.find((u) => u.email.toLowerCase() === cleanEmail);
-      if (memoryUser) {
-        const memoryProfile = INITIAL_PROFILES.find((p) => p.userId === memoryUser.id);
-        user = {
-          ...memoryUser,
-          password_hash: cleanEmail === 'ladi02893@gmail.com' ? 'ladi02893' : 'password123',
-          profile: memoryProfile || null,
-        };
-      }
-    }
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email or password. Please check your credentials.' },
-        { status: 401 }
-      );
-    }
-
-    const accountStatus = user.account_status || user.accountStatus || 'ACTIVE';
-    if (accountStatus === 'BANNED' || accountStatus === 'SUSPENDED') {
-      return NextResponse.json(
-        { success: false, error: 'Your account has been suspended. Please contact support.' },
-        { status: 403 }
-      );
-    }
-
-    // 3. Password Verification
-    let isPasswordValid = false;
-
-    if (cleanEmail === 'ladi02893@gmail.com') {
-      if (
-        inputPassword === 'password123' ||
-        inputPassword === 'ladi02893' ||
-        inputPassword === 'admin123'
-      ) {
-        isPasswordValid = true;
-      }
-    } else {
-      if (inputPassword === 'password123') {
-        isPasswordValid = true;
-      }
-    }
-
-    const storedHash = user.password_hash || user.passwordHash;
-    if (!isPasswordValid && storedHash) {
-      isPasswordValid = await verifyPassword(inputPassword, storedHash);
-    }
-
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid email or password. Please try again.' },
-        { status: 401 }
-      );
-    }
-
-    // Update last_login_at in background
-    insforgeAdmin.database
+    const { data: user, error } = await insforgeAdmin.database
       .from('users')
-      .update({ last_login_at: new Date().toISOString() })
-      .eq('id', user.id)
-      .then(() => {});
+      .select(LOGIN_SELECT)
+      .eq('email', email)
+      .maybeSingle();
+    if (error) {
+      console.error('Login database error:', error.message);
+      return NextResponse.json({ success: false, error: 'Login is temporarily unavailable.' }, { status: 503 });
+    }
+    if (!user || !user.password_hash || !(await verifyPassword(password, user.password_hash))) {
+      return NextResponse.json({ success: false, error: 'Invalid email or password.' }, { status: 401 });
+    }
+    if (user.account_status !== 'ACTIVE') {
+      return NextResponse.json({ success: false, error: 'This account is not active.' }, { status: 403 });
+    }
 
-    // Create session JWT token
+    clearRateLimit(rateKey);
     const token = await signAuthToken({
       userId: user.id,
       email: user.email,
       role: user.role,
+      sessionVersion: user.session_version ?? 0,
     });
-
-    const isPrivileged =
-      user.role === 'SUPER_ADMIN' ||
-      user.role === 'ADMIN' ||
-      user.role === 'MODERATOR' ||
-      cleanEmail === 'ladi02893@gmail.com';
-
-    const redirectUrl = isPrivileged ? '/admin' : '/dashboard';
-
-    const tier = isPrivileged ? 'PREMIUM_PLUS' : (user.subscription_tier || user.subscriptionTier || 'BASIC');
-    const profileIdCode = user.profile_id_code || user.profileIdCode || user.profile?.profile_id_code || user.profile?.profileIdCode || 'VRM-000001';
-    const totalConnections = isPrivileged ? 99999 : (user.total_connections ?? user.totalConnections ?? (tier === 'PREMIUM_PLUS' || tier === 'VIP' ? 300 : tier === 'PREMIUM' ? 100 : 30));
-    const usedConnections = isPrivileged ? 0 : (user.used_connections ?? user.usedConnections ?? 0);
-    const remainingConnections = isPrivileged ? 99999 : (user.remaining_connections ?? user.remainingConnections ?? Math.max(0, totalConnections - usedConnections));
-
-    const safeUser = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      phone: user.phone || user.profile?.phone || '',
-      whatsappNumber: user.whatsapp_number || user.whatsappNumber || user.profile?.whatsappNumber || user.phone || '',
-      profileIdCode,
-      role: isPrivileged ? 'SUPER_ADMIN' : (user.role || 'USER'),
-      subscriptionTier: tier,
-      isVerified: user.is_verified ?? user.isVerified ?? true,
-      isWhatsappVerified: user.is_whatsapp_verified ?? user.isWhatsappVerified ?? true,
-      isEmailVerified: user.is_email_verified ?? user.isEmailVerified ?? true,
-      avatarUrl: user.avatar_url || user.avatarUrl || user.profile?.photos?.[0]?.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
-      profileId: user.profile?.id || (user.id.startsWith('user-') ? user.id.replace('user-', 'profile-') : user.profileId || 'profile-1'),
-      accountStatus: accountStatus,
-      totalConnections,
-      usedConnections,
-      remainingConnections,
-      assignedConsultantId: user.assigned_consultant_id || user.assignedConsultantId || 'consultant-1',
-    };
+    const { error: loginUpdateError } = await insforgeAdmin.database
+      .from('users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', user.id);
+    if (loginUpdateError) console.error('Could not update last login:', loginUpdateError.message);
 
     const response = NextResponse.json({
       success: true,
-      user: safeUser,
-      redirectUrl,
-      message: 'Login successful.',
+      user: toSafeUser(user),
+      redirectUrl: ['SUPER_ADMIN', 'ADMIN'].includes(user.role) ? '/admin' : '/dashboard',
     });
-
-    // Set HTTP-only Cookie
     response.cookies.set({
       name: AUTH_COOKIE_NAME,
       value: token,
@@ -155,15 +74,11 @@ export async function POST(req: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 30 * 24 * 60 * 60, // 30 days
+      maxAge: AUTH_COOKIE_MAX_AGE,
     });
-
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error during authentication.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Invalid login request.' }, { status: 400 });
   }
 }

@@ -3,16 +3,9 @@
 import React, { useState } from 'react';
 import {
   HelpCircle,
-  MessageSquare,
   Plus,
-  CheckCircle2,
-  Clock,
   Send,
-  Link as LinkIcon,
-  Paperclip,
-  ShieldAlert,
   Crown,
-  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { SupportCategory } from '@/lib/types';

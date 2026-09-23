@@ -166,7 +166,7 @@ function SearchContent() {
   };
 
   const handleSaveSearch = () => {
-    toast.success('Search criteria saved! You will receive weekly alerts for new matching profiles.');
+    toast.error('Saved searches and weekly alerts are not connected to the backend yet.');
   };
 
   return (

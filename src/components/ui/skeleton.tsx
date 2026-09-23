@@ -44,19 +44,6 @@ export function ProfileCardSkeleton() {
   );
 }
 
-// Table Row Skeleton
-export function TableRowSkeleton({ cols = 5 }: { cols?: number }) {
-  return (
-    <tr className="border-b border-border/60">
-      {Array.from({ length: cols }).map((_, idx) => (
-        <td key={idx} className="py-4 px-4">
-          <Skeleton className="h-4 w-full max-w-[120px] rounded" />
-        </td>
-      ))}
-    </tr>
-  );
-}
-
 // Dashboard Metric Card Skeleton
 export function MetricCardSkeleton() {
   return (

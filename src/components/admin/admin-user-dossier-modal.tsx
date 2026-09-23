@@ -10,31 +10,16 @@ import {
   Crown,
   MapPin,
   Briefcase,
-  GraduationCap,
-  Calendar,
   Phone,
-  Mail,
   MessageCircle,
   MessageSquare,
   Eye,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Send,
-  Sparkles,
-  ArrowRight,
-  ExternalLink,
   Receipt,
   UserCheck,
-  ShieldAlert,
   Home,
-  Users,
-  Utensils,
-  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { User as UserType, MatrimonialProfile, InterestRequest } from '@/lib/types';
-import { toast } from 'sonner';
+import { User as UserType, MatrimonialProfile } from '@/lib/types';
 
 interface AdminUserDossierModalProps {
   isOpen: boolean;
@@ -48,9 +33,9 @@ type ConnectionFilter = 'ALL' | 'SENT' | 'RECEIVED' | 'CONNECTED';
 
 // Safe helper to extract photo URL regardless of whether photo is a string or ProfilePhoto object
 function getPhotoUrl(photo?: any): string {
-  if (!photo) return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200';
+  if (!photo) return '/avatar-placeholder.svg';
   if (typeof photo === 'string') return photo;
-  return photo.url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200';
+  return photo.url || '/avatar-placeholder.svg';
 }
 
 export function AdminUserDossierModal({
@@ -60,6 +45,7 @@ export function AdminUserDossierModal({
   profile: initialProfile,
 }: AdminUserDossierModalProps) {
   const {
+    currentUser,
     profiles,
     interests,
     conversations,
@@ -198,19 +184,17 @@ export function AdminUserDossierModal({
               <span className="hidden sm:inline">WhatsApp</span>
             </a>
 
-            <button
+            {currentUser?.role === 'SUPER_ADMIN' && user.role === 'USER' && <button
               type="button"
-              onClick={() => {
-                switchUser(user.id);
-                toast.success(`Switched session to ${user.name}`);
-                window.location.href = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' ? '/admin' : '/dashboard';
+              onClick={async () => {
+                if (await switchUser(user.id)) window.location.href = '/dashboard';
               }}
               className="inline-flex items-center gap-1.5 rounded-xl border border-brand-500/40 bg-brand-500/10 px-3 py-1.5 text-xs font-bold text-brand-300 hover:bg-brand-500/20 transition cursor-pointer"
               title="Login As This User"
             >
               <UserCheck className="h-3.5 w-3.5 text-brand-400" />
               <span className="hidden sm:inline">Login As</span>
-            </button>
+            </button>}
 
             <button
               onClick={onClose}
@@ -611,7 +595,7 @@ export function AdminUserDossierModal({
                       <div className="divide-y divide-zinc-800 text-zinc-300">
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Primary Mobile:</span>
-                          <span className="font-mono font-bold text-white">{profile.phone || '+92 300 1234567'}</span>
+                          <span className="font-mono font-bold text-white">{profile.phone || 'Not provided'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Email Address:</span>
@@ -798,7 +782,6 @@ export function AdminUserDossierModal({
               type="button"
               onClick={() => {
                 verifyUserBadge(user.id, !user.isVerified);
-                toast.success(`Verification badge ${!user.isVerified ? 'granted' : 'revoked'} for ${user.name}`);
               }}
               className="rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 cursor-pointer"
             >

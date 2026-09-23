@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldAlert, X, AlertTriangle } from 'lucide-react';
+import { ShieldAlert, X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 
@@ -20,7 +20,7 @@ export function ReportModal({ reportedUserId, reportedUserName, isOpen, onClose 
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim()) {
       toast.error('Please describe the reason for your report.');
@@ -28,12 +28,14 @@ export function ReportModal({ reportedUserId, reportedUserName, isOpen, onClose 
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      submitReport(reportedUserId, category, description);
-      setIsSubmitting(false);
-      toast.success('Report submitted. Our moderation team will investigate immediately.');
+    const result = await submitReport(reportedUserId, category, description);
+    setIsSubmitting(false);
+    if (result.success) {
+      toast.success(result.message);
       onClose();
-    }, 400);
+    } else {
+      toast.error(result.message);
+    }
   };
 
   return (

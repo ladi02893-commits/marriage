@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { ShieldCheck, Lock } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 
@@ -38,7 +37,7 @@ export default function PrivacyPage() {
         <div className="space-y-3">
           <h2 className="text-lg font-bold text-foreground font-serif">3. Government ID Encryption & Storage</h2>
           <p>
-            All verification documents (passports, national ID cards) are encrypted at rest using AES-256 standards. Verification documents are strictly audited by authorized compliance officers and are never exposed publicly or shared with prospective matches.
+            Verification documents are kept in private, access-controlled storage for authorized review and are not exposed publicly or shared with prospective matches.
           </p>
         </div>
 

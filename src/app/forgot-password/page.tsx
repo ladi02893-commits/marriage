@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Mail, ArrowLeft, Send, CheckCircle2, Heart } from 'lucide-react';
+import { Mail, ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { toast } from 'sonner';
@@ -14,8 +14,7 @@ export default function ForgotPasswordPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    toast.success('Password reset link sent to your registered email.');
-    setIsSubmitted(true);
+    toast.info('Password reset email is not available until the email provider is configured. Please contact an administrator.');
   };
 
   return (
@@ -30,7 +29,7 @@ export default function ForgotPasswordPage() {
             </div>
             <h2 className="text-2xl font-bold font-serif text-foreground">Reset Your Password</h2>
             <p className="text-xs text-muted-foreground mt-1">
-              Enter your registered email address to receive a secure recovery link.
+              Email recovery is temporarily unavailable while the email provider integration is pending.
             </p>
           </div>
 

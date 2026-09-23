@@ -14,7 +14,7 @@ export interface CurrencyConfig {
   rateToPKR: number;
 }
 
-export const COUNTRY_CURRENCY_MAP: Record<string, CurrencyConfig> = {
+const COUNTRY_CURRENCY_MAP: Record<string, CurrencyConfig> = {
   // Pakistan (Domestic Reference Currency)
   pakistan: { code: 'PKR', symbol: 'Rs.', name: 'Pakistani Rupee', rateFromPKR: 1, rateToPKR: 1 },
   pk: { code: 'PKR', symbol: 'Rs.', name: 'Pakistani Rupee', rateFromPKR: 1, rateToPKR: 1 },
@@ -101,7 +101,7 @@ export function getCurrencyForCountry(country?: string): CurrencyConfig {
 /**
  * High-precision currency converter from PKR into any foreign country currency
  */
-export function convertPKRToCountryCurrency(
+function convertPKRToCountryCurrency(
   amountInPKR: number,
   targetCountry?: string,
   options?: { round?: boolean }
@@ -132,7 +132,7 @@ export function convertPKRToCountryCurrency(
 /**
  * Format a given amount in PKR into localized currency string
  */
-export function formatCurrencyByCountry(
+function formatCurrencyByCountry(
   amountInPKR: number,
   country?: string,
   options?: { round?: boolean; showCode?: boolean }
@@ -151,7 +151,7 @@ export function formatCurrencyByCountry(
  * Premium: Rs. 5,000 (100 Connections)
  * VIP Royal: Rs. 10,000 (300 Connections)
  */
-export const DEFAULT_PACKAGE_BASE_PRICES: Record<string, { price: number; connections: number; name: string }> = {
+const DEFAULT_PACKAGE_BASE_PRICES: Record<string, { price: number; connections: number; name: string }> = {
   BASIC: { price: 2000, connections: 30, name: 'Basic Package' },
   PREMIUM: { price: 5000, connections: 100, name: 'Premium Package' },
   VIP: { price: 10000, connections: 300, name: 'VIP Royal Package' },

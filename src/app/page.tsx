@@ -5,23 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Crown,
-  Heart,
   Search,
   ShieldCheck,
   Sparkles,
-  Users,
-  Lock,
-  Award,
   ArrowRight,
   CheckCircle2,
   Star,
   ChevronRight,
   PhoneCall,
-  UserCheck,
-  CreditCard,
-  Building,
-  HelpCircle,
-  MessageSquare,
   BadgeCheck,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
@@ -291,7 +282,7 @@ export default function HomePage() {
               <span className="text-xs font-bold font-mono text-gold-600">02</span>
               <h4 className="text-sm font-bold text-foreground">WhatsApp Verification</h4>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Verify phone identity with an encrypted 6-digit WhatsApp authentication code.
+                WhatsApp verification will be available when the messaging provider integration is enabled.
               </p>
             </div>
 
@@ -424,33 +415,23 @@ export default function HomePage() {
             <div className="lg:col-span-5">
               <div className="rounded-3xl border border-gold-400/40 bg-white/10 p-6 sm:p-8 backdrop-blur-md space-y-5">
                 <div className="flex items-center gap-4">
-                  <img
-                    src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400"
-                    alt="Senior Consultant"
-                    className="h-20 w-20 rounded-2xl object-cover ring-2 ring-gold-400"
-                  />
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gold-400/15 text-gold-300 ring-2 ring-gold-400">
+                    <Crown className="h-10 w-10" />
+                  </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gold-300 font-mono">Senior Matchmaker</span>
-                    <h3 className="text-lg font-bold font-serif text-white">Begum Bilquis Khan</h3>
-                    <p className="text-xs text-brand-200">18+ Years Executive Matrimonial Experience</p>
-                    <div className="flex items-center gap-1 text-[11px] text-gold-300 mt-1">
-                      <Star className="h-3 w-3 fill-gold-400" />
-                      <Star className="h-3 w-3 fill-gold-400" />
-                      <Star className="h-3 w-3 fill-gold-400" />
-                      <Star className="h-3 w-3 fill-gold-400" />
-                      <Star className="h-3 w-3 fill-gold-400" />
-                      <span className="ml-1 text-white font-semibold">4.9 / 5.0 (340+ Matches)</span>
-                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gold-300 font-mono">Concierge service</span>
+                    <h3 className="text-lg font-bold font-serif text-white">Consultant assignment</h3>
+                    <p className="text-xs text-brand-200">Real consultant details appear only after an administrator assigns one to your account.</p>
                   </div>
                 </div>
 
                 <p className="text-xs text-white/80 italic border-l-2 border-gold-400 pl-3">
-                  “Our sacred objective is to unite honorable families with the utmost respect, confidentiality, and cultural alignment.”
+                  Consultant availability and contact details are never fabricated; assignment status is shown transparently in the member dashboard.
                 </p>
 
                 <div className="border-t border-white/10 pt-4 flex items-center justify-between text-xs text-white/90">
-                  <span>Direct WhatsApp Assistance</span>
-                  <span className="font-bold text-gold-300">Available Mon - Sat</span>
+                  <span>Support and consultant coordination</span>
+                  <span className="font-bold text-gold-300">Subject to assignment</span>
                 </div>
               </div>
             </div>
@@ -620,12 +601,16 @@ export default function HomePage() {
               Royal Success Stories
             </h2>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              Couples and families who found their lifelong match through our platform.
+              Only consented and administrator-approved stories appear here.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {cms.successStories.map((story) => (
+            {cms.successStories.length === 0 ? (
+              <div className="md:col-span-2 rounded-3xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+                No verified success stories have been published yet.
+              </div>
+            ) : cms.successStories.map((story) => (
               <div key={story.id} className="rounded-3xl border border-border bg-card overflow-hidden shadow-sm flex flex-col sm:flex-row">
                 <img
                   src={story.photoUrl}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, Send, Sparkles, X, MessageSquare, ShieldCheck } from 'lucide-react';
+import { Send, X, ShieldCheck } from 'lucide-react';
 import { MatrimonialProfile } from '@/lib/types';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
@@ -26,7 +26,7 @@ export function SendInterestModal({ profile, isOpen, onClose }: SendInterestModa
 
   if (!isOpen) return null;
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (connectionQuota.isReached) {
       toast.error(`Connection limit reached (${connectionQuota.used}/${connectionQuota.total}). Please upgrade your plan.`);
       window.location.href = '/pricing';
@@ -34,21 +34,17 @@ export function SendInterestModal({ profile, isOpen, onClose }: SendInterestModa
     }
 
     setIsSending(true);
-    setTimeout(() => {
-      const res = sendInterest(profile.id, customMessage);
-      setIsSending(false);
-      if (res.success) {
-        toast.success(res.message);
-        onClose();
-      } else {
-        toast.error(res.message);
-        if (res.message.includes('limit')) {
-          setTimeout(() => {
-            window.location.href = '/pricing';
-          }, 1000);
-        }
+    const res = await sendInterest(profile.id, customMessage);
+    setIsSending(false);
+    if (res.success) {
+      toast.success(res.message);
+      onClose();
+    } else {
+      toast.error(res.message);
+      if (res.message.includes('limit')) {
+        window.location.href = '/pricing';
       }
-    }, 400);
+    }
   };
 
   return (
@@ -67,7 +63,7 @@ export function SendInterestModal({ profile, isOpen, onClose }: SendInterestModa
           <img
             src={
               profile.photos?.[0]?.url ||
-              'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'
+              '/avatar-placeholder.svg'
             }
             alt={profile.fullName}
             className="h-16 w-16 rounded-2xl object-cover ring-2 ring-brand-500/20"

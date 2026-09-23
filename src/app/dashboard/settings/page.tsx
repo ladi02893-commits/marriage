@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Settings, Lock, Bell, UserX, Save, Check } from 'lucide-react';
+import { Lock, Bell, UserX } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 
@@ -14,21 +14,32 @@ export default function AccountSettingsPage() {
   const [notifyOnMessage, setNotifyOnMessage] = useState(true);
   const [notifyNewsletter, setNotifyNewsletter] = useState(false);
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || newPassword !== confirmPassword) {
+    if (!currentPassword || !newPassword || newPassword !== confirmPassword) {
       toast.error('New passwords do not match.');
       return;
     }
-    toast.success('Password updated securely.');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    try {
+      const response = await fetch('/api/auth/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Password update failed.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success(result.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Password update failed.');
+    }
   };
 
   const handleSaveNotifications = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Notification preferences updated.');
+    toast.info('Email notifications are disabled until the email provider is configured.');
   };
 
   return (

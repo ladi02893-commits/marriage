@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Heart, Star, Quote, ArrowRight } from 'lucide-react';
+import { Heart, Star, ArrowRight } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { useAuth } from '@/lib/auth-context';
@@ -21,14 +21,18 @@ export default function StoriesPage() {
             VIP Royal Matrimonial Success Stories
           </h1>
           <p className="text-xs sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Real stories from doctors, engineers, executives, and accomplished couples who discovered their life partners on our platform.
+            Only consented and administrator-approved member stories are published here.
           </p>
         </div>
       </div>
 
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8 w-full space-y-16">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
-          {cms.successStories.map((story) => (
+          {cms.successStories.length === 0 ? (
+            <div className="md:col-span-2 lg:col-span-3 rounded-3xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+              No verified success stories have been published yet.
+            </div>
+          ) : cms.successStories.map((story) => (
             <div
               key={story.id}
               className="flex flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm transition hover:shadow-xl"

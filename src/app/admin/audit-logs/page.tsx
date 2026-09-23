@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { History, ShieldAlert, Search, Filter, Lock } from 'lucide-react';
+import { Search, Lock } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
 export default function AdminAuditLogsPage() {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Sparkles, Filter, Users, SlidersHorizontal, RefreshCw } from 'lucide-react';
+import { Sparkles, Users } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { CountryCitySelect } from '@/components/ui/country-city-select';

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   User,
@@ -11,10 +11,7 @@ import {
   Heart,
   Save,
   Trash2,
-  Plus,
-  ShieldCheck,
   ShieldAlert,
-  Sliders,
 } from 'lucide-react';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useAuth } from '@/lib/auth-context';
@@ -22,21 +19,21 @@ import { CountryCitySelect } from '@/components/ui/country-city-select';
 import { toast } from 'sonner';
 
 export default function ProfileEditorPage() {
-  const { currentProfile, currentUser, updateCurrentUserProfile } = useAuth();
+  const { currentProfile, currentUser, updateCurrentUserProfile, refreshDatabase } = useAuth();
   const [activeTab, setActiveTab] = useState<'photos' | 'basic' | 'career' | 'lifestyle' | 'family' | 'prefs'>('basic');
 
-  const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'MODERATOR';
+  const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
 
   const [form, setForm] = useState({
     fullName: currentProfile?.fullName || '',
     gender: currentProfile?.gender || 'FEMALE',
-    dateOfBirth: currentProfile?.dateOfBirth || '1998-01-01',
+    dateOfBirth: currentProfile?.dateOfBirth?.slice(0, 10) || '',
     maritalStatus: currentProfile?.maritalStatus || 'NEVER_MARRIED',
     religion: currentProfile?.religion || 'ISLAM',
     sectOrCommunity: currentProfile?.sectOrCommunity || '',
     motherTongue: currentProfile?.motherTongue || 'Urdu',
-    city: currentProfile?.city || 'London',
-    country: currentProfile?.country || 'United Kingdom',
+    city: currentProfile?.city || '',
+    country: currentProfile?.country || '',
     bioHeadline: currentProfile?.bioHeadline || '',
     aboutMe: currentProfile?.aboutMe || '',
 
@@ -48,7 +45,7 @@ export default function ProfileEditorPage() {
     annualIncome: currentProfile?.educationCareer?.annualIncome || '',
 
     // Lifestyle
-    height: currentProfile?.lifestyle?.height || "5' 6\"",
+    height: currentProfile?.lifestyle?.height || '',
     diet: currentProfile?.lifestyle?.diet || 'HALAL_ONLY',
     smoking: currentProfile?.lifestyle?.smoking || 'NO',
     drinking: currentProfile?.lifestyle?.drinking || 'NO',
@@ -67,7 +64,40 @@ export default function ProfileEditorPage() {
     prefNotes: currentProfile?.partnerPreferences?.expectationsNotes || '',
   });
 
-  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  useEffect(() => {
+    if (!currentProfile) return;
+    setForm({
+      fullName: currentProfile.fullName || '',
+      gender: currentProfile.gender || 'FEMALE',
+      dateOfBirth: currentProfile.dateOfBirth?.slice(0, 10) || '',
+      maritalStatus: currentProfile.maritalStatus || 'NEVER_MARRIED',
+      religion: currentProfile.religion || 'ISLAM',
+      sectOrCommunity: currentProfile.sectOrCommunity || '',
+      motherTongue: currentProfile.motherTongue || 'Urdu',
+      city: currentProfile.city || '',
+      country: currentProfile.country || '',
+      bioHeadline: currentProfile.bioHeadline || '',
+      aboutMe: currentProfile.aboutMe || '',
+      highestDegree: currentProfile.educationCareer?.highestDegree || '',
+      institution: currentProfile.educationCareer?.institution || '',
+      profession: currentProfile.educationCareer?.profession || '',
+      jobTitle: currentProfile.educationCareer?.jobTitle || '',
+      annualIncome: currentProfile.educationCareer?.annualIncome || '',
+      height: currentProfile.lifestyle?.height || '',
+      diet: currentProfile.lifestyle?.diet || 'HALAL_ONLY',
+      smoking: currentProfile.lifestyle?.smoking || 'NO',
+      drinking: currentProfile.lifestyle?.drinking || 'NO',
+      familyType: currentProfile.familyInfo?.familyType || 'NUCLEAR',
+      familyValues: currentProfile.familyInfo?.familyValues || 'MODERATE',
+      fatherOccupation: currentProfile.familyInfo?.fatherOccupation || '',
+      motherOccupation: currentProfile.familyInfo?.motherOccupation || '',
+      familyLocation: currentProfile.familyInfo?.familyLocation || '',
+      aboutFamily: currentProfile.familyInfo?.aboutFamily || '',
+      prefAgeMin: currentProfile.partnerPreferences?.ageRange?.min || 25,
+      prefAgeMax: currentProfile.partnerPreferences?.ageRange?.max || 35,
+      prefNotes: currentProfile.partnerPreferences?.expectationsNotes || '',
+    });
+  }, [currentProfile]);
 
   const updateField = (field: string, val: any) => {
     setForm((prev) => ({ ...prev, [field]: val }));
@@ -88,7 +118,7 @@ export default function ProfileEditorPage() {
       bioHeadline: form.bioHeadline,
       aboutMe: form.aboutMe,
       educationCareer: {
-        ...currentProfile?.educationCareer!,
+        ...currentProfile?.educationCareer,
         highestDegree: form.highestDegree,
         institution: form.institution,
         profession: form.profession,
@@ -96,14 +126,14 @@ export default function ProfileEditorPage() {
         annualIncome: form.annualIncome,
       },
       lifestyle: {
-        ...currentProfile?.lifestyle!,
+        ...currentProfile?.lifestyle,
         height: form.height,
         diet: form.diet as any,
         smoking: form.smoking as any,
         drinking: form.drinking as any,
       },
       familyInfo: {
-        ...currentProfile?.familyInfo!,
+        ...currentProfile?.familyInfo,
         familyType: form.familyType as any,
         familyValues: form.familyValues as any,
         fatherOccupation: form.fatherOccupation,
@@ -112,42 +142,29 @@ export default function ProfileEditorPage() {
         aboutFamily: form.aboutFamily,
       },
       partnerPreferences: {
-        ...currentProfile?.partnerPreferences!,
+        ...currentProfile?.partnerPreferences,
         ageRange: { min: form.prefAgeMin, max: form.prefAgeMax },
         expectationsNotes: form.prefNotes,
       },
     });
 
-    toast.success('Matrimonial profile dossier updated successfully!');
   };
 
-  const handleAddPhoto = () => {
-    if (!newPhotoUrl.trim()) return;
-    const currentPhotos = currentProfile?.photos || [];
-    const newPhoto = {
-      id: `p-${Date.now()}`,
-      url: newPhotoUrl.trim(),
-      isPrimary: currentPhotos.length === 0,
-      isApproved: true,
-      order: currentPhotos.length + 1,
-    };
-    updateCurrentUserProfile({
-      photos: [...currentPhotos, newPhoto],
-    });
-    setNewPhotoUrl('');
-    toast.success('Photo added to your gallery!');
-  };
-
-  const handleDeletePhoto = (photoId: string) => {
+  const handleDeletePhoto = async (photoId: string) => {
     const currentPhotos = currentProfile?.photos || [];
     if (currentPhotos.length <= 1) {
       toast.error('You must maintain at least one primary profile photo.');
       return;
     }
-    updateCurrentUserProfile({
-      photos: currentPhotos.filter((p) => p.id !== photoId),
-    });
-    toast.info('Photo removed from gallery.');
+    try {
+      const response = await fetch(`/api/profile-photos?id=${encodeURIComponent(photoId)}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Photo could not be deleted.');
+      await refreshDatabase();
+      toast.success('Photo removed.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Photo could not be deleted.');
+    }
   };
 
   const tabs = [
@@ -391,23 +408,20 @@ export default function ProfileEditorPage() {
                 label="Select Photo"
                 bucket="avatars"
                 folder="gallery"
-                onUploadSuccess={(url) => {
-                  setNewPhotoUrl(url);
-                  // We also auto-trigger the add since FileUpload completed it
-                  const currentPhotos = currentProfile?.photos || [];
-                  const newPhoto = {
-                    id: `p-${Date.now()}`,
-                    url: url,
-                    isPrimary: currentPhotos.length === 0,
-                    isApproved: true,
-                    order: currentPhotos.length + 1,
-                  };
-                  updateCurrentUserProfile({
-                    photos: [...currentPhotos, newPhoto],
-                  });
-                  setNewPhotoUrl('');
-                  toast.success('Photo added to your gallery!');
-                }}
+                 onUploadSuccess={async (url, key) => {
+                   try {
+                     const response = await fetch('/api/profile-photos', {
+                       method: 'POST', headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({ url, key }),
+                     });
+                     const result = await response.json();
+                     if (!response.ok || !result.success) throw new Error(result.error || 'Photo could not be saved.');
+                     await refreshDatabase();
+                     toast.success('Photo submitted for review.');
+                   } catch (error) {
+                     toast.error(error instanceof Error ? error.message : 'Photo could not be saved.');
+                   }
+                 }}
               />
             </div>
           </div>

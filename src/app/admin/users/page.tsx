@@ -1,25 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import {
-  Users,
   Search,
   ShieldCheck,
-  ShieldAlert,
-  UserX,
   UserCheck,
-  MoreVertical,
-  Filter,
-  CheckCircle2,
-  Crown,
   Eye,
-  Heart,
-  Plus,
   RotateCcw,
-  Ban,
-  Sparkles,
-  Lock,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
@@ -29,6 +16,7 @@ import { User } from '@/lib/types';
 export default function UserManagementPage() {
   const {
     users,
+    currentUser,
     profiles,
     updateUserStatus,
     verifyUserBadge,
@@ -151,7 +139,7 @@ export default function UserManagementPage() {
             <tbody className="divide-y divide-zinc-800/60">
               {filteredUsers.map((u) => {
                 const prof = profiles.find((p) => p.userId === u.id || p.id === u.profileId);
-                const pId = prof?.profileIdCode || u.profileIdCode || 'VRM-000001';
+                const pId = prof?.profileIdCode || u.profileIdCode || 'ID pending';
                 const total = u.totalConnections || 100;
                 const remaining = u.remainingConnections !== undefined ? u.remainingConnections : 100;
 
@@ -160,7 +148,7 @@ export default function UserManagementPage() {
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
                         <img
-                          src={u.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'}
+                          src={u.avatarUrl || '/avatar-placeholder.svg'}
                           alt={u.name}
                           className="h-9 w-9 rounded-xl object-cover ring-1 ring-zinc-700"
                         />
@@ -252,22 +240,19 @@ export default function UserManagementPage() {
                           <span>Dossier</span>
                         </button>
 
-                        <button
-                          onClick={() => {
-                            switchUser(u.id);
-                            toast.success(`Switched session to ${u.name}`);
-                            window.location.href = '/dashboard';
+                        {currentUser?.role === 'SUPER_ADMIN' && u.role === 'USER' && <button
+                          onClick={async () => {
+                            if (await switchUser(u.id)) window.location.href = '/dashboard';
                           }}
                           className="inline-flex items-center gap-1 rounded-lg border border-brand-500/40 bg-brand-500/10 px-2 py-1.5 text-[11px] font-semibold text-brand-300 hover:bg-brand-500/20"
                         >
                           <UserCheck className="h-3 w-3" /> Login As
-                        </button>
+                        </button>}
 
                         {u.accountStatus === 'ACTIVE' ? (
                           <button
                             onClick={() => {
                               updateUserStatus(u.id, 'SUSPENDED');
-                              toast.warning(`Suspended user ${u.name}`);
                             }}
                             className="rounded-lg border border-amber-800 bg-amber-950/60 px-2 py-1.5 text-[11px] font-semibold text-amber-300 hover:bg-amber-900"
                           >
@@ -277,7 +262,6 @@ export default function UserManagementPage() {
                           <button
                             onClick={() => {
                               updateUserStatus(u.id, 'ACTIVE');
-                              toast.success(`Restored user ${u.name}`);
                             }}
                             className="rounded-lg border border-emerald-800 bg-emerald-950/60 px-2 py-1.5 text-[11px] font-semibold text-emerald-300 hover:bg-emerald-900"
                           >

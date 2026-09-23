@@ -4,19 +4,12 @@ import React from 'react';
 import {
   X,
   Printer,
-  Download,
-  CheckCircle2,
   Clock,
-  AlertCircle,
   ShieldCheck,
-  Building2,
-  Calendar,
   CreditCard,
   User,
-  Hash,
 } from 'lucide-react';
 import { Invoice } from '@/lib/types';
-import { toast } from 'sonner';
 
 interface InvoiceReceiptModalProps {
   isOpen: boolean;
@@ -31,16 +24,12 @@ export function InvoiceReceiptModal({
   onClose,
   invoice,
   userName = 'Valued Member',
-  userEmail = 'member@example.com',
+  userEmail = '',
 }: InvoiceReceiptModalProps) {
   if (!isOpen || !invoice) return null;
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleDownload = () => {
-    toast.success(`Receipt #${invoice.invoiceNumber} downloaded as PDF.`);
   };
 
   const isPaid = invoice.status === 'PAID';
@@ -76,12 +65,12 @@ export function InvoiceReceiptModal({
               <span className="hidden sm:inline">Print</span>
             </button>
             <button
-              onClick={handleDownload}
+              onClick={handlePrint}
               className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-brand-700 transition"
-              title="Download PDF"
+              title="Print or save as PDF"
             >
-              <Download className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">PDF</span>
+              <Printer className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Save PDF</span>
             </button>
             <button
               onClick={onClose}
@@ -130,7 +119,7 @@ export function InvoiceReceiptModal({
                 <User className="h-3.5 w-3.5 text-brand-600" />
                 <span>{userName}</span>
               </div>
-              <div className="text-muted-foreground pl-5">{userEmail}</div>
+              {userEmail && <div className="text-muted-foreground pl-5">{userEmail}</div>}
             </div>
 
             <div className="space-y-1.5">
@@ -220,10 +209,10 @@ export function InvoiceReceiptModal({
             Close Receipt
           </button>
           <button
-            onClick={handleDownload}
+            onClick={handlePrint}
             className="rounded-xl bg-gradient-to-r from-brand-600 to-rose-600 px-5 py-2 text-xs font-bold text-white shadow-md hover:from-brand-700 transition"
           >
-            Download Invoice PDF
+            Print / Save as PDF
           </button>
         </div>
       </div>
