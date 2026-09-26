@@ -53,6 +53,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const profileIdCode = currentProfile?.profileIdCode || currentUser?.profileIdCode || 'ID pending';
 
+  React.useEffect(() => {
+    if (currentUser && ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
+      router.replace('/admin');
+    }
+  }, [currentUser, router]);
+
+  if (currentUser && ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
+        <div className="flex items-center gap-3 text-sm font-semibold">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+          <span>Redirecting to Admin Control Room...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-background text-foreground">
       {/* Desktop Sidebar */}

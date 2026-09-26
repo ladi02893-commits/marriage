@@ -217,7 +217,7 @@ function useAuthValue() {
       const session = await apiRequest<{ user: User; profile: MatrimonialProfile | null }>('/api/auth/me');
       setCurrentUser(session.user);
       setCurrentProfile(session.profile);
-      return { success: true, redirectUrl: result.redirectUrl };
+      return { success: true, redirectUrl: result.redirectUrl, user: session.user };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Login failed.' };
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff, Heart, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,11 +9,21 @@ import { Navbar } from '@/components/navbar';
 import { useAuth } from '@/lib/auth-context';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { currentUser, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      if (['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
+        window.location.href = '/admin';
+      } else {
+        window.location.href = '/dashboard';
+      }
+    }
+  }, [currentUser]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -26,6 +36,10 @@ export default function LoginPage() {
       return;
     }
     toast.success('Signed in successfully.');
+    if (['ADMIN', 'SUPER_ADMIN'].includes(result.user?.role || '')) {
+      window.location.href = '/admin';
+      return;
+    }
     window.location.href = result.redirectUrl || '/dashboard';
   };
 

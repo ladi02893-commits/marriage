@@ -35,6 +35,12 @@ export function Navbar() {
     currentUser?.role === 'ADMIN';
   const isConsultant = currentUser?.role === 'CONSULTANT';
 
+  React.useEffect(() => {
+    if (isAdmin && !pathname.startsWith('/admin')) {
+      router.replace('/admin');
+    }
+  }, [isAdmin, pathname, router]);
+
   // Guest nav links
   const guestNavLinks = [
     { name: 'Find Matches', href: '/search' },

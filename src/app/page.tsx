@@ -24,7 +24,13 @@ import { useAuth } from '@/lib/auth-context';
 
 export default function HomePage() {
   const router = useRouter();
-  const { profiles, cms, plans, consultants } = useAuth();
+  const { currentUser, profiles, cms, plans, consultants } = useAuth();
+
+  React.useEffect(() => {
+    if (currentUser && ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
+      router.replace('/admin');
+    }
+  }, [currentUser, router]);
 
   // Quick Hero Search State
   const [lookingFor, setLookingFor] = useState<'MALE' | 'FEMALE'>('FEMALE');
@@ -69,6 +75,17 @@ export default function HomePage() {
   const verifiedProfiles = profiles
     .filter((p) => p.verificationBadge === 'APPROVED' || p.isWhatsappVerified || p.isVIPVerified || p.isVerified)
     .slice(0, 4);
+
+  if (currentUser && ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
+        <div className="flex items-center gap-3 text-sm font-semibold">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+          <span>Redirecting to Admin Control Room...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">

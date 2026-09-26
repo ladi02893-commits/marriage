@@ -25,12 +25,23 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, verifications, reports, paymentProofs, refreshDatabase } = useAuth();
+  const { currentUser, verifications, reports, paymentProofs, refreshDatabase, logout } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logged out from Admin Panel.');
+      window.location.href = '/login';
+    } catch {
+      window.location.href = '/login';
+    }
+  };
 
   // Real-time polling for the admin panel
   React.useEffect(() => {
@@ -134,6 +145,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <div className="font-bold text-xs text-white truncate">{currentUser?.name}</div>
               <div className="text-[10px] text-amber-400 font-mono font-medium">{currentUser?.role}</div>
             </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-rose-400 hover:border-rose-900/50 hover:bg-rose-950/30 transition"
+              title="Logout from Admin Panel"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
@@ -172,22 +191,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-zinc-800 space-y-2">
-          <Link
-            href="/dashboard"
-            className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-zinc-700 bg-zinc-800/80 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 transition"
+        {/* Sidebar Footer - Dedicated Logout Button */}
+        <div className="p-4 border-t border-zinc-800">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 w-full rounded-xl border border-rose-900/60 bg-rose-950/40 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-900/60 hover:text-white transition shadow-sm"
           >
-            <Heart className="h-3.5 w-3.5 text-rose-400" />
-            Switch to Member View
-          </Link>
-
-          <Link
-            href="/"
-            className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-zinc-800 py-2 text-xs font-medium text-zinc-400 hover:text-white transition"
-          >
-            <LogOut className="h-3.5 w-3.5" /> Back to Website
-          </Link>
+            <LogOut className="h-4 w-4 text-rose-400" />
+            Logout from Admin Panel
+          </button>
         </div>
       </aside>
 
@@ -202,12 +215,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="font-serif font-bold text-base text-white">VIP ROYAL ADMIN</span>
           </Link>
 
-          <button
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-700 text-white"
-          >
-            {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-900/60 bg-rose-950/40 text-rose-300 text-xs font-bold hover:bg-rose-900/60"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Logout
+            </button>
+            <button
+              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-700 text-white"
+            >
+              {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </header>
 
         {/* Mobile Sidebar Dropdown */}
@@ -229,6 +251,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
               </Link>
             ))}
+            <div className="pt-2 border-t border-zinc-800">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center justify-center gap-2 w-full rounded-xl border border-rose-900/60 bg-rose-950/40 py-2.5 text-xs font-bold text-rose-300 hover:bg-rose-900/60 hover:text-white transition"
+              >
+                <LogOut className="h-4 w-4 text-rose-400" />
+                Logout from Admin Panel
+              </button>
+            </div>
           </div>
         )}
 
