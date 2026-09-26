@@ -14,7 +14,9 @@ import {
   ChevronRight,
   PhoneCall,
   BadgeCheck,
+  RotateCcw,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { ProfileCard } from '@/components/profile/profile-card';
@@ -26,17 +28,36 @@ export default function HomePage() {
 
   // Quick Hero Search State
   const [lookingFor, setLookingFor] = useState<'MALE' | 'FEMALE'>('FEMALE');
-  const [minAge, setMinAge] = useState<number>(23);
-  const [maxAge, setMaxAge] = useState<number>(32);
+  const [minAge, setMinAge] = useState<string>('');
+  const [maxAge, setMaxAge] = useState<string>('');
   const [city, setCity] = useState<string>('ALL');
   const [education, setEducation] = useState<string>('ALL');
   const [quickProfileId, setQuickProfileId] = useState<string>('');
 
+  const handleResetHero = () => {
+    setLookingFor('FEMALE');
+    setMinAge('');
+    setMaxAge('');
+    setCity('ALL');
+    setEducation('ALL');
+    setQuickProfileId('');
+    toast.info('Search filters reset to default.');
+  };
+
   const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    router.push(
-      `/search?gender=${lookingFor}&minAge=${minAge}&maxAge=${maxAge}&city=${city}&education=${education}`
-    );
+    if (minAge && maxAge && Number(minAge) > Number(maxAge)) {
+      toast.error('Age From cannot be greater than Age To.');
+      return;
+    }
+    const params = new URLSearchParams();
+    if (lookingFor) params.set('gender', lookingFor);
+    if (minAge) params.set('minAge', minAge);
+    if (maxAge) params.set('maxAge', maxAge);
+    if (city && city !== 'ALL') params.set('city', city);
+    if (education && education !== 'ALL') params.set('education', education);
+    const queryString = params.toString();
+    router.push(queryString ? `/search?${queryString}` : '/search');
   };
 
   const handleQuickIdSearch = (e: React.FormEvent) => {
@@ -119,8 +140,18 @@ export default function HomePage() {
                     <h3 className="text-lg font-bold font-serif text-foreground">Find Your Match</h3>
                     <p className="text-xs text-muted-foreground">Search verified Pakistani candidates</p>
                   </div>
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-100 text-gold-800">
-                    <Search className="h-4 w-4" />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleResetHero}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 hover:text-brand-800 hover:underline px-2 py-1 rounded-lg border border-border bg-muted/30 transition"
+                      title="Reset filters"
+                    >
+                      <RotateCcw className="h-3 w-3" /> Reset
+                    </button>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold-100 text-gold-800">
+                      <Search className="h-4 w-4" />
+                    </div>
                   </div>
                 </div>
 
@@ -160,11 +191,12 @@ export default function HomePage() {
                       <label className="text-xs font-bold text-foreground block mb-1">Age From</label>
                       <select
                         value={minAge}
-                        onChange={(e) => setMinAge(Number(e.target.value))}
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground font-medium"
+                        onChange={(e) => setMinAge(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-brand-500"
                       >
-                        {[20, 22, 24, 26, 28, 30, 32, 35].map((a) => (
-                          <option key={a} value={a}>{a} Years</option>
+                        <option value="">Select Age</option>
+                        {[18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 40, 42, 45, 50, 55, 60, 65, 70].map((a) => (
+                          <option key={a} value={String(a)}>{a} Years</option>
                         ))}
                       </select>
                     </div>
@@ -172,11 +204,12 @@ export default function HomePage() {
                       <label className="text-xs font-bold text-foreground block mb-1">Age To</label>
                       <select
                         value={maxAge}
-                        onChange={(e) => setMaxAge(Number(e.target.value))}
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground font-medium"
+                        onChange={(e) => setMaxAge(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-brand-500"
                       >
-                        {[25, 28, 30, 32, 35, 38, 42, 48].map((a) => (
-                          <option key={a} value={a}>{a} Years</option>
+                        <option value="">Select Age</option>
+                        {[18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 40, 42, 45, 50, 55, 60, 65, 70].map((a) => (
+                          <option key={a} value={String(a)}>{a} Years</option>
                         ))}
                       </select>
                     </div>

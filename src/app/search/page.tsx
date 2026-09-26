@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Search,
   SlidersHorizontal,
@@ -22,6 +22,7 @@ import { MatchingService } from '@/lib/matching-service';
 import { toast } from 'sonner';
 
 function SearchContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { profiles, currentProfile, currentUser, connectionQuota } = useAuth();
 
@@ -30,16 +31,18 @@ function SearchContent() {
   const initialReligion = searchParams.get('religion') || 'ALL';
   const initialCountry = searchParams.get('country') || 'ALL';
   const initialCity = searchParams.get('city') || 'ALL';
-  const initialMinAge = Number(searchParams.get('minAge')) || 20;
-  const initialMaxAge = Number(searchParams.get('maxAge')) || 45;
+  const rawMinAge = searchParams.get('minAge');
+  const initialMinAge = rawMinAge && !isNaN(Number(rawMinAge)) ? Number(rawMinAge) : '';
+  const rawMaxAge = searchParams.get('maxAge');
+  const initialMaxAge = rawMaxAge && !isNaN(Number(rawMaxAge)) ? Number(rawMaxAge) : '';
   const initialProfileId = searchParams.get('profileId') || '';
 
   // Filter State
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const [profileIdSearch, setProfileIdSearch] = useState(initialProfileId);
   const [gender, setGender] = useState<string>(initialGender);
-  const [minAge, setMinAge] = useState<number>(initialMinAge);
-  const [maxAge, setMaxAge] = useState<number>(initialMaxAge);
+  const [minAge, setMinAge] = useState<number | ''>(initialMinAge);
+  const [maxAge, setMaxAge] = useState<number | ''>(initialMaxAge);
   const [religion, setReligion] = useState<string>(initialReligion);
   const [sect, setSect] = useState<string>('ALL');
   const [caste, setCaste] = useState<string>('ALL');
@@ -69,8 +72,9 @@ function SearchContent() {
         // Gender filter
         if (gender !== 'ALL' && p.gender !== gender) return false;
 
-        // Age filter
-        if (p.age < minAge || p.age > maxAge) return false;
+        // Age filter (only applied when user has selected an age)
+        if (typeof minAge === 'number' && !isNaN(minAge) && minAge > 0 && p.age < minAge) return false;
+        if (typeof maxAge === 'number' && !isNaN(maxAge) && maxAge > 0 && p.age > maxAge) return false;
 
         // Religion filter
         if (religion !== 'ALL' && p.religion !== religion) return false;
@@ -150,9 +154,10 @@ function SearchContent() {
 
   const handleResetFilters = () => {
     setSearchTerm('');
+    setProfileIdSearch('');
     setGender('ALL');
-    setMinAge(20);
-    setMaxAge(45);
+    setMinAge('');
+    setMaxAge('');
     setReligion('ALL');
     setSect('ALL');
     setCaste('ALL');
@@ -161,7 +166,9 @@ function SearchContent() {
     setCity('ALL');
     setProfession('ALL');
     setVerifiedOnly(false);
+    setWhatsappVerifiedOnly(false);
     setSortBy('COMPATIBILITY');
+    router.replace('/search', { scroll: false });
     toast.info('Search filters reset to default.');
   };
 
@@ -328,33 +335,41 @@ function SearchContent() {
               </div>
             </div>
 
-            {/* Age Range Slider / Inputs */}
+            {/* Age Range Filter */}
             <div>
               <div className="flex justify-between text-xs font-semibold text-foreground mb-2">
                 <span>Age Range</span>
-                <span className="text-brand-600">
-                  {minAge} - {maxAge} yrs
+                <span className="text-brand-600 font-medium">
+                  {minAge || maxAge ? `${minAge || 18} - ${maxAge || '70+'} yrs` : 'All Ages'}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  min={18}
-                  max={maxAge}
-                  value={minAge}
-                  onChange={(e) => setMinAge(Number(e.target.value))}
-                  className="rounded-xl border border-border bg-muted/40 p-2 text-xs text-foreground focus:outline-none"
-                  placeholder="Min"
-                />
-                <input
-                  type="number"
-                  min={minAge}
-                  max={70}
-                  value={maxAge}
-                  onChange={(e) => setMaxAge(Number(e.target.value))}
-                  className="rounded-xl border border-border bg-muted/40 p-2 text-xs text-foreground focus:outline-none"
-                  placeholder="Max"
-                />
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-1">Age From</label>
+                  <select
+                    value={minAge}
+                    onChange={(e) => setMinAge(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full rounded-xl border border-border bg-muted/40 p-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  >
+                    <option value="">Select Age</option>
+                    {[18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 40, 42, 45, 50, 55, 60, 65, 70].map((a) => (
+                      <option key={a} value={a}>{a} Years</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-1">Age To</label>
+                  <select
+                    value={maxAge}
+                    onChange={(e) => setMaxAge(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full rounded-xl border border-border bg-muted/40 p-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  >
+                    <option value="">Select Age</option>
+                    {[18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 40, 42, 45, 50, 55, 60, 65, 70].map((a) => (
+                      <option key={a} value={a}>{a} Years</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -517,9 +532,18 @@ function SearchContent() {
           <div className="ml-auto w-full max-w-xs h-full bg-card p-6 overflow-y-auto space-y-6 animate-in slide-in-from-right duration-300">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <span className="font-bold text-sm text-foreground">Filter Profiles</span>
-              <button onClick={() => setMobileFilterOpen(false)} className="text-muted-foreground">
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 hover:underline"
+                >
+                  <RotateCcw className="h-3 w-3" /> Reset
+                </button>
+                <button onClick={() => setMobileFilterOpen(false)} className="text-muted-foreground p-1">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Mobile Filter Options */}
@@ -538,6 +562,44 @@ function SearchContent() {
                     {g}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Mobile Age Range Filter */}
+            <div>
+              <div className="flex justify-between text-xs font-semibold text-foreground mb-2">
+                <span>Age Range</span>
+                <span className="text-brand-600 font-medium">
+                  {minAge || maxAge ? `${minAge || 18} - ${maxAge || '70+'} yrs` : 'All Ages'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-1">Age From</label>
+                  <select
+                    value={minAge}
+                    onChange={(e) => setMinAge(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full rounded-xl border border-border bg-muted/40 p-2 text-xs text-foreground focus:outline-none"
+                  >
+                    <option value="">Select Age</option>
+                    {[18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 40, 42, 45, 50, 55, 60, 65, 70].map((a) => (
+                      <option key={a} value={a}>{a} Years</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground block mb-1">Age To</label>
+                  <select
+                    value={maxAge}
+                    onChange={(e) => setMaxAge(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full rounded-xl border border-border bg-muted/40 p-2 text-xs text-foreground focus:outline-none"
+                  >
+                    <option value="">Select Age</option>
+                    {[18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 38, 40, 42, 45, 50, 55, 60, 65, 70].map((a) => (
+                      <option key={a} value={a}>{a} Years</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
