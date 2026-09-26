@@ -17,6 +17,21 @@ export class MatchingService {
       religion: 0.10,
     }
   ): CompatibilityBreakdown {
+    if (userProfile.gender && candidate.gender && userProfile.gender === candidate.gender) {
+      return {
+        overallScore: 0,
+        ageScore: 0,
+        locationScore: 0,
+        educationScore: 0,
+        professionScore: 0,
+        lifestyleScore: 0,
+        familyScore: 0,
+        maritalScore: 0,
+        matchReasons: ['Incompatible candidate (Same gender)'],
+        improvementTips: [],
+      };
+    }
+
     const prefs = userProfile.partnerPreferences;
     const matchReasons: string[] = [];
     const improvementTips: string[] = [];

@@ -39,14 +39,26 @@ export default function DashboardOverviewPage() {
 
   const assignedConsultant = consultants.find((consultant) => consultant.id === currentUser?.assignedConsultantId);
 
+  // Determine current user's profile and target opposite gender
+  const userProfile = React.useMemo(() => {
+    return profiles.find((p) => currentUser && p.userId === currentUser.id);
+  }, [profiles, currentUser]);
+
+  const userGender = currentProfile?.gender || userProfile?.gender;
+  const targetOppositeGender = userGender === 'MALE' ? 'FEMALE' : userGender === 'FEMALE' ? 'MALE' : null;
+
   // Consultant Recommendations (Section 26)
   const userConsultantRecs = consultantRecommendations.filter(
     (r) => r.userId === currentUser?.id || r.userId === currentProfile?.userId
   );
 
-  const recommendedByConsultantProfiles = profiles.filter((p) =>
-    userConsultantRecs.some((r) => r.targetProfileId === p.id)
-  );
+  const recommendedByConsultantProfiles = profiles.filter((p) => {
+    if (currentProfile && p.id === currentProfile.id) return false;
+    if (currentUser && p.userId === currentUser.id) return false;
+    if (userProfile && p.id === userProfile.id) return false;
+    if (targetOppositeGender && p.gender !== targetOppositeGender) return false;
+    return userConsultantRecs.some((r) => r.targetProfileId === p.id);
+  });
 
   // Connection Requests
   const userReceivedInterests = interests.filter(
@@ -72,7 +84,13 @@ export default function DashboardOverviewPage() {
 
   // Recommended Matches
   const standardRecommendedMatches = profiles
-    .filter((p) => p.id !== currentProfile?.id && p.gender !== currentProfile?.gender)
+    .filter((p) => {
+      if (currentProfile && p.id === currentProfile.id) return false;
+      if (currentUser && p.userId === currentUser.id) return false;
+      if (userProfile && p.id === userProfile.id) return false;
+      if (targetOppositeGender && p.gender !== targetOppositeGender) return false;
+      return true;
+    })
     .slice(0, 3);
 
   return (

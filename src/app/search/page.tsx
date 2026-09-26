@@ -26,8 +26,16 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const { profiles, currentProfile, currentUser, connectionQuota } = useAuth();
 
+  // Determine current user's profile and opposite target gender
+  const userProfile = useMemo(() => {
+    return profiles.find((p) => currentUser && p.userId === currentUser.id);
+  }, [profiles, currentUser]);
+
+  const userGender = currentProfile?.gender || userProfile?.gender;
+  const targetOppositeGender = userGender === 'MALE' ? 'FEMALE' : userGender === 'FEMALE' ? 'MALE' : null;
+
   // Initial params from URL
-  const initialGender = searchParams.get('gender') || 'ALL';
+  const initialGender = targetOppositeGender || searchParams.get('gender') || 'ALL';
   const initialReligion = searchParams.get('religion') || 'ALL';
   const initialCountry = searchParams.get('country') || 'ALL';
   const initialCity = searchParams.get('city') || 'ALL';
@@ -55,12 +63,21 @@ function SearchContent() {
   const [sortBy, setSortBy] = useState<string>('COMPATIBILITY');
   const [mobileFilterOpen, setMobileFilterOpen] = useState<boolean>(false);
 
+  // Sync opposite gender if user logs in
+  React.useEffect(() => {
+    if (targetOppositeGender) {
+      setGender(targetOppositeGender);
+    }
+  }, [targetOppositeGender]);
+
   // Filter and sort profiles
   const filteredProfiles = useMemo(() => {
     return profiles
       .filter((p) => {
-        // Exclude current user's own profile
+        // Exclude current user's own profile and account
         if (currentProfile && p.id === currentProfile.id) return false;
+        if (currentUser && p.userId === currentUser.id) return false;
+        if (userProfile && p.id === userProfile.id) return false;
 
         // Specific Profile ID Search (Section 59)
         if (profileIdSearch.trim()) {
@@ -69,8 +86,15 @@ function SearchContent() {
           if (!matchesPId) return false;
         }
 
-        // Gender filter
-        if (gender !== 'ALL' && p.gender !== gender) return false;
+        // Strict 100% Opposite Gender Enforcement
+        // If user is MALE -> only FEMALE candidates are allowed
+        // If user is FEMALE -> only MALE candidates are allowed
+        if (targetOppositeGender) {
+          if (p.gender !== targetOppositeGender) return false;
+        } else {
+          // Guest filter
+          if (gender !== 'ALL' && p.gender !== gender) return false;
+        }
 
         // Age filter (only applied when user has selected an age)
         if (typeof minAge === 'number' && !isNaN(minAge) && minAge > 0 && p.age < minAge) return false;
@@ -155,7 +179,7 @@ function SearchContent() {
   const handleResetFilters = () => {
     setSearchTerm('');
     setProfileIdSearch('');
-    setGender('ALL');
+    setGender(targetOppositeGender || 'ALL');
     setMinAge('');
     setMaxAge('');
     setReligion('ALL');
@@ -313,26 +337,42 @@ function SearchContent() {
             {/* Gender */}
             <div>
               <label className="text-xs font-semibold text-foreground block mb-2">Gender</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { label: 'All', val: 'ALL' },
-                  { label: 'Female', val: 'FEMALE' },
-                  { label: 'Male', val: 'MALE' },
-                ].map((g) => (
-                  <button
-                    key={g.val}
-                    type="button"
-                    onClick={() => setGender(g.val)}
-                    className={`rounded-xl border py-2 text-xs font-medium transition ${
-                      gender === g.val
-                        ? 'border-brand-600 bg-brand-50 text-brand-700 font-semibold dark:bg-brand-950 dark:text-brand-300'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted'
-                    }`}
-                  >
-                    {g.label}
-                  </button>
-                ))}
-              </div>
+              {targetOppositeGender ? (
+                <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-2.5 dark:border-brand-900/50 dark:bg-brand-950/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-brand-700 dark:text-brand-300">
+                      Seeking: {targetOppositeGender === 'FEMALE' ? 'Brides (Females)' : 'Grooms (Males)'}
+                    </span>
+                    <span className="text-[10px] font-bold bg-brand-100 text-brand-800 dark:bg-brand-900/80 dark:text-brand-200 px-2 py-0.5 rounded-full">
+                      Matched
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Matched automatically to opposite gender for your profile.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { label: 'All', val: 'ALL' },
+                    { label: 'Female', val: 'FEMALE' },
+                    { label: 'Male', val: 'MALE' },
+                  ].map((g) => (
+                    <button
+                      key={g.val}
+                      type="button"
+                      onClick={() => setGender(g.val)}
+                      className={`rounded-xl border py-2 text-xs font-medium transition ${
+                        gender === g.val
+                          ? 'border-brand-600 bg-brand-50 text-brand-700 font-semibold dark:bg-brand-950 dark:text-brand-300'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {g.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Age Range Filter */}
@@ -549,20 +589,31 @@ function SearchContent() {
             {/* Mobile Filter Options */}
             <div>
               <label className="text-xs font-semibold text-foreground block mb-2">Gender</label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {['ALL', 'FEMALE', 'MALE'].map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGender(g)}
-                    className={`rounded-xl border py-2 text-xs font-medium ${
-                      gender === g ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-border'
-                    }`}
-                  >
-                    {g}
-                  </button>
-                ))}
-              </div>
+              {targetOppositeGender ? (
+                <div className="rounded-xl border border-brand-200 bg-brand-50/60 p-2.5 dark:border-brand-900/50 dark:bg-brand-950/30">
+                  <span className="text-xs font-bold text-brand-700 dark:text-brand-300">
+                    Seeking: {targetOppositeGender === 'FEMALE' ? 'Brides (Females)' : 'Grooms (Males)'}
+                  </span>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Locked to opposite gender for your profile.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {['ALL', 'FEMALE', 'MALE'].map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      onClick={() => setGender(g)}
+                      className={`rounded-xl border py-2 text-xs font-medium ${
+                        gender === g ? 'border-brand-600 bg-brand-50 text-brand-700 font-semibold' : 'border-border'
+                      }`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Mobile Age Range Filter */}

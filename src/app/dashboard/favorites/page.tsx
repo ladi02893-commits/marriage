@@ -7,12 +7,23 @@ import { useAuth } from '@/lib/auth-context';
 import { ProfileCard } from '@/components/profile/profile-card';
 
 export default function FavoritesPage() {
-  const { favorites, profiles, currentUser } = useAuth();
+  const { favorites, profiles, currentUser, currentProfile } = useAuth();
+
+  const userProfile = React.useMemo(() => {
+    return profiles.find((p) => currentUser && p.userId === currentUser.id);
+  }, [profiles, currentUser]);
+
+  const userGender = currentProfile?.gender || userProfile?.gender;
+  const targetOppositeGender = userGender === 'MALE' ? 'FEMALE' : userGender === 'FEMALE' ? 'MALE' : null;
 
   const userFavorites = favorites.filter((f) => f.userId === currentUser?.id);
-  const favoriteProfiles = profiles.filter((p) =>
-    userFavorites.some((f) => f.targetProfileId === p.id)
-  );
+  const favoriteProfiles = profiles.filter((p) => {
+    if (currentProfile && p.id === currentProfile.id) return false;
+    if (currentUser && p.userId === currentUser.id) return false;
+    if (userProfile && p.id === userProfile.id) return false;
+    if (targetOppositeGender && p.gender !== targetOppositeGender) return false;
+    return userFavorites.some((f) => f.targetProfileId === p.id);
+  });
 
   return (
     <div className="space-y-6">

@@ -24,7 +24,7 @@ import { useAuth } from '@/lib/auth-context';
 
 export default function HomePage() {
   const router = useRouter();
-  const { currentUser, profiles, cms, plans, consultants } = useAuth();
+  const { currentUser, currentProfile, profiles, cms, plans, consultants } = useAuth();
 
   React.useEffect(() => {
     if (currentUser && ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
@@ -32,16 +32,30 @@ export default function HomePage() {
     }
   }, [currentUser, router]);
 
+  // Determine current user's profile and target opposite gender
+  const userProfile = React.useMemo(() => {
+    return profiles.find((p) => currentUser && p.userId === currentUser.id);
+  }, [profiles, currentUser]);
+
+  const userGender = currentProfile?.gender || userProfile?.gender;
+  const targetOppositeGender = userGender === 'MALE' ? 'FEMALE' : userGender === 'FEMALE' ? 'MALE' : null;
+
   // Quick Hero Search State
-  const [lookingFor, setLookingFor] = useState<'MALE' | 'FEMALE'>('FEMALE');
+  const [lookingFor, setLookingFor] = useState<'MALE' | 'FEMALE'>(targetOppositeGender || 'FEMALE');
   const [minAge, setMinAge] = useState<string>('');
   const [maxAge, setMaxAge] = useState<string>('');
   const [city, setCity] = useState<string>('ALL');
   const [education, setEducation] = useState<string>('ALL');
   const [quickProfileId, setQuickProfileId] = useState<string>('');
 
+  React.useEffect(() => {
+    if (targetOppositeGender) {
+      setLookingFor(targetOppositeGender);
+    }
+  }, [targetOppositeGender]);
+
   const handleResetHero = () => {
-    setLookingFor('FEMALE');
+    setLookingFor(targetOppositeGender || 'FEMALE');
     setMinAge('');
     setMaxAge('');
     setCity('ALL');
@@ -73,7 +87,17 @@ export default function HomePage() {
   };
 
   const verifiedProfiles = profiles
-    .filter((p) => p.verificationBadge === 'APPROVED' || p.isWhatsappVerified || p.isVIPVerified || p.isVerified)
+    .filter((p) => {
+      // Exclude current user's own profile and account
+      if (currentProfile && p.id === currentProfile.id) return false;
+      if (currentUser && p.userId === currentUser.id) return false;
+      if (userProfile && p.id === userProfile.id) return false;
+
+      // Strict opposite gender if user is logged in
+      if (targetOppositeGender && p.gender !== targetOppositeGender) return false;
+
+      return p.verificationBadge === 'APPROVED' || p.isWhatsappVerified || p.isVIPVerified || p.isVerified;
+    })
     .slice(0, 4);
 
   if (currentUser && ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
@@ -176,30 +200,39 @@ export default function HomePage() {
                   {/* Looking For */}
                   <div>
                     <label className="text-xs font-bold text-foreground block mb-1.5">Seeking Partner</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setLookingFor('FEMALE')}
-                        className={`py-2 text-xs font-bold rounded-xl border transition ${
-                          lookingFor === 'FEMALE'
-                            ? 'bg-brand-900 text-white border-brand-900 shadow-sm'
-                            : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        Bride (Female)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLookingFor('MALE')}
-                        className={`py-2 text-xs font-bold rounded-xl border transition ${
-                          lookingFor === 'MALE'
-                            ? 'bg-brand-900 text-white border-brand-900 shadow-sm'
-                            : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        Groom (Male)
-                      </button>
-                    </div>
+                    {targetOppositeGender ? (
+                      <div className="py-2.5 px-3 rounded-xl border border-brand-200 bg-brand-50/70 dark:border-brand-900/40 dark:bg-brand-950/30 text-xs font-bold text-brand-900 dark:text-brand-300 flex items-center justify-between">
+                        <span>Seeking: {targetOppositeGender === 'FEMALE' ? 'Bride (Females Only)' : 'Groom (Males Only)'}</span>
+                        <span className="text-[10px] bg-brand-100 text-brand-800 dark:bg-brand-900/80 dark:text-brand-200 px-2 py-0.5 rounded-full font-bold">
+                          Opposite Match
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setLookingFor('FEMALE')}
+                          className={`py-2 text-xs font-bold rounded-xl border transition ${
+                            lookingFor === 'FEMALE'
+                              ? 'bg-brand-900 text-white border-brand-900 shadow-sm'
+                              : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          Bride (Female)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLookingFor('MALE')}
+                          className={`py-2 text-xs font-bold rounded-xl border transition ${
+                            lookingFor === 'MALE'
+                              ? 'bg-brand-900 text-white border-brand-900 shadow-sm'
+                              : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          Groom (Male)
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Age Range */}

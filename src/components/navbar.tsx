@@ -107,7 +107,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Nav Links */}
-        <nav className="hidden lg:flex items-center gap-6">
+        <nav className="hidden lg:flex items-center gap-7">
           {activeNavLinks.map((link) => {
             const isActive = pathname === link.href.split('?')[0];
             return (
@@ -115,8 +115,10 @@ export function Navbar() {
                 key={link.name}
                 href={link.href}
                 className={cn(
-                  'text-xs font-semibold tracking-tight transition-colors hover:text-brand-800',
-                  isActive ? 'text-brand-900 font-bold underline decoration-gold-500 decoration-2 underline-offset-8' : 'text-muted-foreground'
+                  'text-sm font-semibold tracking-tight transition-all duration-150 py-1 border-b-2',
+                  isActive
+                    ? 'text-brand-900 font-bold border-gold-500 dark:text-gold-400'
+                    : 'text-muted-foreground border-transparent hover:text-foreground hover:border-border'
                 )}
               >
                 {link.name}
@@ -221,7 +223,7 @@ export function Navbar() {
               <div className="relative">
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2 rounded-full border border-border bg-muted/40 py-1 pl-1 pr-3 text-xs font-semibold text-foreground transition hover:border-gold-300"
+                  className="flex items-center gap-2.5 rounded-full border border-border bg-card hover:bg-muted/70 py-1.5 pl-1.5 pr-3.5 text-xs font-semibold text-foreground transition hover:border-gold-400/50 shadow-sm"
                 >
                   <img
                     src={
@@ -229,13 +231,13 @@ export function Navbar() {
                       '/avatar-placeholder.svg'
                     }
                     alt={currentUser.name}
-                    className="h-7 w-7 rounded-full object-cover ring-1 ring-gold-400"
+                    className="h-8 w-8 rounded-full object-cover ring-2 ring-gold-400/60 shadow-sm"
                   />
-                  <div className="text-left hidden md:block">
-                    <span className="block font-bold text-xs truncate max-w-[100px]">{currentUser.name.split(' ')[0]}</span>
-                    <span className="block font-mono text-[9px] text-gold-700 font-semibold">{currentUser.profileIdCode || 'VRM-MEMBER'}</span>
+                  <div className="text-left hidden md:block leading-tight">
+                    <span className="block font-bold text-sm text-foreground truncate max-w-[120px]">{currentUser.name.split(' ')[0]}</span>
+                    <span className="block font-mono text-[10px] text-gold-700 dark:text-gold-400 font-bold">{currentUser.profileIdCode || 'VRM-MEMBER'}</span>
                   </div>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground ml-0.5" />
                 </button>
 
                 {userDropdownOpen && (
@@ -322,18 +324,18 @@ export function Navbar() {
               </div>
             </>
           ) : (
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-3">
               <Link
                 href="/login"
-                className="rounded-xl px-4 py-2 text-xs font-bold text-foreground transition hover:text-brand-800"
+                className="rounded-xl border border-border/80 bg-background/80 hover:bg-muted px-4 py-2 text-sm font-bold text-foreground transition shadow-sm hover:border-gold-400/40"
               >
                 Sign In
               </Link>
               <Link
                 href="/register"
-                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-900 via-brand-800 to-rose-900 px-5 py-2.5 text-xs font-bold text-white shadow-md transition hover:scale-[1.02] border border-gold-400/40"
+                className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-900 via-brand-800 to-rose-900 px-5 py-2 text-sm font-bold text-white shadow-md shadow-brand-900/20 transition hover:scale-[1.02] border border-gold-400/40 hover:shadow-lg"
               >
-                <Crown className="h-3.5 w-3.5 text-gold-300" />
+                <Crown className="h-4 w-4 text-gold-300" />
                 Register Free
               </Link>
             </div>
@@ -345,9 +347,9 @@ export function Navbar() {
           {currentUser && (
             <Link
               href="/pricing"
-              className="flex items-center gap-1 rounded-full bg-gold-100 px-2.5 py-1 text-[11px] font-bold text-gold-800"
+              className="flex items-center gap-1 rounded-full bg-gold-100 px-2.5 py-1 text-xs font-bold text-gold-800"
             >
-              <Sparkles className="h-3 w-3 text-gold-600" />
+              <Sparkles className="h-3.5 w-3.5 text-gold-600" />
               {connectionQuota.remaining}
             </Link>
           )}
@@ -370,7 +372,7 @@ export function Navbar() {
                 key={link.name}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block rounded-lg px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted"
+                className="block rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground hover:bg-muted transition"
               >
                 {link.name}
               </Link>
@@ -387,30 +389,30 @@ export function Navbar() {
                 <Link
                   href="/dashboard"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="block rounded-xl bg-brand-900 py-2.5 text-center text-xs font-bold text-white shadow-sm"
+                  className="block rounded-xl bg-brand-900 py-3 text-center text-sm font-bold text-white shadow-sm"
                 >
                   Go to Dashboard
                 </Link>
                 <button
                   onClick={handleSignOut}
-                  className="w-full text-center text-xs font-semibold text-rose-600 py-1.5"
+                  className="w-full text-center text-xs font-semibold text-rose-600 py-2"
                 >
                   Sign Out
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2.5">
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-xl border border-border py-2 text-center text-xs font-bold text-foreground"
+                  className="rounded-xl border border-border py-2.5 text-center text-sm font-bold text-foreground hover:bg-muted"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="rounded-xl bg-brand-900 py-2.5 text-center text-xs font-bold text-white"
+                  className="rounded-xl bg-gradient-to-r from-brand-900 via-brand-800 to-rose-900 py-3 text-center text-sm font-bold text-white shadow-md"
                 >
                   Register Free
                 </Link>

@@ -145,10 +145,6 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-200">
-        Daily activity and historical revenue charts are hidden until time-series reporting is connected to real transaction and registration records.
-      </div>
-
       {/* Moderation & Quick Action Desk */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Pending Verifications */}

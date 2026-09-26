@@ -50,13 +50,16 @@ export async function POST(request: NextRequest) {
     }
 
     const [{ data: senderProfile, error: senderError }, { data: receiverProfile, error: receiverError }] = await Promise.all([
-      insforgeAdmin.database.from('matrimonial_profiles').select('id').eq('user_id', auth.user.id).maybeSingle(),
-      insforgeAdmin.database.from('matrimonial_profiles').select('id,approval_status,user:users(account_status)').eq('user_id', receiverId).maybeSingle(),
+      insforgeAdmin.database.from('matrimonial_profiles').select('id,gender').eq('user_id', auth.user.id).maybeSingle(),
+      insforgeAdmin.database.from('matrimonial_profiles').select('id,gender,approval_status,user:users(account_status)').eq('user_id', receiverId).maybeSingle(),
     ]);
     if (senderError || receiverError) throw senderError ?? receiverError;
     const receiverUser = Array.isArray(receiverProfile?.user) ? receiverProfile.user[0] : receiverProfile?.user;
     if (!senderProfile || !receiverProfile || receiverProfile.approval_status !== 'APPROVED' || receiverUser?.account_status !== 'ACTIVE') {
       return NextResponse.json({ success: false, error: 'Recipient profile is unavailable.' }, { status: 404 });
+    }
+    if (senderProfile?.gender && receiverProfile?.gender && senderProfile.gender === receiverProfile.gender) {
+      return NextResponse.json({ success: false, error: 'Connections are strictly permitted between opposite genders only.' }, { status: 400 });
     }
 
     const { data: existing, error: existingError } = await insforgeAdmin.database

@@ -8,25 +8,37 @@ import { CountryCitySelect } from '@/components/ui/country-city-select';
 import { MatchingService } from '@/lib/matching-service';
 
 export default function DiscoverMatchesPage() {
-  const { profiles, currentProfile } = useAuth();
+  const { profiles, currentProfile, currentUser } = useAuth();
   const [filterReligion, setFilterReligion] = useState<string>('ALL');
   const [filterCountry, setFilterCountry] = useState<string>('ALL');
   const [filterCity, setFilterCity] = useState<string>('ALL');
 
-  // Filter out own profile & same gender
+  // Determine current user's profile and target opposite gender
+  const userProfile = React.useMemo(() => {
+    return profiles.find((p) => currentUser && p.userId === currentUser.id);
+  }, [profiles, currentUser]);
+
+  const userGender = currentProfile?.gender || userProfile?.gender;
+  const targetOppositeGender = userGender === 'MALE' ? 'FEMALE' : userGender === 'FEMALE' ? 'MALE' : null;
+
+  // Filter out own profile & strictly enforce opposite gender (100% strict)
   const candidates = profiles
     .filter((p) => {
       if (currentProfile && p.id === currentProfile.id) return false;
-      if (currentProfile && p.gender === currentProfile.gender) return false;
+      if (currentUser && p.userId === currentUser.id) return false;
+      if (userProfile && p.id === userProfile.id) return false;
+      if (targetOppositeGender && p.gender !== targetOppositeGender) return false;
+      if (userGender && p.gender === userGender) return false;
       if (filterReligion !== 'ALL' && p.religion !== filterReligion) return false;
       if (filterCountry !== 'ALL' && !p.country.toLowerCase().includes(filterCountry.toLowerCase())) return false;
       if (filterCity !== 'ALL' && !p.city.toLowerCase().includes(filterCity.toLowerCase())) return false;
       return true;
     })
     .sort((a, b) => {
-      if (!currentProfile) return 0;
-      const scoreA = MatchingService.calculateCompatibility(currentProfile, a).overallScore;
-      const scoreB = MatchingService.calculateCompatibility(currentProfile, b).overallScore;
+      const activeProf = currentProfile || userProfile;
+      if (!activeProf) return 0;
+      const scoreA = MatchingService.calculateCompatibility(activeProf, a).overallScore;
+      const scoreB = MatchingService.calculateCompatibility(activeProf, b).overallScore;
       return scoreB - scoreA;
     });
 

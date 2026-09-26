@@ -288,6 +288,12 @@ function useAuthValue() {
   const sendInterest = async (targetProfileId: string, message?: string) => {
     const target = profiles.find((profile) => profile.id === targetProfileId);
     if (!target) return { success: false, message: 'Candidate profile not found.' };
+
+    const activeGender = currentProfile?.gender || profiles.find((p) => currentUser && p.userId === currentUser.id)?.gender;
+    if (activeGender && target.gender && activeGender === target.gender && currentUser?.role === 'USER') {
+      return { success: false, message: 'Opposite gender matching only: You cannot connect with profiles of the same gender.' };
+    }
+
     try {
       await apiRequest('/api/interests', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },

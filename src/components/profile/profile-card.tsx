@@ -48,8 +48,16 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
   const favorited = isFavorited(profile.id);
   const contactUnlocked = isContactUnlocked(profile.id);
 
-  // Compute compatibility score if current user has a profile (Section 15)
-  const compatibility = currentProfile
+  const userGender = currentProfile?.gender;
+  const isSameGender = Boolean(
+    userGender &&
+    profile?.gender &&
+    userGender === profile.gender &&
+    currentUser?.role === 'USER'
+  );
+
+  // Compute compatibility score if current user has a profile and candidate is opposite gender (Section 15)
+  const compatibility = currentProfile && !isSameGender
     ? MatchingService.calculateCompatibility(currentProfile, profile)
     : null;
 
@@ -70,6 +78,10 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isSameGender) {
+      toast.error('Opposite gender matching only: You cannot bookmark profiles of the same gender.');
+      return;
+    }
     const added = await toggleFavorite(profile.id);
     if (added === null) return;
     if (added) {
@@ -84,6 +96,11 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
     e.preventDefault();
     e.stopPropagation();
 
+    if (isSameGender) {
+      toast.error('Opposite gender matching only: Contact access is not permitted for same-gender profiles.');
+      return;
+    }
+
     if (contactUnlocked) {
       toast.info('Contact details are already unlocked for this profile.');
       return;
@@ -93,6 +110,11 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
   };
 
   const handleInterestAction = () => {
+    if (isSameGender) {
+      toast.error('Opposite gender matching only: You cannot send connection requests to profiles of the same gender.');
+      return;
+    }
+
     if (hasSentInterest) {
       toast.info('Interest is already sent to this profile.');
       return;
@@ -240,31 +262,37 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
               <Eye className="h-3.5 w-3.5" /> View Dossier
             </Link>
 
-            <button
-              onClick={handleInterestAction}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition shadow-sm cursor-pointer',
-                hasSentInterest
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
-                  : connectionQuota.isReached
-                  ? 'bg-amber-500/15 text-amber-600 border border-amber-500/40 hover:bg-amber-500/25'
-                  : 'bg-brand-600 hover:bg-brand-700 text-white shadow-brand-600/20'
-              )}
-            >
-              {hasSentInterest ? (
-                <>
-                  <Check className="h-3.5 w-3.5" /> Interest Sent
-                </>
-              ) : connectionQuota.isReached ? (
-                <>
-                  <Lock className="h-3.5 w-3.5 text-amber-600" /> Send Interest
-                </>
-              ) : (
-                <>
-                  <Send className="h-3.5 w-3.5" /> Send Interest
-                </>
-              )}
-            </button>
+            {isSameGender ? (
+              <span className="flex-1 text-center py-2 text-[11px] font-semibold text-muted-foreground bg-muted/60 rounded-xl border border-border/60">
+                Opposite Match Only
+              </span>
+            ) : (
+              <button
+                onClick={handleInterestAction}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition shadow-sm cursor-pointer',
+                  hasSentInterest
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                    : connectionQuota.isReached
+                    ? 'bg-amber-500/15 text-amber-600 border border-amber-500/40 hover:bg-amber-500/25'
+                    : 'bg-brand-600 hover:bg-brand-700 text-white shadow-brand-600/20'
+                )}
+              >
+                {hasSentInterest ? (
+                  <>
+                    <Check className="h-3.5 w-3.5" /> Interest Sent
+                  </>
+                ) : connectionQuota.isReached ? (
+                  <>
+                    <Lock className="h-3.5 w-3.5 text-amber-600" /> Send Interest
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-3.5 w-3.5" /> Send Interest
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

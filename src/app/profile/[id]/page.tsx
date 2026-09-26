@@ -81,12 +81,28 @@ export default function ProfileDetailPage() {
 
   const isMutual = interestReq?.status === 'ACCEPTED';
 
+  const userProfile = React.useMemo(() => {
+    return profiles.find((p) => currentUser && p.userId === currentUser.id);
+  }, [profiles, currentUser]);
+
+  const userGender = currentProfile?.gender || userProfile?.gender;
+  const isSameGender = Boolean(
+    userGender &&
+    profile &&
+    userGender === profile.gender &&
+    currentUser?.role === 'USER'
+  );
+
   // Compute Compatibility
-  const compatibility = currentProfile
+  const compatibility = currentProfile && !isSameGender
     ? MatchingService.calculateCompatibility(currentProfile, profile)
     : null;
 
   const handleFavoriteClick = async () => {
+    if (isSameGender) {
+      toast.error('Opposite gender matching only: You cannot bookmark profiles of the same gender.');
+      return;
+    }
     const added = await toggleFavorite(profile.id);
     if (added === null) return;
     if (added) {
@@ -101,6 +117,10 @@ export default function ProfileDetailPage() {
       toast.info('Please sign in to message this member.');
       return;
     }
+    if (isSameGender) {
+      toast.error('Opposite gender matching only: You cannot message profiles of the same gender.');
+      return;
+    }
     if (!isMutual && connectionQuota.isReached && currentUser.role === 'USER') {
       setQuotaAction('MESSAGE');
       setQuotaModalOpen(true);
@@ -111,6 +131,10 @@ export default function ProfileDetailPage() {
   };
 
   const handleExpressInterest = () => {
+    if (isSameGender) {
+      toast.error('Opposite gender matching only: You cannot send connection requests to profiles of the same gender.');
+      return;
+    }
     if (hasSentInterest) {
       toast.info('Interest already sent to this profile.');
       return;
@@ -124,6 +148,10 @@ export default function ProfileDetailPage() {
   };
 
   const handleRequestContact = () => {
+    if (isSameGender) {
+      toast.error('Opposite gender matching only: Contact requests are only permitted for opposite-gender profiles.');
+      return;
+    }
     if (connectionQuota.isReached) {
       setQuotaAction('CONTACT');
       setQuotaModalOpen(true);
@@ -192,6 +220,18 @@ export default function ProfileDetailPage() {
             >
               ⚡ Upgrade Plan
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Same Gender Policy Alert */}
+      {isSameGender && (
+        <div className="bg-amber-600 text-white px-4 py-2.5 text-xs font-semibold shadow-md">
+          <div className="mx-auto max-w-7xl flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-200" />
+            <span>
+              <strong>Matrimonial Policy Notice:</strong> This profile has the same gender as your registered account. Connection requests, messaging, and compatibility scores are strictly restricted to opposite genders.
+            </span>
           </div>
         </div>
       )}
