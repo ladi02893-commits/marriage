@@ -1,4 +1,4 @@
-export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'CONSULTANT' | 'FAMILY_MEMBER';
+export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'CONSULTANT';
 
 export type SubscriptionTier = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS' | 'BASIC' | 'VIP';
 
@@ -269,24 +269,6 @@ export interface BlockedUser {
   blockedProfileId: string;
   blockedAt: string;
   reason?: string;
-}
-
-export interface FamilyMemberInvitation {
-  id: string;
-  userId: string;
-  familyMemberName: string;
-  relationship: 'FATHER' | 'MOTHER' | 'GUARDIAN' | 'SIBLING' | string;
-  email: string;
-  phone?: string;
-  accessCode: string;
-  status: 'PENDING' | 'ACTIVE' | 'REVOKED';
-  permissions: {
-    canViewMatches: boolean;
-    canViewConnections: boolean;
-    canFavoriteProfiles: boolean;
-    canChatConsultant: boolean;
-  };
-  createdAt: string;
 }
 
 export interface PaymentProof {

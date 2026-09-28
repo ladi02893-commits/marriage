@@ -59,6 +59,10 @@ export default function ProfileDetailPage() {
   const [quotaModalOpen, setQuotaModalOpen] = useState(false);
   const [quotaAction, setQuotaAction] = useState<'INTEREST' | 'MESSAGE' | 'CONTACT'>('INTEREST');
 
+  const userProfile = React.useMemo(() => {
+    return profiles.find((p) => currentUser && p.userId === currentUser.id);
+  }, [profiles, currentUser]);
+
   if (!profile) {
     return <div className="min-h-screen bg-background text-foreground"><Navbar /><main className="mx-auto max-w-3xl p-8"><h1 className="text-xl font-bold">Profile unavailable</h1><p className="mt-2 text-sm text-muted-foreground">This profile may still be loading, may be hidden, or may no longer be approved.</p><Link href="/search" className="mt-4 inline-block text-brand-600 underline">Return to search</Link></main><Footer /></div>;
   }
@@ -80,10 +84,6 @@ export default function ProfileDetailPage() {
   );
 
   const isMutual = interestReq?.status === 'ACCEPTED';
-
-  const userProfile = React.useMemo(() => {
-    return profiles.find((p) => currentUser && p.userId === currentUser.id);
-  }, [profiles, currentUser]);
 
   const userGender = currentProfile?.gender || userProfile?.gender;
   const isSameGender = Boolean(

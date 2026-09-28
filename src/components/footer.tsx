@@ -124,9 +124,6 @@ export function Footer() {
                 <Link href="/pricing" className="transition hover:text-brand-800">Additional Connection Packs</Link>
               </li>
               <li>
-                <Link href="/dashboard/family" className="transition hover:text-brand-800">Family Member Access</Link>
-              </li>
-              <li>
                 <Link href="/dashboard/verification" className="transition hover:text-brand-800">Identity Verification</Link>
               </li>
               <li>

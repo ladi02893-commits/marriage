@@ -15,7 +15,6 @@ import {
   Conversation,
   Coupon,
   ExtraConnectionPack,
-  FamilyMemberInvitation,
   FavoriteItem,
   InterestRequest,
   Invoice,
@@ -114,7 +113,6 @@ function useAuthValue() {
   const [consultantRecommendations] = useState<ConsultantRecommendation[]>([]);
   const [consultantNotes] = useState<ConsultantNote[]>([]);
   const [blockedUsers] = useState<BlockedUser[]>([]);
-  const [familyInvitations] = useState<FamilyMemberInvitation[]>([]);
 
   const isAdmin = currentUser ? ['SUPER_ADMIN', 'ADMIN'].includes(currentUser.role) : false;
 
@@ -466,7 +464,7 @@ function useAuthValue() {
     currentUser, currentProfile, users, profiles, interests, favorites, conversations, messages, notifications,
     plans, extraPacks, invoices, verifications, reports, tickets, coupons, cms, auditLogs, settings,
     paymentProofs, receivingAccounts, connectionTransactions, consultants, consultantRecommendations,
-    consultantNotes, blockedUsers, familyInvitations, connectionQuota, refreshDatabase,
+    consultantNotes, blockedUsers, connectionQuota, refreshDatabase,
     login, register, logout, switchUser, updateCurrentUserProfile,
     updateUserSubscription: (_tier: SubscriptionTier, _days = 365) => unavailable('Direct subscription changes'),
     verifyWhatsAppCode: (_code: string) => ({ success: false, message: 'WhatsApp verification will be available after the provider integration is configured.' }),
@@ -559,7 +557,6 @@ function useAuthValue() {
       }).then(async () => { await refreshDatabase(); toast.success('Ticket status updated.'); })
         .catch((error) => toast.error(error instanceof Error ? error.message : 'Ticket update failed.'));
     },
-    inviteFamilyMember: (_data: Omit<FamilyMemberInvitation, 'id' | 'userId' | 'createdAt' | 'status'>) => unavailable('Family access'),
     updateSettings: (_data: Partial<SystemSettings>) => unavailable('System settings'),
     updateTaxSettings: (_tax: TaxSettings) => unavailable('Tax settings'),
     updatePlan: (_id: string, _data: Partial<SubscriptionPlan>) => unavailable('Plan management'),
