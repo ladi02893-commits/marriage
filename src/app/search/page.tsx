@@ -19,6 +19,7 @@ import { ProfileCard } from '@/components/profile/profile-card';
 import { CountryCitySelect } from '@/components/ui/country-city-select';
 import { useAuth } from '@/lib/auth-context';
 import { MatchingService } from '@/lib/matching-service';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 function SearchContent() {
@@ -61,7 +62,25 @@ function SearchContent() {
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
   const [whatsappVerifiedOnly, setWhatsappVerifiedOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>('COMPATIBILITY');
-  const [mobileFilterOpen, setMobileFilterOpen] = useState<boolean>(false);
+  const [isFilterOpen, setIsFilterOpen] = useState<boolean>(false);
+
+  // Active filters count calculation
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (gender !== 'ALL' && (!targetOppositeGender || gender !== targetOppositeGender)) count++;
+    if (minAge !== '' || maxAge !== '') count++;
+    if (religion !== 'ALL') count++;
+    if (sect !== 'ALL') count++;
+    if (caste !== 'ALL') count++;
+    if (maritalStatus !== 'ALL') count++;
+    if (country !== 'ALL') count++;
+    if (city !== 'ALL') count++;
+    if (profession !== 'ALL') count++;
+    if (verifiedOnly) count++;
+    if (whatsappVerifiedOnly) count++;
+    if (profileIdSearch.trim()) count++;
+    return count;
+  }, [gender, targetOppositeGender, minAge, maxAge, religion, sect, caste, maritalStatus, country, city, profession, verifiedOnly, whatsappVerifiedOnly, profileIdSearch]);
 
   // Sync opposite gender if user logs in
   React.useEffect(() => {
@@ -146,14 +165,42 @@ function SearchContent() {
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'COMPATIBILITY' && currentProfile) {
-          const scoreA = MatchingService.calculateCompatibility(currentProfile, a).overallScore;
-          const scoreB = MatchingService.calculateCompatibility(currentProfile, b).overallScore;
-          return scoreB - scoreA;
+        if (sortBy === 'COMPATIBILITY') {
+          const prof = currentProfile || userProfile;
+          if (prof) {
+            const scoreA = MatchingService.calculateCompatibility(prof, a).overallScore;
+            const scoreB = MatchingService.calculateCompatibility(prof, b).overallScore;
+            return scoreB - scoreA;
+          }
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (sortBy === 'COMPATIBILITY_ASC') {
+          const prof = currentProfile || userProfile;
+          if (prof) {
+            const scoreA = MatchingService.calculateCompatibility(prof, a).overallScore;
+            const scoreB = MatchingService.calculateCompatibility(prof, b).overallScore;
+            return scoreA - scoreB;
+          }
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        }
+        if (sortBy === 'NEWEST') {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (sortBy === 'OLDEST') {
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
         }
         if (sortBy === 'AGE_ASC') return a.age - b.age;
         if (sortBy === 'AGE_DESC') return b.age - a.age;
-        if (sortBy === 'NEWEST') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        if (sortBy === 'VERIFIED_FIRST') {
+          const aScore = a.verificationBadge === 'APPROVED' ? 2 : a.isVerified ? 1 : 0;
+          const bScore = b.verificationBadge === 'APPROVED' ? 2 : b.isVerified ? 1 : 0;
+          return bScore - aScore;
+        }
+        if (sortBy === 'PHOTO_FIRST') {
+          const aPhotos = a.photos?.length || 0;
+          const bPhotos = b.photos?.length || 0;
+          return bPhotos - aPhotos;
+        }
         return 0;
       });
   }, [
@@ -251,15 +298,30 @@ function SearchContent() {
             <div className="flex items-center gap-3">
               <button
                 onClick={handleSaveSearch}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-200 bg-white px-4 py-2.5 text-xs font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 dark:border-brand-900 dark:bg-card dark:text-brand-300"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-200 bg-white px-4 py-2.5 text-xs font-semibold text-brand-700 shadow-sm transition hover:bg-brand-50 dark:border-brand-900 dark:bg-card dark:text-brand-300 cursor-pointer"
               >
                 <Bookmark className="h-3.5 w-3.5" /> Save Search Alert
               </button>
               <button
-                onClick={() => setMobileFilterOpen(true)}
-                className="md:hidden inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-semibold text-white shadow-sm"
+                type="button"
+                onClick={() => setIsFilterOpen((prev) => !prev)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold transition shadow-sm cursor-pointer",
+                  isFilterOpen
+                    ? "bg-brand-600 text-white shadow-brand-600/20"
+                    : "border border-border bg-white text-foreground hover:bg-muted dark:bg-card"
+                )}
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" /> Filters
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>{isFilterOpen ? 'Hide Filters' : 'Filters'}</span>
+                {activeFiltersCount > 0 && (
+                  <span className={cn(
+                    "rounded-full px-2 py-0.5 text-[10px] font-black",
+                    isFilterOpen ? "bg-white text-brand-700" : "bg-brand-600 text-white"
+                  )}>
+                    {activeFiltersCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -273,12 +335,12 @@ function SearchContent() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by name, city, profession, or keyword..."
-                className="w-full rounded-2xl border border-border bg-white pl-10 pr-4 py-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none dark:bg-card"
+                className="w-full rounded-2xl border border-border bg-white pl-10 pr-4 py-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none dark:bg-card shadow-xs"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -286,38 +348,141 @@ function SearchContent() {
             </div>
 
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">Sort By:</span>
+              <span className="text-xs font-semibold text-muted-foreground shrink-0 hidden sm:inline">Sort:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full sm:w-auto rounded-2xl border border-border bg-white px-3.5 py-2.5 text-xs font-medium text-foreground focus:border-brand-500 focus:outline-none dark:bg-card"
+                className="w-full sm:w-auto rounded-2xl border border-border bg-white px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-brand-500 focus:outline-none dark:bg-card shadow-xs cursor-pointer"
               >
-                <option value="COMPATIBILITY">Highest Compatibility %</option>
-                <option value="NEWEST">Newly Joined</option>
-                <option value="AGE_ASC">Age: Youngest First</option>
-                <option value="AGE_DESC">Age: Senior First</option>
+                <option value="COMPATIBILITY">Compatibility: High to Low (Best Match)</option>
+                <option value="COMPATIBILITY_ASC">Compatibility: Low to High</option>
+                <option value="NEWEST">New to Old (Newly Registered)</option>
+                <option value="OLDEST">Old to New (Oldest Registered)</option>
+                <option value="AGE_ASC">Age: Low to High (Youngest First)</option>
+                <option value="AGE_DESC">Age: High to Low (Senior First)</option>
+                <option value="VERIFIED_FIRST">Verified Profiles First</option>
+                <option value="PHOTO_FIRST">Profiles with Photos First</option>
               </select>
             </div>
           </div>
+
+          {/* Active Filter Pills Row */}
+          {activeFiltersCount > 0 && (
+            <div className="mt-3.5 flex flex-wrap items-center gap-2 pt-3 border-t border-border/60 text-xs">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Active:</span>
+              {gender !== 'ALL' && (!targetOppositeGender || gender !== targetOppositeGender) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Gender: {gender}
+                  <button onClick={() => setGender('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {(minAge !== '' || maxAge !== '') && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Age: {minAge || 18} - {maxAge || '70+'} yrs
+                  <button onClick={() => { setMinAge(''); setMaxAge(''); }} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {religion !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Religion: {religion}
+                  <button onClick={() => setReligion('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {sect !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Sect: {sect}
+                  <button onClick={() => setSect('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {caste !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Caste: {caste}
+                  <button onClick={() => setCaste('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {maritalStatus !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Status: {maritalStatus.replace('_', ' ')}
+                  <button onClick={() => setMaritalStatus('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {country !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Country: {country}
+                  <button onClick={() => { setCountry('ALL'); setCity('ALL'); }} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {city !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  City: {city}
+                  <button onClick={() => setCity('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {profession !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Profession: {profession}
+                  <button onClick={() => setProfession('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {verifiedOnly && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 border border-blue-200 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300">
+                  ID Verified
+                  <button onClick={() => setVerifiedOnly(false)} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {profileIdSearch.trim() && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  ID: {profileIdSearch}
+                  <button onClick={() => setProfileIdSearch('')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-[11px] text-rose-600 hover:underline font-semibold ml-1 cursor-pointer"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Main Body */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 flex-1 w-full">
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-          {/* Desktop Filter Sidebar */}
-          <div className="hidden md:block space-y-6 rounded-3xl border border-border bg-card p-6 shadow-sm self-start sticky top-24">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-foreground">
-                <Filter className="h-4 w-4 text-brand-600" /> Filters
+        <div className={cn(
+          "grid grid-cols-1 gap-8",
+          isFilterOpen ? "md:grid-cols-4" : "grid-cols-1"
+        )}>
+          {/* Desktop Filter Sidebar - Only shown when isFilterOpen is true */}
+          {isFilterOpen && (
+            <div className="hidden md:block space-y-6 rounded-3xl border border-border bg-card p-6 shadow-sm self-start sticky top-24 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between border-b border-border pb-3">
+                <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-foreground">
+                  <Filter className="h-4 w-4 text-brand-600" /> Filters
+                  {activeFiltersCount > 0 && (
+                    <span className="rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/50 dark:text-brand-300 px-2 py-0.5 text-[10px] font-bold">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleResetFilters}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 hover:underline cursor-pointer"
+                  >
+                    <RotateCcw className="h-3 w-3" /> Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-muted cursor-pointer"
+                    title="Close filter panel"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={handleResetFilters}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 hover:underline"
-              >
-                <RotateCcw className="h-3 w-3" /> Reset
-              </button>
-            </div>
 
             {/* Search by Profile ID (Section 59) */}
             <div>
@@ -534,11 +699,12 @@ function SearchContent() {
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
                 <span>Show ID Verified Only</span>
               </label>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Results Grid */}
-          <div className="md:col-span-3">
+          <div className={isFilterOpen ? "md:col-span-3" : "w-full"}>
             {filteredProfiles.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-border bg-card p-12 text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-brand-700 dark:bg-brand-900/40">
@@ -550,13 +716,16 @@ function SearchContent() {
                 </p>
                 <button
                   onClick={handleResetFilters}
-                  className="rounded-xl bg-brand-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-700"
+                  className="rounded-xl bg-brand-600 px-5 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-700 cursor-pointer"
                 >
                   Clear All Filters
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className={cn(
+                "grid grid-cols-1 gap-6 sm:grid-cols-2",
+                isFilterOpen ? "lg:grid-cols-3" : "md:grid-cols-3 lg:grid-cols-4"
+              )}>
                 {filteredProfiles.map((p) => (
                   <ProfileCard key={p.id} profile={p} />
                 ))}
@@ -567,7 +736,7 @@ function SearchContent() {
       </div>
 
       {/* Mobile Filters Drawer */}
-      {mobileFilterOpen && (
+      {isFilterOpen && (
         <div className="fixed inset-0 z-50 flex bg-black/60 backdrop-blur-sm md:hidden">
           <div className="ml-auto w-full max-w-xs h-full bg-card p-6 overflow-y-auto space-y-6 animate-in slide-in-from-right duration-300">
             <div className="flex items-center justify-between border-b border-border pb-3">
@@ -576,11 +745,11 @@ function SearchContent() {
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 hover:underline"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 hover:underline cursor-pointer"
                 >
                   <RotateCcw className="h-3 w-3" /> Reset
                 </button>
-                <button onClick={() => setMobileFilterOpen(false)} className="text-muted-foreground p-1">
+                <button onClick={() => setIsFilterOpen(false)} className="text-muted-foreground p-1 cursor-pointer">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -655,8 +824,8 @@ function SearchContent() {
             </div>
 
             <button
-              onClick={() => setMobileFilterOpen(false)}
-              className="w-full rounded-2xl bg-brand-600 py-3 text-xs font-bold text-white shadow-md"
+              onClick={() => setIsFilterOpen(false)}
+              className="w-full rounded-2xl bg-brand-600 py-3 text-xs font-bold text-white shadow-md cursor-pointer hover:bg-brand-700 transition"
             >
               Apply Filters ({filteredProfiles.length} Results)
             </button>

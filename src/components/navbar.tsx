@@ -55,7 +55,6 @@ export function Navbar() {
     { name: 'Find Matches', href: '/search' },
     { name: 'Recommended', href: '/dashboard/discover' },
     { name: 'Connections', href: '/dashboard/connections' },
-    { name: 'Favorite Connections', href: '/dashboard/connections?tab=favorites' },
     { name: 'My Consultant', href: '/dashboard/consultant' },
     { name: 'Packages', href: '/pricing' },
     { name: 'Helpdesk', href: '/dashboard/support' },

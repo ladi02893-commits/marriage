@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Heart,
   CheckCircle2,
@@ -19,7 +20,10 @@ import {
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 
-export default function ConnectionsHubPage() {
+function ConnectionsHubContent() {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab') as 'received' | 'sent' | 'accepted' | 'favorites' | 'blocked' | null;
+
   const {
     currentUser,
     currentProfile,
@@ -37,7 +41,17 @@ export default function ConnectionsHubPage() {
     isContactUnlocked,
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'received' | 'sent' | 'accepted' | 'favorites' | 'blocked'>('received');
+  const [activeTab, setActiveTab] = useState<'received' | 'sent' | 'accepted' | 'favorites' | 'blocked'>(
+    tabParam && ['received', 'sent', 'accepted', 'favorites', 'blocked'].includes(tabParam)
+      ? tabParam
+      : 'received'
+  );
+
+  useEffect(() => {
+    if (tabParam && ['received', 'sent', 'accepted', 'favorites', 'blocked'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
 
   // 1. Received Interests
   const receivedInterests = interests.filter(
@@ -617,5 +631,13 @@ export default function ConnectionsHubPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ConnectionsHubPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-muted-foreground">Loading connections...</div>}>
+      <ConnectionsHubContent />
+    </Suspense>
   );
 }

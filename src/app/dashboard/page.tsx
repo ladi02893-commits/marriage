@@ -306,53 +306,65 @@ export default function DashboardOverviewPage() {
 
       {/* KPI Stats Grid (Section 71) */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+        <Link
+          href="/dashboard/connections?tab=received"
+          className="rounded-3xl border border-border bg-card p-5 shadow-sm hover:border-brand-500/50 hover:shadow-md transition group block"
+        >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground">Received Interests</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300">
+            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition">Received Interests</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300 group-hover:scale-110 transition">
               <Heart className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-foreground font-serif">{userReceivedInterests.length}</div>
           <span className="text-[11px] text-brand-600 font-medium mt-1 block">
-            {pendingReceivedInterests.length} pending review
+            {pendingReceivedInterests.length} pending review →
           </span>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+        <Link
+          href="/dashboard/connections?tab=sent"
+          className="rounded-3xl border border-border bg-card p-5 shadow-sm hover:border-brand-500/50 hover:shadow-md transition group block"
+        >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground">Sent Interests</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
+            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition">Sent Interests</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-300 group-hover:scale-110 transition">
               <Send className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-foreground font-serif">{userSentInterests.length}</div>
           <span className="text-[11px] text-muted-foreground mt-1 block">
-            {userSentInterests.filter((i) => i.status === 'ACCEPTED').length} accepted
+            {userSentInterests.filter((i) => i.status === 'ACCEPTED').length} accepted →
           </span>
-        </div>
+        </Link>
 
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+        <Link
+          href="/dashboard/connections?tab=favorites"
+          className="rounded-3xl border border-border bg-card p-5 shadow-sm hover:border-brand-500/50 hover:shadow-md transition group block"
+        >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground">Favorite Connections</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-300">
+            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition">Favorite Connections</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-950 dark:text-amber-300 group-hover:scale-110 transition">
               <Bookmark className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-foreground font-serif">{favorites.length}</div>
-          <span className="text-[11px] text-muted-foreground mt-1 block">Saved in favorites</span>
-        </div>
+          <span className="text-[11px] text-muted-foreground mt-1 block">Saved in favorites →</span>
+        </Link>
 
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+        <Link
+          href="/dashboard/messages"
+          className="rounded-3xl border border-border bg-card p-5 shadow-sm hover:border-brand-500/50 hover:shadow-md transition group block"
+        >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground">Active Chats</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
+            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition">Active Chats</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300 group-hover:scale-110 transition">
               <MessageSquare className="h-4 w-4" />
             </div>
           </div>
           <div className="text-2xl font-black text-foreground font-serif">{userConversations.length}</div>
-          <span className="text-[11px] text-emerald-600 font-medium mt-1 block">Direct communication</span>
-        </div>
+          <span className="text-[11px] text-emerald-600 font-medium mt-1 block">Direct communication →</span>
+        </Link>
       </div>
 
       {/* Section 9: Profile Completion Meter with Missing Checklist */}

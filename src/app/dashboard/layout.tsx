@@ -39,7 +39,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'My Profile Dossier', href: '/dashboard/profile', icon: User },
     { name: 'Find Matches', href: '/search', icon: Compass },
     { name: 'Connections', href: '/dashboard/connections', icon: Users, badge: connectionQuota.remaining > 0 ? `${connectionQuota.remaining}` : '0' },
-    { name: 'Favorite Connections', href: '/dashboard/favorites', icon: Bookmark },
     { name: 'My Consultant', href: '/dashboard/consultant', icon: Crown },
     { name: 'Secure Messages', href: '/dashboard/messages', icon: MessageSquare },
     { name: 'Notifications', href: '/dashboard/notifications', icon: Bell, badge: unreadCount },

@@ -22,6 +22,11 @@ const nextConfig: NextConfig = {
         destination: '/dashboard',
         permanent: true,
       },
+      {
+        source: '/dashboard/favorites',
+        destination: '/dashboard/connections?tab=favorites',
+        permanent: true,
+      },
     ];
   },
 };
