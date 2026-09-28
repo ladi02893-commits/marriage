@@ -96,16 +96,16 @@ function useAuthValue() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [plans] = useState<SubscriptionPlan[]>(PUBLIC_PLANS);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>(PUBLIC_PLANS);
   const [extraPacks] = useState<ExtraConnectionPack[]>(PUBLIC_EXTRA_PACKS);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [verifications, setVerifications] = useState<VerificationRequest[]>([]);
   const [reports, setReports] = useState<AbuseReport[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [coupons] = useState<Coupon[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [cms] = useState<CMSContent>(PUBLIC_CMS);
   const [auditLogs] = useState<AdminAuditLog[]>([]);
-  const [settings] = useState<SystemSettings>(PUBLIC_SETTINGS);
+  const [settings, setSettings] = useState<SystemSettings>(PUBLIC_SETTINGS);
   const [paymentProofs, setPaymentProofs] = useState<PaymentProof[]>([]);
   const [receivingAccounts, setReceivingAccounts] = useState<ReceivingAccount[]>([]);
   const [connectionTransactions] = useState<ConnectionTransaction[]>([]);
@@ -117,32 +117,35 @@ function useAuthValue() {
   const isAdmin = currentUser ? ['SUPER_ADMIN', 'ADMIN'].includes(currentUser.role) : false;
 
   const refreshDatabase = useCallback(async () => {
-    const endpoints: Array<[string, (value: ApiRecord[]) => void]> = [
-      ['/api/receiving-accounts', (value) => setReceivingAccounts(value as ReceivingAccount[])],
+    const endpoints: Array<[string, (value: unknown) => void]> = [
+      ['/api/receiving-accounts', (value) => setReceivingAccounts(Array.isArray(value) ? value as ReceivingAccount[] : [])],
+      ['/api/admin/plans', (value) => { if (Array.isArray(value) && value.length > 0) setPlans(value as SubscriptionPlan[]); }],
+      ['/api/admin/settings', (value) => { if (value && typeof value === 'object' && !Array.isArray(value)) setSettings(value as SystemSettings); }],
     ];
     if (currentUser?.id) {
       endpoints.push(
-        ['/api/profiles', (value) => setProfiles(value as MatrimonialProfile[])],
-        ['/api/interests', (value) => setInterests(value as InterestRequest[])],
-        ['/api/favorites', (value) => setFavorites(value as FavoriteItem[])],
-        ['/api/notifications', (value) => setNotifications(value as NotificationItem[])],
-        ['/api/support', (value) => setTickets(value as SupportTicket[])],
-        ['/api/invoices', (value) => setInvoices(value as Invoice[])],
-        ['/api/payments/proofs', (value) => setPaymentProofs(value as PaymentProof[])],
-        ['/api/verifications', (value) => setVerifications(value as VerificationRequest[])],
-        ['/api/conversations', (value) => setConversations(value.map(camelConversation))],
+        ['/api/profiles', (value) => setProfiles(Array.isArray(value) ? value as MatrimonialProfile[] : [])],
+        ['/api/interests', (value) => setInterests(Array.isArray(value) ? value as InterestRequest[] : [])],
+        ['/api/favorites', (value) => setFavorites(Array.isArray(value) ? value as FavoriteItem[] : [])],
+        ['/api/notifications', (value) => setNotifications(Array.isArray(value) ? value as NotificationItem[] : [])],
+        ['/api/support', (value) => setTickets(Array.isArray(value) ? value as SupportTicket[] : [])],
+        ['/api/invoices', (value) => setInvoices(Array.isArray(value) ? value as Invoice[] : [])],
+        ['/api/payments/proofs', (value) => setPaymentProofs(Array.isArray(value) ? value as PaymentProof[] : [])],
+        ['/api/verifications', (value) => setVerifications(Array.isArray(value) ? value as VerificationRequest[] : [])],
+        ['/api/conversations', (value) => setConversations(Array.isArray(value) ? (value as ApiRecord[]).map(camelConversation) : [])],
       );
       if (isAdmin) {
         endpoints.push(
-          ['/api/users', (value) => setUsers(value as User[])],
-          ['/api/reports', (value) => setReports(value as AbuseReport[])],
+          ['/api/users', (value) => setUsers(Array.isArray(value) ? value as User[] : [])],
+          ['/api/reports', (value) => setReports(Array.isArray(value) ? value as AbuseReport[] : [])],
+          ['/api/admin/coupons', (value) => setCoupons(Array.isArray(value) ? value as Coupon[] : [])],
         );
       }
     }
 
     const results = await Promise.allSettled(endpoints.map(async ([url, assign]) => {
-      const result = await apiRequest<{ data: ApiRecord[] }>(url);
-      assign(Array.isArray(result.data) ? result.data : []);
+      const result = await apiRequest<{ data: unknown }>(url);
+      assign(result.data);
       return { url, data: result.data };
     }));
     for (const result of results) {
@@ -158,7 +161,7 @@ function useAuthValue() {
 
       const conversationsResult = results.find((result) => result.status === 'fulfilled' && result.value.url === '/api/conversations');
       if (conversationsResult?.status === 'fulfilled') {
-        const rows = conversationsResult.value.data ?? [];
+        const rows = (Array.isArray(conversationsResult.value.data) ? conversationsResult.value.data : []) as ApiRecord[];
         const loaded = await Promise.all(rows.map(async (row) => {
           const result = await apiRequest<{ data: ApiRecord[] }>(`/api/messages?conversationId=${encodeURIComponent(row.id)}`);
           return [row.id, result.data.map(camelMessage)] as const;
@@ -557,15 +560,141 @@ function useAuthValue() {
       }).then(async () => { await refreshDatabase(); toast.success('Ticket status updated.'); })
         .catch((error) => toast.error(error instanceof Error ? error.message : 'Ticket update failed.'));
     },
-    updateSettings: (_data: Partial<SystemSettings>) => unavailable('System settings'),
-    updateTaxSettings: (_tax: TaxSettings) => unavailable('Tax settings'),
-    updatePlan: (_id: string, _data: Partial<SubscriptionPlan>) => unavailable('Plan management'),
-    addPlan: (_plan: SubscriptionPlan) => unavailable('Plan management'),
-    applyCoupon: (_code: string): { valid: boolean; discountPercent?: number; fixedDiscount?: number; message: string } => ({
-      valid: false, discountPercent: undefined, fixedDiscount: undefined, message: 'Coupons are not enabled.',
-    }),
-    addCoupon: (_coupon: Coupon) => unavailable('Coupons'),
-    toggleCouponStatus: (_id: string) => unavailable('Coupons'),
+    updateSettings: async (data: Partial<SystemSettings>) => {
+      try {
+        const result = await apiRequest<{ success: boolean; data: SystemSettings }>('/api/admin/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (result.data) setSettings(result.data);
+        await refreshDatabase();
+        toast.success('System settings updated successfully.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Settings update failed.');
+        return false;
+      }
+    },
+    updateTaxSettings: async (tax: TaxSettings) => {
+      try {
+        const result = await apiRequest<{ success: boolean; data: SystemSettings }>('/api/admin/settings', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tax }),
+        });
+        if (result.data) setSettings(result.data);
+        await refreshDatabase();
+        toast.success('Tax settings updated.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Tax settings update failed.');
+        return false;
+      }
+    },
+    updatePlan: async (id: string, data: Partial<SubscriptionPlan>) => {
+      try {
+        const result = await apiRequest<{ success: boolean; data: SubscriptionPlan }>('/api/admin/plans', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data }),
+        });
+        if (result.data) {
+          setPlans((prev) => prev.map((p) => p.id === id ? { ...p, ...result.data } : p));
+        }
+        await refreshDatabase();
+        toast.success('Plan updated successfully.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Plan update failed.');
+        return false;
+      }
+    },
+    addPlan: async (plan: SubscriptionPlan) => {
+      try {
+        const result = await apiRequest<{ success: boolean; data: SubscriptionPlan }>('/api/admin/plans', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(plan),
+        });
+        if (result.data) {
+          setPlans((prev) => [...prev, result.data]);
+        }
+        await refreshDatabase();
+        toast.success('Plan created successfully.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Plan creation failed.');
+        return false;
+      }
+    },
+    applyCoupon: async (code: string): Promise<{ valid: boolean; discountPercent?: number; fixedDiscount?: number; message: string }> => {
+      try {
+        const result = await apiRequest<{ valid: boolean; discountPercent?: number; fixedDiscount?: number; message: string }>('/api/coupons/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        return result;
+      } catch (error) {
+        return {
+          valid: false,
+          message: error instanceof Error ? error.message : 'Invalid coupon.',
+        };
+      }
+    },
+    addCoupon: async (coupon: Coupon) => {
+      try {
+        const result = await apiRequest<{ success: boolean; data: Coupon }>('/api/admin/coupons', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(coupon),
+        });
+        if (result.data) {
+          setCoupons((prev) => [result.data, ...prev]);
+        }
+        await refreshDatabase();
+        toast.success(`Coupon ${coupon.code} created successfully.`);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Coupon creation failed.');
+        return false;
+      }
+    },
+    toggleCouponStatus: async (id: string) => {
+      const existing = coupons.find((c) => c.id === id);
+      const nextActive = !existing?.isActive;
+      try {
+        const result = await apiRequest<{ success: boolean; data: Coupon }>('/api/admin/coupons', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, isActive: nextActive }),
+        });
+        if (result.data) {
+          setCoupons((prev) => prev.map((c) => c.id === id ? result.data : c));
+        }
+        await refreshDatabase();
+        toast.info(`Coupon ${existing?.code || ''} ${nextActive ? 'activated' : 'deactivated'}.`);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Coupon update failed.');
+        return false;
+      }
+    },
+    deleteCoupon: async (id: string) => {
+      try {
+        await apiRequest(`/api/admin/coupons?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+        });
+        setCoupons((prev) => prev.filter((c) => c.id !== id));
+        await refreshDatabase();
+        toast.success('Coupon deleted.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Coupon deletion failed.');
+        return false;
+      }
+    },
     updateCMS: (_data: Partial<CMSContent>) => unavailable('CMS publishing'),
     logAdminAction: (_action: string, _type: unknown, _id: string, _details: string) => undefined,
   };

@@ -101,7 +101,7 @@ export function getCurrencyForCountry(country?: string): CurrencyConfig {
 /**
  * High-precision currency converter from PKR into any foreign country currency
  */
-function convertPKRToCountryCurrency(
+export function convertPKRToCountryCurrency(
   amountInPKR: number,
   targetCountry?: string,
   options?: { round?: boolean }

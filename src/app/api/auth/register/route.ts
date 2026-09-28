@@ -93,9 +93,9 @@ export async function POST(request: NextRequest) {
         avatar_url: null,
         account_status: 'ACTIVE',
         profile_id_code: profileIdCode,
-        total_connections: 30,
+        total_connections: 3,
         used_connections: 0,
-        remaining_connections: 30,
+        remaining_connections: 3,
       }])
       .select()
       .single();

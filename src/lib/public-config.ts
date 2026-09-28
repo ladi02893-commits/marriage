@@ -58,7 +58,7 @@ export const PUBLIC_SETTINGS: SystemSettings = {
   requireAdminProfileApproval: true,
   whatsappNotificationsEnabled: false,
   emailNotificationsEnabled: false,
-  freeTierConnectionsLimit: 30,
+  freeTierConnectionsLimit: 3,
   tax: { taxEnabled: false, taxPercentage: 0, taxFixed: 0, taxLabel: 'Tax' },
   matchingWeights: {
     ageWeight: 10, locationWeight: 10, educationWeight: 10, professionWeight: 10,

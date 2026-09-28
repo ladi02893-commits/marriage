@@ -151,7 +151,7 @@ export function AdminUserDossierModal({
                 )}
                 {user.subscriptionTier === 'FREE' && (
                   <span className="rounded-full bg-zinc-800 border border-zinc-700 px-2 py-0.5 text-[10px] font-medium text-zinc-400">
-                    Free (2 Limits)
+                    Free (3 Limits)
                   </span>
                 )}
               </div>
@@ -690,7 +690,7 @@ export function AdminUserDossierModal({
                   <div className="text-left sm:text-right">
                     <span className="text-[10px] text-zinc-400 block uppercase">Plan Expiry Date</span>
                     <span className="text-xs font-mono font-bold text-white">
-                      {user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Lifetime / Free (2 Connects Limit)'}
+                      {user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Lifetime / Free (3 Connects Limit)'}
                     </span>
                   </div>
                 </div>
@@ -699,7 +699,7 @@ export function AdminUserDossierModal({
                   <div className="p-2.5 rounded-xl bg-zinc-800/60 border border-zinc-700/40">
                     <span className="text-zinc-400 block">Connection Limit</span>
                     <span className="font-bold text-white font-mono">
-                      {user.subscriptionTier === 'PREMIUM_PLUS' ? 'Unlimited' : user.subscriptionTier === 'PREMIUM' ? '50 / month' : '2 / month (Free)'}
+                      {user.subscriptionTier === 'PREMIUM_PLUS' ? 'Unlimited' : user.subscriptionTier === 'PREMIUM' ? '50 / month' : '3 / month (Free)'}
                     </span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-zinc-800/60 border border-zinc-700/40">

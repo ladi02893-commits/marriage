@@ -22,9 +22,9 @@ export function toSafeUser(user: DatabaseUser) {
     avatarUrl: user.avatar_url ?? null,
     profileId: profile?.id ?? null,
     accountStatus: user.account_status ?? 'ACTIVE',
-    totalConnections: user.total_connections ?? 30,
+    totalConnections: user.total_connections ?? 3,
     usedConnections: user.used_connections ?? 0,
-    remainingConnections: user.remaining_connections ?? 30,
+    remainingConnections: user.remaining_connections ?? 3,
     assignedConsultantId: user.assigned_consultant_id ?? null,
     createdAt: user.created_at ?? null,
   };

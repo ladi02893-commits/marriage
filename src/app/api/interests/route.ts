@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     if (error || !interest) throw error ?? new Error('Interest insert failed.');
 
     const used = Number(auth.user.used_connections ?? 0) + 1;
-    const total = Number(auth.user.total_connections ?? 30);
+    const total = Number(auth.user.total_connections ?? 3);
     const { data: charged, error: creditError } = await insforgeAdmin.database.from('users').update({
       used_connections: used,
       remaining_connections: Math.max(0, total - used),
