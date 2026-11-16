@@ -20,12 +20,15 @@ import {
   Building2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { useCustomization } from '@/lib/customization-context';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { currentUser, currentProfile, notifications, connectionQuota, logout, markNotificationRead } = useAuth();
+  const { customization } = useCustomization();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -77,10 +80,10 @@ export function Navbar() {
         <div className="mx-auto max-w-7xl flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1 text-gold-300 font-semibold tracking-wide">
-              <Crown className="h-3 w-3 text-gold-400" /> VIP Royal Matchmaking
+              <Crown className="h-3 w-3 text-gold-400" /> {customization.company.companyName}
             </span>
             <span className="text-brand-200">|</span>
-            <span className="text-white/80">Pakistan’s Premier Connection-Based Matrimonial Platform</span>
+            <span className="text-white/80">{customization.company.subtext}</span>
           </div>
           <div className="flex items-center gap-4 text-white/90">
             <span>Verified Profiles</span>
@@ -94,17 +97,7 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-brand-900 via-brand-800 to-gold-600 shadow-md shadow-brand-900/20 text-white transition-transform group-hover:scale-105 border border-gold-400/30">
-            <Crown className="h-5 w-5 text-gold-300" />
-          </div>
-          <div>
-            <div className="text-lg sm:text-xl font-bold tracking-tight text-foreground font-serif leading-none">
-              VIP <span className="text-brand-800 font-extrabold">ROYAL</span>
-            </div>
-            <div className="text-[8px] tracking-[0.2em] text-gold-700 uppercase font-bold mt-0.5">
-              Matchmaking Concierge
-            </div>
-          </div>
+          <BrandLogo variant="navbar" />
         </Link>
 
         {/* Desktop Nav Links */}

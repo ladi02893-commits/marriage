@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { CustomizationProvider } from "@/lib/customization-context";
 import { WhatsAppFloatingWidget } from "@/components/ui/whatsapp-floating-widget";
 import { NavigationProgressBar } from "@/components/ui/navigation-progress-bar";
 import { Toaster } from "sonner";
@@ -38,9 +39,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <NavigationProgressBar />
         </Suspense>
         <AuthProvider>
-          {children}
-          <WhatsAppFloatingWidget />
-          <Toaster position="top-right" richColors />
+          <CustomizationProvider>
+            {children}
+            <WhatsAppFloatingWidget />
+            <Toaster position="top-right" richColors />
+          </CustomizationProvider>
         </AuthProvider>
       </body>
     </html>

@@ -11,10 +11,11 @@ const PURPOSES = {
   'verification-documents': { bucket: 'verification-documents', maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
   'bureau-cnic': { bucket: 'verification-documents', maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
   'bureau-receipts': { bucket: 'payment-evidence', maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
+  'website-branding': { bucket: 'profile-photos', maxBytes: 5 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'] },
 } as const;
 
 function extensionFor(type: string): string {
-  return { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' }[type] ?? 'bin';
+  return { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf', 'image/svg+xml': 'svg' }[type] ?? 'bin';
 }
 
 function signatureMatches(type: string, bytes: Uint8Array): boolean {
@@ -22,6 +23,12 @@ function signatureMatches(type: string, bytes: Uint8Array): boolean {
   if (type === 'image/png') return bytes.slice(0, 8).join(',') === '137,80,78,71,13,10,26,10';
   if (type === 'image/webp') return new TextDecoder().decode(bytes.slice(0, 4)) === 'RIFF' && new TextDecoder().decode(bytes.slice(8, 12)) === 'WEBP';
   if (type === 'application/pdf') return new TextDecoder().decode(bytes.slice(0, 5)) === '%PDF-';
+  if (type === 'image/svg+xml') {
+    const text = new TextDecoder().decode(bytes);
+    const trimmed = text.trim();
+    const hasScript = /<script|javascript:|xlink:href\s*=\s*["']javascript:|on\w+\s*=/i.test(text);
+    return (trimmed.startsWith('<svg') || trimmed.startsWith('<?xml')) && !hasScript;
+  }
   return false;
 }
 

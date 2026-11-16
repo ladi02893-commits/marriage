@@ -21,8 +21,10 @@ import {
   X,
   HelpCircle,
   Building2,
+  Palette,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -86,6 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'SaaS Analytics', href: '/admin/analytics', icon: BarChart3 },
     { name: 'Platform Settings', href: '/admin/settings', icon: Sliders },
     { name: 'Audit Logs', href: '/admin/audit-logs', icon: History },
+    { name: 'Website Customization', href: '/admin/website-customization', icon: Palette },
   ];
 
   if (currentUser && !['SUPER_ADMIN', 'ADMIN'].includes(currentUser.role)) {
@@ -119,17 +122,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Brand Header */}
         <div className="p-6 border-b border-zinc-800">
           <Link href="/admin" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-600 to-amber-400 text-black shadow-md font-bold">
-              <ShieldAlert className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-base font-bold tracking-tight text-white font-serif">
-                VIP ROYAL
-              </div>
-              <div className="text-[9px] tracking-widest text-amber-400/80 uppercase font-mono">
-                Admin Control Room
-              </div>
-            </div>
+            <BrandLogo variant="sidebar" taglineOverride="Admin Control Room" />
           </Link>
         </div>
 
@@ -209,10 +202,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Mobile Header Bar */}
         <header className="md:hidden flex items-center justify-between border-b border-zinc-800 bg-zinc-900 p-4 sticky top-0 z-40">
           <Link href="/admin" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500 text-black font-bold">
-              <ShieldAlert className="h-4 w-4" />
-            </div>
-            <span className="font-serif font-bold text-base text-white">VIP ROYAL ADMIN</span>
+            <BrandLogo variant="navbar" customWidth={32} customHeight={32} taglineOverride="Admin" />
           </Link>
 
           <div className="flex items-center gap-2">

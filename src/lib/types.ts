@@ -757,3 +757,112 @@ export interface SystemSettings {
   supportEmail?: string;
   currency?: string;
 }
+
+// -------------------------------------------------------------
+// Website Branding & Footer Customization (Prompt Requirements)
+// -------------------------------------------------------------
+
+export interface LogoSettings {
+  primaryLogoUrl: string;
+  primaryLogoKey: string;
+  primaryLogoWidth: number; // width in px, default 40
+  primaryLogoHeight: number; // height in px, default 40
+  altLogoUrl?: string;
+  altLogoKey?: string;
+  footerLogoUrl?: string;
+  footerLogoKey?: string;
+  footerLogoWidth?: number;
+  footerLogoHeight?: number;
+  showTextWithLogo: boolean;
+  mobileLogoWidth: number;
+}
+
+export interface CompanyInfoSettings {
+  companyName: string; // e.g. "VIP ROYAL"
+  tagline: string; // e.g. "Matchmaking Concierge"
+  subtext: string; // e.g. "Pakistan’s Premier Connection-Based Matrimonial Platform"
+  shortDescription: string;
+  footerDescription: string;
+  address: string;
+  contactPhone: string;
+  contactEmail: string;
+  whatsappNumber: string;
+}
+
+export interface FooterLinkItem {
+  id: string;
+  title: string;
+  url: string;
+  enabled: boolean;
+  order: number;
+  openInNewTab?: boolean;
+}
+
+export interface FooterColumnItem {
+  id: string;
+  title: string;
+  enabled: boolean;
+  order: number;
+  links: FooterLinkItem[];
+}
+
+export type SocialPlatform =
+  | 'facebook'
+  | 'instagram'
+  | 'youtube'
+  | 'linkedin'
+  | 'tiktok'
+  | 'twitter'
+  | 'whatsapp';
+
+export interface SocialLinkItem {
+  id: string;
+  platform: SocialPlatform;
+  label: string;
+  url: string;
+  enabled: boolean;
+  order: number;
+}
+
+export interface CopyrightSettings {
+  copyrightText: string;
+  companyName: string;
+  useDynamicYear: boolean;
+  customYear: string;
+  additionalText: string;
+  legalInfo?: string;
+}
+
+export interface FooterDesignSettings {
+  backgroundColor: string;
+  textColor: string;
+  headingColor: string;
+  linkColor: string;
+  linkHoverColor: string;
+  borderColor: string;
+  fontSize: 'xs' | 'sm' | 'base';
+  logoSize: 'small' | 'medium' | 'large';
+  paddingY: 'compact' | 'normal' | 'spacious';
+  alignment: 'left' | 'center';
+  columnsCount: number;
+}
+
+export interface WebsiteCustomizationConfig {
+  version: number;
+  branding: LogoSettings;
+  company: CompanyInfoSettings;
+  columns: FooterColumnItem[];
+  socialLinks: SocialLinkItem[];
+  copyright: CopyrightSettings;
+  design: FooterDesignSettings;
+  updatedAt?: string;
+  publishedAt?: string;
+  publishedBy?: string;
+}
+
+export interface WebsiteCustomizationState {
+  draft: WebsiteCustomizationConfig;
+  published: WebsiteCustomizationConfig;
+  hasUnpublishedChanges: boolean;
+}
+

@@ -1,10 +1,87 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
-import { Crown, ShieldCheck, Lock, Phone, Mail, MapPin, Sparkles } from 'lucide-react';
+import {
+  Crown,
+  ShieldCheck,
+  Lock,
+  Phone,
+  Mail,
+  MapPin,
+  Sparkles,
+  Facebook,
+  Instagram,
+  Youtube,
+  Linkedin,
+  Twitter,
+  MessageCircle,
+  Music,
+} from 'lucide-react';
+import { useCustomization } from '@/lib/customization-context';
+import { BrandLogo } from '@/components/ui/brand-logo';
+import { SocialPlatform } from '@/lib/types';
+
+function SocialIcon({ platform, className }: { platform: SocialPlatform; className?: string }) {
+  switch (platform) {
+    case 'facebook':
+      return <Facebook className={className} />;
+    case 'instagram':
+      return <Instagram className={className} />;
+    case 'youtube':
+      return <Youtube className={className} />;
+    case 'linkedin':
+      return <Linkedin className={className} />;
+    case 'twitter':
+      return <Twitter className={className} />;
+    case 'whatsapp':
+      return <MessageCircle className={className} />;
+    case 'tiktok':
+      return <Music className={className} />;
+    default:
+      return <Sparkles className={className} />;
+  }
+}
 
 export function Footer() {
+  const { customization } = useCustomization();
+  const { company, columns, socialLinks, copyright, design } = customization;
+
+  const currentYear = copyright.useDynamicYear
+    ? new Date().getFullYear()
+    : copyright.customYear || new Date().getFullYear();
+
+  const enabledColumns = columns
+    .filter((col) => col.enabled)
+    .sort((a, b) => a.order - b.order);
+
+  const enabledSocials = socialLinks
+    .filter((soc) => soc.enabled && soc.url.trim().length > 0)
+    .sort((a, b) => a.order - b.order);
+
+  const paddingClass =
+    design.paddingY === 'compact'
+      ? 'py-8'
+      : design.paddingY === 'spacious'
+      ? 'py-16'
+      : 'py-12';
+
+  const fontSizeClass =
+    design.fontSize === 'sm'
+      ? 'text-sm'
+      : design.fontSize === 'base'
+      ? 'text-base'
+      : 'text-xs';
+
   return (
-    <footer className="border-t border-gold-200/60 bg-white dark:border-brand-950 dark:bg-card">
+    <footer
+      style={{
+        backgroundColor: design.backgroundColor || '#ffffff',
+        color: design.textColor || '#71717a',
+        borderColor: design.borderColor || '#e4e4e7',
+      }}
+      className="border-t transition-colors duration-200"
+    >
       {/* Trust Highlights Strip */}
       <div className="border-b border-border/80 bg-brand-50/40 py-8 dark:bg-brand-950/20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -53,117 +130,163 @@ export function Footer() {
       </div>
 
       {/* Main Footer Links */}
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className={`mx-auto max-w-7xl px-4 ${paddingClass} sm:px-6 lg:px-8`}>
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-5">
-          {/* Brand Col */}
+          {/* Brand & Company Details Column */}
           <div className="lg:col-span-2 space-y-4">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-brand-900 via-brand-800 to-gold-600 shadow-md text-white border border-gold-400/30">
-                <Crown className="h-5 w-5 text-gold-300" />
-              </div>
-              <div>
-                <div className="text-xl font-bold tracking-tight text-foreground font-serif">
-                  VIP <span className="text-brand-800 font-extrabold">ROYAL</span>
-                </div>
-                <div className="text-[8px] tracking-[0.2em] text-gold-700 uppercase font-bold">
-                  Matchmaking Concierge
-                </div>
-              </div>
+            <Link href="/" className="inline-block group">
+              <BrandLogo variant="footer" />
             </Link>
 
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">
-              Pakistan’s premier connection-based matrimonial platform designed exclusively for respectable families, doctors, corporate leaders, and accomplished professionals worldwide.
+            <p
+              style={{ color: design.textColor }}
+              className={`${fontSizeClass} leading-relaxed max-w-sm`}
+            >
+              {company.footerDescription || company.shortDescription}
             </p>
 
-            <div className="space-y-2 text-xs text-muted-foreground pt-1">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-3.5 w-3.5 text-gold-600 shrink-0" />
-                <span>Executive Office: Gulberg III & DHA Phase 5, Lahore, Pakistan</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 text-gold-600 shrink-0" />
-                <span>Concierge contact details are provided after assignment.</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="h-3.5 w-3.5 text-gold-600 shrink-0" />
-                <span>concierge@viproyalmatchmaking.com</span>
-              </div>
+            {/* Address & Contact Information */}
+            <div className={`space-y-2 ${fontSizeClass} pt-1`}>
+              {company.address && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-gold-600 shrink-0 mt-0.5" />
+                  <span>{company.address}</span>
+                </div>
+              )}
+              {company.contactPhone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-3.5 w-3.5 text-gold-600 shrink-0" />
+                  <a
+                    href={`tel:${company.contactPhone}`}
+                    className="hover:underline transition"
+                  >
+                    {company.contactPhone}
+                  </a>
+                </div>
+              )}
+              {company.contactEmail && (
+                <div className="flex items-center gap-2">
+                  <Mail className="h-3.5 w-3.5 text-gold-600 shrink-0" />
+                  <a
+                    href={`mailto:${company.contactEmail}`}
+                    className="hover:underline transition"
+                  >
+                    {company.contactEmail}
+                  </a>
+                </div>
+              )}
+              {company.whatsappNumber && (
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <a
+                    href={`https://wa.me/${company.whatsappNumber.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline transition text-emerald-600 font-semibold"
+                  >
+                    WhatsApp: {company.whatsappNumber}
+                  </a>
+                </div>
+              )}
             </div>
+
+            {/* Social Media Links */}
+            {enabledSocials.length > 0 && (
+              <div className="pt-2">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                  Connect With Us
+                </div>
+                <div className="flex items-center gap-2.5">
+                  {enabledSocials.map((soc) => (
+                    <a
+                      key={soc.id}
+                      href={soc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={soc.label}
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-border/80 bg-background/80 hover:bg-gold-50 dark:hover:bg-gold-950/40 text-muted-foreground hover:text-gold-600 transition shadow-sm"
+                    >
+                      <SocialIcon platform={soc.platform} className="h-4 w-4" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Col 1: Platform */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground font-mono">Platform</h4>
-            <ul className="space-y-2 text-xs text-muted-foreground">
-              <li>
-                <Link href="/search" className="transition hover:text-brand-800">Browse Verified Profiles</Link>
-              </li>
-              <li>
-                <Link href="/pricing" className="transition hover:text-brand-800">Connection Packages</Link>
-              </li>
-              <li>
-                <Link href="/dashboard/discover" className="transition hover:text-brand-800">Recommended Matches</Link>
-              </li>
-              <li>
-                <Link href="/dashboard/connections" className="transition hover:text-brand-800">Connections Hub</Link>
-              </li>
-              <li>
-                <Link href="/stories" className="transition hover:text-brand-800">Royal Success Stories</Link>
-              </li>
-            </ul>
-          </div>
+          {/* Dynamic Navigation Columns */}
+          {enabledColumns.map((col) => {
+            const enabledLinks = (col.links || [])
+              .filter((l) => l.enabled)
+              .sort((a, b) => a.order - b.order);
 
-          {/* Col 2: Services */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground font-mono">Services</h4>
-            <ul className="space-y-2 text-xs text-muted-foreground">
-              <li>
-                <Link href="/dashboard/consultant" className="transition hover:text-brand-800">Senior Family Consultant</Link>
-              </li>
-              <li>
-                <Link href="/pricing" className="transition hover:text-brand-800">Additional Connection Packs</Link>
-              </li>
-              <li>
-                <Link href="/dashboard/verification" className="transition hover:text-brand-800">Identity Verification</Link>
-              </li>
-              <li>
-                <Link href="/dashboard/support" className="transition hover:text-brand-800">Helpdesk & Ticket Support</Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Col 3: Legal & Trust (Section 79) */}
-          <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-foreground font-mono">Trust & Policies</h4>
-            <ul className="space-y-2 text-xs text-muted-foreground">
-              <li>
-                <Link href="/privacy" className="transition hover:text-brand-800">Privacy Policy</Link>
-              </li>
-              <li>
-                <Link href="/terms" className="transition hover:text-brand-800">Terms & Conditions</Link>
-              </li>
-              <li>
-                <Link href="/safety" className="transition hover:text-brand-800">Community & Verification Rules</Link>
-              </li>
-              <li>
-                <Link href="/contact" className="transition hover:text-brand-800">Bank Transfer Verification</Link>
-              </li>
-              <li>
-                <Link href="/admin" className="text-muted-foreground/60 transition hover:text-brand-800">Staff Portal</Link>
-              </li>
-            </ul>
-          </div>
+            return (
+              <div key={col.id} className="space-y-3">
+                <h4
+                  style={{ color: design.headingColor || '#18181b' }}
+                  className="text-xs font-bold uppercase tracking-wider font-mono"
+                >
+                  {col.title}
+                </h4>
+                <ul className={`space-y-2 ${fontSizeClass}`}>
+                  {enabledLinks.map((link) => {
+                    const isExternal = link.url.startsWith('http');
+                    return (
+                      <li key={link.id}>
+                        {isExternal ? (
+                          <a
+                            href={link.url}
+                            target={link.openInNewTab ? '_blank' : undefined}
+                            rel={link.openInNewTab ? 'noopener noreferrer' : undefined}
+                            style={{ color: design.linkColor || '#71717a' }}
+                            className="transition hover:underline"
+                          >
+                            {link.title}
+                          </a>
+                        ) : (
+                          <Link
+                            href={link.url}
+                            style={{ color: design.linkColor || '#71717a' }}
+                            className="transition hover:underline"
+                          >
+                            {link.title}
+                          </Link>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 border-t border-border/80 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} VIP Royal Matchmaking Pvt Ltd. All rights reserved.</p>
-          <div className="flex items-center gap-4 text-[11px]">
-            <span>Consent-based introductions</span>
-            <span>•</span>
-            <span>No Monthly Expiry on Connections</span>
-            <span>•</span>
-            <span>Strict Family Confidentiality</span>
+        <div
+          style={{ borderColor: design.borderColor || '#e4e4e7' }}
+          className="mt-12 border-t pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground"
+        >
+          <p>
+            © {currentYear} {copyright.companyName}. {copyright.copyrightText}
+          </p>
+          <div className="flex flex-wrap items-center gap-3 text-[11px]">
+            {copyright.additionalText ? (
+              <span>{copyright.additionalText}</span>
+            ) : (
+              <>
+                <span>Consent-based introductions</span>
+                <span>•</span>
+                <span>No Monthly Expiry on Connections</span>
+                <span>•</span>
+                <span>Strict Family Confidentiality</span>
+              </>
+            )}
+            {copyright.legalInfo && (
+              <>
+                <span>•</span>
+                <span>{copyright.legalInfo}</span>
+              </>
+            )}
           </div>
         </div>
       </div>

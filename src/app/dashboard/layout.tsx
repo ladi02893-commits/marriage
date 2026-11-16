@@ -20,6 +20,7 @@ import {
   CreditCard,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { cn } from '@/lib/utils';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -73,17 +74,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Brand Header */}
         <div className="p-5 border-b border-border bg-gradient-to-b from-brand-950/20 to-transparent">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-brand-900 to-brand-700 text-gold-400 border border-gold-500/30 shadow-md">
-              <Crown className="h-5 w-5 fill-gold-400" />
-            </div>
-            <div>
-              <div className="text-base font-bold tracking-tight text-foreground font-serif leading-tight">
-                VIP ROYAL
-              </div>
-              <div className="text-[9px] tracking-widest text-gold-600 dark:text-gold-400 uppercase font-semibold">
-                Matchmaking Member
-              </div>
-            </div>
+            <BrandLogo variant="sidebar" taglineOverride="Matchmaking Member" />
           </Link>
         </div>
 
@@ -173,10 +164,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile Top Header */}
       <div className="md:hidden flex items-center justify-between border-b border-border bg-card p-4 sticky top-0 z-40">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-800 text-gold-400">
-            <Crown className="h-4 w-4" />
-          </div>
-          <span className="font-bold font-serif text-sm">VIP ROYAL MATCHMAKING</span>
+          <BrandLogo variant="navbar" customWidth={32} customHeight={32} />
         </Link>
 
         <button
