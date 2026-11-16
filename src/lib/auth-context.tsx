@@ -8,6 +8,7 @@ import {
   BlockedUser,
   BureauApprovalStatus,
   BureauPlanSlug,
+  BureauRechargeRequest,
   BureauSubscriptionPlan,
   ChatMessage,
   CMSContent,
@@ -131,6 +132,10 @@ function useAuthValue() {
   const [connectionTransactions] = useState<ConnectionTransaction[]>([]);
   const [bureaus, setBureaus] = useState<MarriageBureau[]>(PUBLIC_BUREAUS);
   const [bureauPlans, setBureauPlans] = useState<BureauSubscriptionPlan[]>(PUBLIC_BUREAU_PLANS);
+  const [bureauOverviewStats, setBureauOverviewStats] = useState<any>(null);
+  const [allRecharges, setAllRecharges] = useState<BureauRechargeRequest[]>([]);
+  const [allCreditTransactions, setAllCreditTransactions] = useState<any[]>([]);
+  const [platformMatchmakingStats, setPlatformMatchmakingStats] = useState<any>(null);
   const consultants = useMemo<Consultant[]>(
     () =>
       bureaus
@@ -174,6 +179,10 @@ function useAuthValue() {
       ['/api/bureaus', (value, raw) => {
         if (Array.isArray(value)) setBureaus(value as MarriageBureau[]);
         if (Array.isArray(raw?.bureauPlans)) setBureauPlans(raw.bureauPlans as BureauSubscriptionPlan[]);
+        if (raw?.bureauOverviewStats) setBureauOverviewStats(raw.bureauOverviewStats);
+        if (Array.isArray(raw?.allRecharges)) setAllRecharges(raw.allRecharges as BureauRechargeRequest[]);
+        if (Array.isArray(raw?.allCreditTransactions)) setAllCreditTransactions(raw.allCreditTransactions);
+        if (raw?.overallPlatformMatchmaking) setPlatformMatchmakingStats(raw.overallPlatformMatchmaking);
       }],
       ['/api/receiving-accounts', (value) => setReceivingAccounts(Array.isArray(value) ? value as ReceivingAccount[] : [])],
       ['/api/admin/plans', (value) => { if (Array.isArray(value) && value.length > 0) setPlans(value as SubscriptionPlan[]); }],
@@ -615,6 +624,7 @@ function useAuthValue() {
     plans, extraPacks, invoices, verifications, reports, tickets, coupons, cms, auditLogs, settings,
     paymentProofs, receivingAccounts, connectionTransactions, consultants, bureaus, bureauPlans, ownBureau, consultantRecommendations,
     consultantNotes, blockedUsers, connectionQuota, refreshDatabase,
+    bureauOverviewStats, allRecharges, allCreditTransactions, platformMatchmakingStats,
     login, register, sendSignupVerificationCode, completeSimpleRegistration, logout, switchUser, updateCurrentUserProfile,
     updateBureauPlanPricing: async (slug: BureauPlanSlug, data: Partial<BureauSubscriptionPlan>) => {
       try {
@@ -632,19 +642,129 @@ function useAuthValue() {
         return false;
       }
     },
-    submitBureauRecharge: async (data: { planSlug: BureauPlanSlug; paymentMethod: string; transactionId: string }) => {
+    submitBureauCnicVerification: async (data: { cnicNumber: string; cnicFrontKey: string; cnicBackKey: string; cnicDocKey?: string }) => {
       try {
         await apiRequest('/api/bureaus', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'RECHARGE_BUREAU', ...data }),
+          body: JSON.stringify({ action: 'SUBMIT_CNIC_VERIFICATION', ...data }),
         });
         await refreshDatabase();
-        toast.success('Bureau subscription recharge request submitted to Admin.');
+        toast.success('CNIC identity documents submitted for verification.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'CNIC submission failed.');
+        return false;
+      }
+    },
+    submitBureauProfileForApproval: async () => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'SUBMIT_PROFILE_FOR_APPROVAL' }),
+        });
+        await refreshDatabase();
+        toast.success('Bureau profile submitted for Admin review.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Submission failed.');
+        return false;
+      }
+    },
+    submitBureauRecharge: async (data: {
+      planSlug: BureauPlanSlug;
+      paymentMethod: string;
+      transactionId: string;
+      senderName?: string;
+      senderAccount?: string;
+      receiptKey?: string;
+      notes?: string;
+    }) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'SUBMIT_RECHARGE', ...data }),
+        });
+        await refreshDatabase();
+        toast.success('Package recharge request submitted for verification.');
         return true;
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Recharge request failed.');
         return false;
+      }
+    },
+    adminReviewCnic: async (bureauId: string, decision: 'VERIFIED' | 'REJECTED', rejectionReason?: string) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'REVIEW_CNIC_VERIFICATION', bureauId, decision, rejectionReason }),
+        });
+        await refreshDatabase();
+        toast.success(`CNIC marked as ${decision}.`);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Review failed.');
+        return false;
+      }
+    },
+    adminReviewBureauProfile: async (bureauId: string, decision: 'APPROVED' | 'REJECTED', rejectionReason?: string) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'REVIEW_BUREAU_PROFILE', bureauId, decision, rejectionReason }),
+        });
+        await refreshDatabase();
+        toast.success(`Bureau profile marked as ${decision}.`);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Review failed.');
+        return false;
+      }
+    },
+    adminReviewRecharge: async (rechargeId: string, decision: 'APPROVED' | 'REJECTED', rejectionReason?: string) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'REVIEW_RECHARGE', rechargeId, decision, rejectionReason }),
+        });
+        await refreshDatabase();
+        toast.success(`Package recharge ${decision === 'APPROVED' ? 'Approved & credits added' : 'Rejected'}.`);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Recharge review failed.');
+        return false;
+      }
+    },
+    adminAdjustBureauCredits: async (bureauId: string, amount: number, description?: string) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'ADJUST_BUREAU_CREDITS', bureauId, amount, description }),
+        });
+        await refreshDatabase();
+        toast.success('Bureau credits adjusted.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Credit adjustment failed.');
+        return false;
+      }
+    },
+    getDocumentSignedUrl: async (storageKey: string, bucket = 'verification-documents'): Promise<string | null> => {
+      try {
+        const res = await apiRequest<{ success: boolean; signedUrl: string }>('/api/bureaus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'GET_SIGNED_DOCUMENT_URL', storageKey, bucket }),
+        });
+        return res.signedUrl;
+      } catch {
+        return null;
       }
     },
     activateBureauSubscription: async (bureauId: string, planSlug: BureauPlanSlug) => {

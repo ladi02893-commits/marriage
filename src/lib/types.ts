@@ -1,6 +1,10 @@
 export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'CONSULTANT' | 'BUREAU';
 
 export type BureauApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+export type BureauCnicStatus = 'NOT_SUBMITTED' | 'PENDING_VERIFICATION' | 'VERIFIED' | 'REJECTED';
+export type BureauProfileCompletionStatus = 'INCOMPLETE' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+export type BureauRechargeStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type BureauCreditTransactionType = 'PURCHASE' | 'USAGE' | 'ADMIN_ADJUSTMENT' | 'REFUND';
 
 export type BureauRishtaScope = 'ALL_PLATFORM' | 'BUREAU_PRIORITY';
 
@@ -232,6 +236,19 @@ export interface MarriageBureau {
   reviewerNotes?: string;
   isVerified: boolean;
   clientCount?: number;
+  cnicNumber?: string;
+  cnicFrontKey?: string;
+  cnicBackKey?: string;
+  cnicDocKey?: string;
+  cnicVerificationStatus?: BureauCnicStatus;
+  cnicRejectionReason?: string;
+  cnicVerifiedAt?: string;
+  profileCompletionPercentage?: number;
+  profileCompletionStatus?: BureauProfileCompletionStatus;
+  profileRejectionReason?: string;
+  creditsTotal?: number;
+  creditsUsed?: number;
+  creditsRemaining?: number;
   subscriptionPlanSlug?: BureauPlanSlug;
   subscriptionStatus?: 'ACTIVE' | 'EXPIRED' | 'UNSUBSCRIBED' | 'PENDING_VERIFICATION';
   subscriptionExpiresAt?: string;
@@ -242,10 +259,47 @@ export interface MarriageBureau {
     durationDays: number;
     paymentMethod: string;
     transactionId: string;
+    receiptKey?: string;
+    senderName?: string;
+    senderAccount?: string;
+    notes?: string;
     submittedAt: string;
   } | null;
   createdAt: string;
   updatedAt?: string;
+}
+
+export interface BureauRechargeRequest {
+  id: string;
+  bureauId: string;
+  bureauName?: string;
+  planSlug: BureauPlanSlug;
+  planName: string;
+  amountPKR: number;
+  durationDays: number;
+  creditsAllocated: number;
+  paymentMethod: string;
+  senderName: string;
+  senderAccount: string;
+  transactionId: string;
+  receiptKey: string;
+  receiptSignedUrl?: string;
+  notes?: string;
+  status: BureauRechargeStatus;
+  rejectionReason?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
+export interface BureauCreditTransaction {
+  id: string;
+  bureauId: string;
+  amount: number;
+  type: BureauCreditTransactionType;
+  description: string;
+  balanceAfter: number;
+  createdAt: string;
 }
 
 // Connection Transactions Log (Section 81 & 82)

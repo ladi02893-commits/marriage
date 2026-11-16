@@ -6,7 +6,7 @@ import {
   Heart,
   Sparkles,
   Bookmark,
-  MessageSquare,
+  PhoneCall,
   Crown,
   ArrowRight,
   Send,
@@ -313,7 +313,7 @@ export default function DashboardOverviewPage() {
               </div>
             </div>
             <Link href="/dashboard/consultant" className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-brand-700">
-              <MessageSquare className="h-3.5 w-3.5" /> View Bureau Contact
+              <PhoneCall className="h-3.5 w-3.5" /> View Bureau Contact
             </Link>
           </div>
         </div>
@@ -409,17 +409,19 @@ export default function DashboardOverviewPage() {
         </Link>
 
         <Link
-          href="/dashboard/messages"
+          href="/dashboard/connections?tab=accepted"
           className="rounded-3xl border border-border bg-card p-5 shadow-sm hover:border-brand-500/50 hover:shadow-md transition group block"
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition">Active Chats</span>
+            <span className="text-xs font-semibold text-muted-foreground group-hover:text-foreground transition">Accepted Matches</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300 group-hover:scale-110 transition">
-              <MessageSquare className="h-4 w-4" />
+              <PhoneCall className="h-4 w-4" />
             </div>
           </div>
-          <div className="text-2xl font-black text-foreground font-serif">{userConversations.length}</div>
-          <span className="text-[11px] text-emerald-600 font-medium mt-1 block">Direct communication →</span>
+          <div className="text-2xl font-black text-foreground font-serif">
+            {interests.filter((i) => i.status === 'ACCEPTED').length}
+          </div>
+          <span className="text-[11px] text-emerald-600 font-medium mt-1 block">Unlocked contacts →</span>
         </Link>
       </div>
 

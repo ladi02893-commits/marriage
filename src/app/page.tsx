@@ -439,9 +439,12 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Compact Horizontal Profile Cards Scroller */}
+          <div className="flex gap-5 overflow-x-auto pb-6 pt-2 snap-x scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
             {verifiedProfiles.map((profile) => (
-              <ProfileCard key={profile.id} profile={profile} />
+              <div key={profile.id} className="w-[280px] sm:w-[300px] shrink-0 snap-start flex">
+                <ProfileCard key={profile.id} profile={profile} className="w-full flex flex-col justify-between" />
+              </div>
             ))}
           </div>
         </div>
@@ -536,42 +539,43 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Single Compact Horizontal Row on Desktop, Smooth Responsive on Mobile */}
+          <div className="flex flex-col md:grid md:grid-cols-3 gap-5 items-stretch">
             {/* Basic Package */}
-            <div className="rounded-3xl border border-border bg-background p-6 sm:p-8 flex flex-col justify-between shadow-sm">
-              <div className="space-y-4">
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider font-mono">Essential Tier</span>
-                <h3 className="text-xl font-bold font-serif text-foreground">Basic Package</h3>
+            <div className="rounded-3xl border border-border bg-background p-5 sm:p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition">
+              <div className="space-y-3">
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider font-mono">Essential Tier</span>
+                <h3 className="text-lg font-bold font-serif text-foreground">Basic Package</h3>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-foreground font-serif">Rs. 2,000</span>
+                  <span className="text-2xl font-black text-foreground font-serif">Rs. 2,000</span>
                   <span className="text-xs text-muted-foreground">one-time</span>
                 </div>
-                <div className="rounded-xl bg-muted/60 p-3 text-xs font-bold text-brand-900 border border-border">
+                <div className="rounded-xl bg-muted/60 p-2.5 text-xs font-bold text-brand-900 dark:text-gold-400 border border-border">
                   ✨ 30 Direct Connection Credits Included
                 </div>
-                <ul className="space-y-2 text-xs text-muted-foreground">
+                <ul className="space-y-1.5 text-xs text-muted-foreground pt-1">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                     <span>Unique VRM Profile ID</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                     <span>Unlock Full Phone & WhatsApp Contacts</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Unlimited Incoming Interest Inquiries</span>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span>Unlimited Incoming Inquiries</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Bank Transfer Payment Verification</span>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span>Bank Transfer Verification</span>
                   </li>
                 </ul>
               </div>
-              <div className="pt-6 mt-6 border-t border-border">
+              <div className="pt-5 mt-4 border-t border-border">
                 <Link
                   href="/pricing"
-                  className="block w-full rounded-2xl border border-brand-900 py-3 text-center text-xs font-bold text-brand-900 transition hover:bg-brand-50"
+                  className="block w-full rounded-xl border border-brand-900 py-2.5 text-center text-xs font-bold text-brand-900 transition hover:bg-brand-50 dark:text-gold-400 dark:border-gold-500/40"
                 >
                   Select Basic
                 </Link>
@@ -579,43 +583,43 @@ export default function HomePage() {
             </div>
 
             {/* Premium Package */}
-            <div className="rounded-3xl border-2 border-brand-900 bg-background p-6 sm:p-8 flex flex-col justify-between shadow-xl relative">
-              <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-brand-900 px-4 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
+            <div className="rounded-3xl border-2 border-brand-900 bg-background p-5 sm:p-6 flex flex-col justify-between shadow-xl relative hover:shadow-2xl transition">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-900 px-3 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow-md">
                 Most Popular
               </div>
-              <div className="space-y-4">
-                <span className="text-xs font-bold text-gold-700 uppercase tracking-wider font-mono">Executive Outreach</span>
-                <h3 className="text-xl font-bold font-serif text-foreground">Premium Package</h3>
+              <div className="space-y-3">
+                <span className="text-[11px] font-bold text-gold-700 dark:text-gold-400 uppercase tracking-wider font-mono">Executive Outreach</span>
+                <h3 className="text-lg font-bold font-serif text-foreground">Premium Package</h3>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-brand-900 font-serif">Rs. 5,000</span>
+                  <span className="text-2xl font-black text-brand-900 dark:text-gold-400 font-serif">Rs. 5,000</span>
                   <span className="text-xs text-muted-foreground">one-time</span>
                 </div>
-                <div className="rounded-xl bg-gold-50 p-3 text-xs font-bold text-brand-900 border border-gold-300">
+                <div className="rounded-xl bg-gold-50/70 dark:bg-gold-950/30 p-2.5 text-xs font-bold text-brand-900 dark:text-gold-300 border border-gold-300 dark:border-gold-500/30">
                   ✨ 100 Direct Connection Credits Included
                 </div>
-                <ul className="space-y-2 text-xs text-muted-foreground">
+                <ul className="space-y-1.5 text-xs text-muted-foreground pt-1">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                     <span>100 Full Contact Unlocks (Phone & WhatsApp)</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                     <span>Profile Boosted on Search Directory</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                     <span>Priority Identity Verification Badge</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                     <span>WhatsApp & Email Alert Notifications</span>
                   </li>
                 </ul>
               </div>
-              <div className="pt-6 mt-6 border-t border-border">
+              <div className="pt-5 mt-4 border-t border-border">
                 <Link
                   href="/pricing"
-                  className="block w-full rounded-2xl bg-brand-900 py-3 text-center text-xs font-bold text-white shadow-md transition hover:bg-brand-950"
+                  className="block w-full rounded-xl bg-brand-900 py-2.5 text-center text-xs font-bold text-white shadow-md transition hover:bg-brand-950"
                 >
                   Select Premium
                 </Link>
@@ -623,46 +627,42 @@ export default function HomePage() {
             </div>
 
             {/* VIP Royal Package */}
-            <div className="rounded-3xl border border-gold-400 bg-gradient-to-b from-gold-50/50 to-background p-6 sm:p-8 flex flex-col justify-between shadow-lg relative">
-              <div className="space-y-4">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-200 px-3 py-0.5 text-[10px] font-bold text-brand-900">
+            <div className="rounded-3xl border border-gold-400 bg-gradient-to-b from-gold-50/40 to-background p-5 sm:p-6 flex flex-col justify-between shadow-lg relative hover:shadow-xl transition">
+              <div className="space-y-3">
+                <div className="inline-flex items-center gap-1 rounded-full bg-gold-200/80 px-2.5 py-0.5 text-[9px] font-bold text-brand-900">
                   <Crown className="h-3 w-3 text-gold-700" /> Royal Concierge
                 </div>
-                <h3 className="text-xl font-bold font-serif text-foreground">VIP Royal Package</h3>
+                <h3 className="text-lg font-bold font-serif text-foreground">VIP Royal Package</h3>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black text-brand-950 font-serif">Rs. 10,000</span>
+                  <span className="text-2xl font-black text-brand-950 dark:text-gold-400 font-serif">Rs. 10,000</span>
                   <span className="text-xs text-muted-foreground">one-time</span>
                 </div>
-                <div className="rounded-xl bg-gold-100 p-3 text-xs font-bold text-brand-950 border border-gold-400">
+                <div className="rounded-xl bg-gold-100/70 dark:bg-gold-950/40 p-2.5 text-xs font-bold text-brand-950 dark:text-gold-300 border border-gold-400 dark:border-gold-500/30">
                   👑 300 Connections + Dedicated Consultant
                 </div>
-                <ul className="space-y-2 text-xs text-muted-foreground">
+                <ul className="space-y-1.5 text-xs text-muted-foreground pt-1">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span><strong>Dedicated Senior Family Consultant</strong> Assigned</span>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span><strong>Senior Family Consultant</strong> Assigned</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Handpicked Doctor / Bureaucrat / Executive Rishtas</span>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span>Handpicked Doctor / Executive Rishtas</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                     <span>300 Direct Connection Credits</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Confidential Family Background Verifications</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Direct Introduction Meetings Arranged</span>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span>Confidential Family Verifications</span>
                   </li>
                 </ul>
               </div>
-              <div className="pt-6 mt-6 border-t border-border">
+              <div className="pt-5 mt-4 border-t border-border">
                 <Link
                   href="/pricing"
-                  className="block w-full rounded-2xl bg-gradient-to-r from-gold-500 to-gold-600 py-3 text-center text-xs font-bold text-brand-950 shadow-md transition hover:bg-gold-400"
+                  className="block w-full rounded-xl bg-gradient-to-r from-gold-500 to-gold-600 py-2.5 text-center text-xs font-bold text-brand-950 shadow-md transition hover:bg-gold-400"
                 >
                   Join VIP Royal Concierge
                 </Link>

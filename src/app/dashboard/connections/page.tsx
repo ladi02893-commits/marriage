@@ -7,7 +7,7 @@ import {
   Heart,
   CheckCircle2,
   Send,
-  MessageSquare,
+  MessageCircle,
   Eye,
   UserX,
   Bookmark,
@@ -43,12 +43,6 @@ function ConnectionsHubContent() {
     isContactUnlocked,
   } = useAuth();
 
-  const handleOpenChat = async (otherUserId: string) => {
-    const convId = await startOrGetConversation(otherUserId);
-    if (convId) {
-      router.push(`/dashboard/messages?conversationId=${encodeURIComponent(convId)}`);
-    }
-  };
 
   const [activeTab, setActiveTab] = useState<'received' | 'sent' | 'accepted' | 'favorites' | 'blocked'>(
     tabParam && ['received', 'sent', 'accepted', 'favorites', 'blocked'].includes(tabParam)
@@ -271,10 +265,10 @@ function ConnectionsHubContent() {
                   {item.status === 'ACCEPTED' && (
                     <button
                       type="button"
-                      onClick={() => handleOpenChat(item.senderId)}
+                      onClick={() => setActiveTab('accepted')}
                       className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-md flex items-center gap-1.5"
                     >
-                      <MessageSquare className="h-3.5 w-3.5" /> Message
+                      <Phone className="h-3.5 w-3.5" /> View Contacts
                     </button>
                   )}
                 </div>
@@ -354,10 +348,10 @@ function ConnectionsHubContent() {
                   {item.status === 'ACCEPTED' && (
                     <button
                       type="button"
-                      onClick={() => handleOpenChat(item.receiverId)}
+                      onClick={() => setActiveTab('accepted')}
                       className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-md flex items-center gap-1.5"
                     >
-                      <MessageSquare className="h-3.5 w-3.5" /> Message
+                      <Phone className="h-3.5 w-3.5" /> View Contacts
                     </button>
                   )}
 
@@ -445,13 +439,25 @@ function ConnectionsHubContent() {
                         <Eye className="h-3.5 w-3.5 inline mr-1" /> Dossier
                       </Link>
 
-                      <button
-                        type="button"
-                        onClick={() => handleOpenChat(isMeSender ? item.receiverId : item.senderId)}
-                        className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-md flex items-center gap-1.5"
-                      >
-                        <MessageSquare className="h-3.5 w-3.5" /> Direct Chat
-                      </button>
+                      {(targetProfile?.whatsappNumber || targetProfile?.phone) && (
+                        <a
+                          href={`https://wa.me/${(targetProfile.whatsappNumber || targetProfile.phone || '').replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-3.5 py-2 text-xs font-bold text-white shadow-md flex items-center gap-1.5"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                        </a>
+                      )}
+
+                      {targetProfile?.phone && (
+                        <a
+                          href={`tel:${targetProfile.phone}`}
+                          className="rounded-xl bg-brand-900 hover:bg-brand-950 px-3.5 py-2 text-xs font-bold text-white shadow-md flex items-center gap-1.5"
+                        >
+                          <Phone className="h-3.5 w-3.5" /> Call
+                        </a>
+                      )}
                     </div>
                   </div>
 
@@ -462,21 +468,21 @@ function ConnectionsHubContent() {
                         <Phone className="h-4 w-4" />
                       </div>
                       <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-bold block">Mobile / WhatsApp</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold block">Mobile / Phone</span>
                         <strong className="font-mono text-foreground font-bold">
-                          {targetProfile?.phone || targetProfile?.whatsappNumber || 'Shared via direct chat'}
+                          {targetProfile?.phone || targetProfile?.whatsappNumber || 'Verified by Bureau'}
                         </strong>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2.5">
                       <div className="h-8 w-8 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center shrink-0">
-                        <Mail className="h-4 w-4" />
+                        <MessageCircle className="h-4 w-4" />
                       </div>
                       <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-bold block">Direct Chat Status</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold block">WhatsApp Contact</span>
                         <strong className="text-foreground truncate block font-mono">
-                          Unlocked (Accepted Match)
+                          {targetProfile?.whatsappNumber || targetProfile?.phone || 'Available'}
                         </strong>
                       </div>
                     </div>

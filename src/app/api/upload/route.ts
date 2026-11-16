@@ -9,6 +9,8 @@ const PURPOSES = {
   'payment-proofs': { bucket: 'payment-evidence', maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp'] },
   verifications: { bucket: 'verification-documents', maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
   'verification-documents': { bucket: 'verification-documents', maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
+  'bureau-cnic': { bucket: 'verification-documents', maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
+  'bureau-receipts': { bucket: 'payment-evidence', maxBytes: 8 * 1024 * 1024, types: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] },
 } as const;
 
 function extensionFor(type: string): string {

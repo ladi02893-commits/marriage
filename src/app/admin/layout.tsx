@@ -69,7 +69,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pendingVerifsCount = verifications.filter((v) => v.status === 'PENDING').length;
   const pendingPaymentsCount = (paymentProofs || []).filter((p) => p.status === 'PENDING').length;
   const openReportsCount = reports.filter((r) => r.status === 'OPEN').length;
-  const pendingBureausCount = (bureaus || []).filter((b) => b.approvalStatus === 'PENDING' || Boolean(b.pendingRechargeRequest)).length;
+  const pendingBureausCount = (bureaus || []).filter((b) => b.approvalStatus === 'PENDING' || b.cnicVerificationStatus === 'PENDING_VERIFICATION' || Boolean(b.pendingRechargeRequest)).length;
 
   const adminLinks = [
     { name: 'Executive Overview', href: '/admin', icon: LayoutDashboard },

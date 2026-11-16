@@ -11,7 +11,7 @@ import {
   GraduationCap,
   Sparkles,
   Send,
-  MessageSquare,
+  MessageCircle,
   Share2,
   ShieldAlert,
   ArrowLeft,
@@ -118,26 +118,7 @@ export default function ProfileDetailPage() {
     }
   };
 
-  const handleStartChat = async () => {
-    if (!currentUser) {
-      toast.info('Please sign in to message this member.');
-      router.push(`/login?returnTo=/profile/${profile.id}`);
-      return;
-    }
-    if (isSameGender) {
-      toast.error('Opposite gender matching only: You cannot message profiles of the same gender.');
-      return;
-    }
-    if (!isMutual && connectionQuota.isReached && currentUser.role === 'USER') {
-      setQuotaAction('MESSAGE');
-      setQuotaModalOpen(true);
-      return;
-    }
-    const convId = await startOrGetConversation(profile.userId);
-    if (convId) {
-      router.push(`/dashboard/messages?conversationId=${encodeURIComponent(convId)}`);
-    }
-  };
+
 
   const handleExpressInterest = () => {
     if (!currentUser) {
@@ -373,14 +354,16 @@ export default function ProfileDetailPage() {
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={handleStartChat}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3.5 text-xs font-semibold text-foreground transition hover:bg-muted"
-              >
-                <MessageSquare className="h-4 w-4 text-brand-600" />
-                {isMutual ? 'Open Active Chat' : 'Send Message / Chat'}
-              </button>
+              {isMutual && (profile.phone || profile.whatsappNumber) && (
+                <a
+                  href={`https://wa.me/${(profile.whatsappNumber || profile.phone || '').replace(/[^0-9]/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 py-3.5 text-xs font-bold text-white transition shadow-md"
+                >
+                  <MessageCircle className="h-4 w-4" /> Open WhatsApp Contact
+                </a>
+              )}
 
               <div className="pt-2 text-center text-[11px] text-muted-foreground">
                 🔒 Protected by Consent-Based Privacy Protocol
@@ -427,7 +410,7 @@ export default function ProfileDetailPage() {
                       rel="noopener noreferrer"
                       className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2 font-bold text-white shadow-sm hover:bg-emerald-700 text-center"
                     >
-                      <MessageSquare className="h-3.5 w-3.5" /> WhatsApp
+                      <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
                     </a>
                     {profile.phone && <a
                       href={`tel:${profile.phone}`}
