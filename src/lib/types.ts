@@ -4,6 +4,20 @@ export type BureauApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPEN
 
 export type BureauRishtaScope = 'ALL_PLATFORM' | 'BUREAU_PRIORITY';
 
+export type BureauPlanSlug = 'BUREAU_1M' | 'BUREAU_3M' | 'BUREAU_1Y';
+
+export interface BureauSubscriptionPlan {
+  id: string;
+  slug: BureauPlanSlug;
+  name: string;
+  durationMonths: 1 | 3 | 12;
+  durationDays: 30 | 90 | 365;
+  pricePKR: number;
+  description: string;
+  features: string[];
+  popular?: boolean;
+}
+
 export type SubscriptionTier = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS' | 'BASIC' | 'VIP';
 
 export type AccountStatus = 'ACTIVE' | 'SUSPENDED' | 'BANNED' | 'DELETED';
@@ -23,6 +37,7 @@ export type InterestStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED';
 export interface User {
   id: string;
   name: string;
+  username?: string;
   email: string;
   phone?: string;
   whatsappNumber?: string;
@@ -188,6 +203,7 @@ export interface MatrimonialProfile {
   bureauName?: string | null;
   bureauCode?: string | null;
   createdByBureau?: boolean;
+  username?: string;
   consultantRecommended?: boolean;
   consultantNote?: string;
   createdAt: string;
@@ -216,6 +232,18 @@ export interface MarriageBureau {
   reviewerNotes?: string;
   isVerified: boolean;
   clientCount?: number;
+  subscriptionPlanSlug?: BureauPlanSlug;
+  subscriptionStatus?: 'ACTIVE' | 'EXPIRED' | 'UNSUBSCRIBED' | 'PENDING_VERIFICATION';
+  subscriptionExpiresAt?: string;
+  pendingRechargeRequest?: {
+    planSlug: BureauPlanSlug;
+    planName: string;
+    amountPKR: number;
+    durationDays: number;
+    paymentMethod: string;
+    transactionId: string;
+    submittedAt: string;
+  } | null;
   createdAt: string;
   updatedAt?: string;
 }

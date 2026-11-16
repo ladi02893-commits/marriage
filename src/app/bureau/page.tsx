@@ -6,6 +6,7 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  CreditCard,
   Crown,
   Eye,
   Globe,
@@ -25,21 +26,29 @@ import { Footer } from '@/components/footer';
 import { CountryCitySelect } from '@/components/ui/country-city-select';
 import { ProfileCard } from '@/components/profile/profile-card';
 import { useAuth } from '@/lib/auth-context';
+import { BureauPlanSlug } from '@/lib/types';
 import { toast } from 'sonner';
 
-type BureauTab = 'clients' | 'add-client' | 'explore' | 'settings';
+type BureauTab = 'clients' | 'add-client' | 'explore' | 'subscription' | 'settings';
 
 export default function MarriageBureauPortalPage() {
   const {
     currentUser,
     ownBureau,
+    bureauPlans,
+    receivingAccounts,
     profiles,
     createBureauClient,
     approveBureauClientProfile,
     updateBureauProfile,
+    submitBureauRecharge,
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<BureauTab>('clients');
+  const [selectedRechargeSlug, setSelectedRechargeSlug] = useState<BureauPlanSlug>('BUREAU_1M');
+  const [rechargeMethod, setRechargeMethod] = useState('BANK_TRANSFER');
+  const [rechargeTxId, setRechargeTxId] = useState('');
+  const [isSubmittingRecharge, setIsSubmittingRecharge] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
   const [clientStatusFilter, setClientStatusFilter] = useState('ALL');
 
@@ -305,6 +314,22 @@ export default function MarriageBureauPortalPage() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              onClick={() => setActiveTab('subscription')}
+              className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-xs font-bold transition ${
+                ownBureau?.subscriptionStatus === 'ACTIVE'
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300'
+                  : 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300'
+              }`}
+            >
+              <CreditCard className="h-4 w-4" />
+              {ownBureau?.subscriptionStatus === 'ACTIVE' && ownBureau.subscriptionExpiresAt
+                ? `Active Plan (${new Date(ownBureau.subscriptionExpiresAt).toLocaleDateString()})`
+                : ownBureau?.subscriptionStatus === 'PENDING_VERIFICATION'
+                ? 'Recharge Pending Verification'
+                : 'Recharge Subscription'}
+            </button>
+            <button
+              type="button"
               onClick={() => setActiveTab('add-client')}
               disabled={!isApproved}
               className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50"
@@ -369,6 +394,7 @@ export default function MarriageBureauPortalPage() {
             { id: 'clients', label: `My Bureau Clients (${ownClients.length})`, icon: Users },
             { id: 'add-client', label: 'Add Walk-in Client', icon: PlusCircle },
             { id: 'explore', label: 'Rishta Explorer (All vs Bureau)', icon: Globe },
+            { id: 'subscription', label: 'Packages & Recharge', icon: CreditCard },
             { id: 'settings', label: 'Office Settings', icon: Settings },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -755,7 +781,158 @@ export default function MarriageBureauPortalPage() {
           </div>
         )}
 
-        {/* TAB 4: Office Settings */}
+        {/* TAB 4: Bureau Subscription Packages & Recharge */}
+        {activeTab === 'subscription' && (
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
+                <div>
+                  <h2 className="text-xl font-bold font-serif text-foreground">Marriage Bureau Subscription &amp; Recharge</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    All your clients stay visible. Recharge your office account for 1 Month, 3 Months, or 1 Year as priced by the Administrator.
+                  </p>
+                </div>
+                {ownBureau?.subscriptionStatus === 'ACTIVE' && ownBureau.subscriptionExpiresAt && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-3 py-1 text-xs font-bold">
+                    <ShieldCheck className="h-4 w-4" />
+                    Valid until {new Date(ownBureau.subscriptionExpiresAt).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+
+              {ownBureau?.pendingRechargeRequest && (
+                <div className="rounded-2xl border border-amber-300 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/30 p-4 text-xs space-y-1">
+                  <div className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                    <Clock className="h-4 w-4" /> Pending Recharge Approval
+                  </div>
+                  <p className="text-muted-foreground">
+                    Requested Package: <strong>{ownBureau.pendingRechargeRequest.planName}</strong> (PKR {ownBureau.pendingRechargeRequest.amountPKR.toLocaleString()}) • Method: {ownBureau.pendingRechargeRequest.paymentMethod} • Ref: <span className="font-mono">{ownBureau.pendingRechargeRequest.transactionId}</span>
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {bureauPlans.map((plan) => {
+                  const selected = selectedRechargeSlug === plan.slug;
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => setSelectedRechargeSlug(plan.slug)}
+                      className={`text-left rounded-2xl border p-5 transition space-y-3 ${
+                        selected
+                          ? 'border-brand-600 bg-brand-50/40 dark:bg-brand-950/30 ring-2 ring-brand-500/20'
+                          : 'border-border bg-background hover:bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-brand-600">
+                          {plan.durationMonths === 1 ? 'Monthly Recharge' : plan.durationMonths === 3 ? 'Quarterly Plan' : 'Annual Plan'}
+                        </span>
+                        {plan.popular && (
+                          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-black">
+                            Popular
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold font-serif text-foreground">{plan.name}</h3>
+                        <div className="mt-1 text-2xl font-black text-foreground">
+                          PKR {plan.pricePKR.toLocaleString()}
+                          <span className="text-xs font-normal text-muted-foreground"> / {plan.durationDays} days</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{plan.description}</p>
+                      <ul className="space-y-1 text-[11px] text-muted-foreground">
+                        {plan.features.map((f, idx) => (
+                          <li key={idx} className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {receivingAccounts.filter((a) => a.isActive).length > 0 && (
+                <div className="rounded-2xl border border-border bg-muted/20 p-4 space-y-2 text-xs">
+                  <div className="font-bold text-foreground">Official Platform Payment Accounts:</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {receivingAccounts
+                      .filter((a) => a.isActive)
+                      .map((acc) => (
+                        <div key={acc.id} className="rounded-xl border border-border bg-card p-3">
+                          <div className="font-bold text-foreground">{acc.bankName} ({acc.provider})</div>
+                          <div className="text-muted-foreground">Title: {acc.accountTitle}</div>
+                          <div className="font-mono font-bold text-brand-700 dark:text-brand-300">{acc.accountNumber}</div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!rechargeTxId.trim()) {
+                    toast.error('Please enter your transaction ID or payment reference.');
+                    return;
+                  }
+                  setIsSubmittingRecharge(true);
+                  const ok = await submitBureauRecharge({
+                    planSlug: selectedRechargeSlug,
+                    paymentMethod: rechargeMethod,
+                    transactionId: rechargeTxId.trim(),
+                  });
+                  setIsSubmittingRecharge(false);
+                  if (ok) setRechargeTxId('');
+                }}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end border-t border-border pt-4"
+              >
+                <div>
+                  <label className="text-xs font-semibold block mb-1">Payment Method</label>
+                  <select
+                    value={rechargeMethod}
+                    onChange={(e) => setRechargeMethod(e.target.value)}
+                    className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs focus:outline-none"
+                  >
+                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="JAZZCASH">JazzCash</option>
+                    <option value="EASYPAISA">EasyPaisa</option>
+                    <option value="RAAST">Raast</option>
+                    <option value="NAYAPAY">NayaPay / SadaPay</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold block mb-1">Transaction / Reference ID *</label>
+                  <input
+                    type="text"
+                    required
+                    value={rechargeTxId}
+                    onChange={(e) => setRechargeTxId(e.target.value)}
+                    placeholder="e.g. TXN-8849201"
+                    className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs font-mono focus:outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingRecharge}
+                  className="rounded-xl bg-brand-600 py-2.5 px-5 text-xs font-bold text-white hover:bg-brand-700 disabled:opacity-50"
+                >
+                  {isSubmittingRecharge
+                    ? 'Submitting...'
+                    : `Submit Recharge (PKR ${(bureauPlans.find((p) => p.slug === selectedRechargeSlug)?.pricePKR ?? 3000).toLocaleString()})`}
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: Office Settings */}
         {activeTab === 'settings' && ownBureau && (
           <form onSubmit={handleSaveOffice} className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-sm space-y-5">
             <div className="border-b border-border pb-4">

@@ -17,11 +17,13 @@ export async function GET() {
   const rawUser = user as Record<string, unknown>;
   const resolvedBureauId = (rawUser.bureau_id as string | null) ?? mapEntry?.bureauId ?? (user.assigned_consultant_id as string | null) ?? null;
   const bureau = bureaus.find((b) => b.id === resolvedBureauId || b.ownerUserId === user.id);
+  const resolvedBureauName = bureau?.name ?? mapEntry?.customBureauName ?? null;
 
   const safeUser = {
     ...toSafeUser(user),
+    username: mapEntry?.username ?? undefined,
     bureauId: bureau?.id ?? resolvedBureauId,
-    bureauName: bureau?.name ?? null,
+    bureauName: resolvedBureauName,
   };
   const profile = Array.isArray(user.profile) ? user.profile[0] : user.profile;
   return NextResponse.json({
@@ -30,9 +32,10 @@ export async function GET() {
     profile: profile
       ? await toProfileDto({ ...profile, user }, true, true, {
           id: bureau?.id ?? resolvedBureauId,
-          name: bureau?.name ?? null,
+          name: resolvedBureauName,
           bureauCode: bureau?.bureauCode ?? null,
           createdByBureau: mapEntry?.createdByBureau,
+          username: mapEntry?.username ?? null,
         })
       : null,
   });

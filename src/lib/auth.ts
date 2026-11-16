@@ -89,3 +89,45 @@ export async function getCurrentUserFromCookies() {
     return null;
   }
 }
+
+export async function signEmailVerificationToken(payload: {
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  code: string;
+}): Promise<string> {
+  return new SignJWT({ purpose: 'EMAIL_VERIFY', ...payload })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('15m')
+    .sign(getJwtSecret());
+}
+
+export async function verifyEmailVerificationToken(token: string): Promise<{
+  email: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  code: string;
+} | null> {
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret(), { algorithms: ['HS256'] });
+    if (
+      payload.purpose !== 'EMAIL_VERIFY' ||
+      typeof payload.email !== 'string' ||
+      typeof payload.code !== 'string'
+    ) {
+      return null;
+    }
+    return {
+      email: payload.email,
+      username: typeof payload.username === 'string' ? payload.username : '',
+      firstName: typeof payload.firstName === 'string' ? payload.firstName : '',
+      lastName: typeof payload.lastName === 'string' ? payload.lastName : '',
+      code: payload.code,
+    };
+  } catch {
+    return null;
+  }
+}

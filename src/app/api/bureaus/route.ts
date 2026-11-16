@@ -16,15 +16,17 @@ import {
   requireUser,
 } from '@/lib/api-auth';
 import {
+  getBureauPlans,
   getBureausRegistry,
   getUserBureauMap,
   linkUserToBureau,
+  saveBureauPlans,
   saveBureausRegistry,
 } from '@/lib/bureau-store';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { toProfileDto } from '@/lib/profile-dto';
 import { toSafeUser } from '@/lib/user-dto';
-import { BureauApprovalStatus, MarriageBureau } from '@/lib/types';
+import { BureauApprovalStatus, BureauPlanSlug, MarriageBureau } from '@/lib/types';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BLOCKED_PASSWORDS = new Set(['password', 'password123', 'admin123', '12345678', 'qwerty123']);
@@ -48,8 +50,9 @@ export async function GET(request: NextRequest) {
     const currentUser = await getCurrentUserFromCookies();
     const isAdmin = currentUser ? ADMIN_ROLES.has(currentUser.role) : false;
 
-    const [bureaus, userBureauMap, usersRes] = await Promise.all([
+    const [bureaus, bureauPlans, userBureauMap, usersRes] = await Promise.all([
       getBureausRegistry(),
+      getBureauPlans(),
       getUserBureauMap(),
       insforgeAdmin.database
         .from('users')
@@ -104,6 +107,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: visible,
+      bureauPlans,
       total: visible.length,
     });
   } catch (error) {
@@ -120,6 +124,66 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const action = typeof body.action === 'string' ? body.action : 'REGISTER_BUREAU';
+
+    // -------------------------------------------------------------------------
+    // 0. RECHARGE_BUREAU — Bureau submits subscription package recharge request
+    // -------------------------------------------------------------------------
+    if (action === 'RECHARGE_BUREAU') {
+      const auth = await requireUser();
+      if (auth.response) return auth.response;
+      if (!BUREAU_ROLES.has(auth.user.role) && !ADMIN_ROLES.has(auth.user.role)) {
+        return NextResponse.json({ success: false, error: 'Marriage Bureau account required.' }, { status: 403 });
+      }
+
+      const planSlug = text(body.planSlug, 30) as BureauPlanSlug;
+      const paymentMethod = text(body.paymentMethod, 60) || 'BANK_TRANSFER';
+      const transactionId = text(body.transactionId, 120);
+      if (!['BUREAU_1M', 'BUREAU_3M', 'BUREAU_1Y'].includes(planSlug)) {
+        return NextResponse.json({ success: false, error: 'Select a valid 1-Month, 3-Month, or 1-Year package.' }, { status: 400 });
+      }
+      if (transactionId.length < 3) {
+        return NextResponse.json({ success: false, error: 'Please provide a valid payment reference / transaction ID.' }, { status: 400 });
+      }
+
+      const [bureaus, plans] = await Promise.all([getBureausRegistry(), getBureauPlans()]);
+      const idx = bureaus.findIndex(
+        (b) => b.ownerUserId === auth.user.id || b.id === auth.user.assigned_consultant_id,
+      );
+      if (idx === -1) {
+        return NextResponse.json({ success: false, error: 'Marriage Bureau record not found.' }, { status: 404 });
+      }
+
+      const selectedPlan = plans.find((p) => p.slug === planSlug);
+      if (!selectedPlan) {
+        return NextResponse.json({ success: false, error: 'Bureau subscription package not found.' }, { status: 404 });
+      }
+
+      const existing = bureaus[idx];
+      const updatedBureau: MarriageBureau = {
+        ...existing,
+        subscriptionStatus: existing.subscriptionStatus === 'ACTIVE' ? 'ACTIVE' : 'PENDING_VERIFICATION',
+        pendingRechargeRequest: {
+          planSlug: selectedPlan.slug,
+          planName: selectedPlan.name,
+          amountPKR: selectedPlan.pricePKR,
+          durationDays: selectedPlan.durationDays,
+          paymentMethod,
+          transactionId,
+          submittedAt: new Date().toISOString(),
+        },
+        updatedAt: new Date().toISOString(),
+      };
+
+      const nextBureaus = [...bureaus];
+      nextBureaus[idx] = updatedBureau;
+      await saveBureausRegistry(nextBureaus);
+
+      return NextResponse.json({
+        success: true,
+        data: updatedBureau,
+        message: 'Bureau subscription recharge submitted for Admin verification.',
+      });
+    }
 
     // -------------------------------------------------------------------------
     // 1. ADMIN_CREATE_BUREAU — Admin creates an approved bureau directly
@@ -581,6 +645,83 @@ export async function PATCH(request: NextRequest) {
       getBureausRegistry(),
       getUserBureauMap(),
     ]);
+
+    // Update Marriage Bureau subscription plan prices (Admin only)
+    if (body.action === 'UPDATE_BUREAU_PLAN') {
+      if (!isAdmin) {
+        return NextResponse.json({ success: false, error: 'Administrator access required.' }, { status: 403 });
+      }
+      const slug = text(body.slug, 30) as BureauPlanSlug;
+      if (!['BUREAU_1M', 'BUREAU_3M', 'BUREAU_1Y'].includes(slug)) {
+        return NextResponse.json({ success: false, error: 'Valid bureau plan slug is required.' }, { status: 400 });
+      }
+      const plans = await getBureauPlans();
+      const idx = plans.findIndex((p) => p.slug === slug);
+      if (idx === -1) {
+        return NextResponse.json({ success: false, error: 'Bureau subscription plan not found.' }, { status: 404 });
+      }
+      const pricePKR = body.pricePKR !== undefined ? Number(body.pricePKR) : plans[idx].pricePKR;
+      if (!Number.isFinite(pricePKR) || pricePKR < 0) {
+        return NextResponse.json({ success: false, error: 'Price must be a valid non-negative number.' }, { status: 400 });
+      }
+      const nextPlans = [...plans];
+      nextPlans[idx] = {
+        ...plans[idx],
+        pricePKR,
+        ...(typeof body.name === 'string' && body.name.trim() ? { name: body.name.trim().slice(0, 100) } : {}),
+        ...(typeof body.description === 'string' ? { description: body.description.trim().slice(0, 300) } : {}),
+        ...(Array.isArray(body.features) ? { features: body.features.map(String).slice(0, 10) } : {}),
+      };
+      await saveBureauPlans(nextPlans);
+      return NextResponse.json({ success: true, data: nextPlans });
+    }
+
+    // Activate or recharge a Marriage Bureau subscription (Admin only)
+    if (body.action === 'ACTIVATE_BUREAU_SUBSCRIPTION') {
+      if (!isAdmin) {
+        return NextResponse.json({ success: false, error: 'Administrator access required.' }, { status: 403 });
+      }
+      const targetBureauId = text(body.bureauId ?? body.id, 100);
+      const planSlug = text(body.planSlug, 30) as BureauPlanSlug;
+      const plans = await getBureauPlans();
+      const plan = plans.find((p) => p.slug === planSlug);
+      if (!plan) {
+        return NextResponse.json({ success: false, error: 'Invalid bureau subscription plan.' }, { status: 400 });
+      }
+      const idx = bureaus.findIndex((b) => b.id === targetBureauId);
+      if (idx === -1) {
+        return NextResponse.json({ success: false, error: 'Marriage Bureau not found.' }, { status: 404 });
+      }
+      const existing = bureaus[idx];
+      const existingExpiryMs = existing.subscriptionExpiresAt ? new Date(existing.subscriptionExpiresAt).getTime() : 0;
+      const baseMs = Number.isFinite(existingExpiryMs) && existingExpiryMs > Date.now() ? existingExpiryMs : Date.now();
+      const nextExpiry = new Date(baseMs + plan.durationDays * 86_400_000).toISOString();
+
+      const updated: MarriageBureau = {
+        ...existing,
+        approvalStatus: 'APPROVED',
+        isVerified: true,
+        subscriptionPlanSlug: plan.slug,
+        subscriptionStatus: 'ACTIVE',
+        subscriptionExpiresAt: nextExpiry,
+        pendingRechargeRequest: null,
+        updatedAt: new Date().toISOString(),
+      };
+      const nextBureaus = [...bureaus];
+      nextBureaus[idx] = updated;
+      await saveBureausRegistry(nextBureaus);
+
+      if (existing.ownerUserId) {
+        await insforgeAdmin.database.from('notifications').insert([{
+          user_id: existing.ownerUserId,
+          title: `${plan.name} Activated!`,
+          description: `Your Marriage Bureau (${existing.name}) recharge is active until ${new Date(nextExpiry).toLocaleDateString()}.`,
+          type: 'PAYMENT_APPROVED',
+          link_url: '/bureau',
+        }]);
+      }
+      return NextResponse.json({ success: true, data: updated });
+    }
 
     // Update a client profile status belonging to this bureau
     if (body.action === 'UPDATE_CLIENT_STATUS') {

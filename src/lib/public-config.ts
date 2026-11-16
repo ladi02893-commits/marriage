@@ -1,4 +1,53 @@
-import { CMSContent, ExtraConnectionPack, MarriageBureau, SubscriptionPlan, SystemSettings } from './types';
+import { BureauSubscriptionPlan, CMSContent, ExtraConnectionPack, MarriageBureau, SubscriptionPlan, SystemSettings } from './types';
+
+export const PUBLIC_BUREAU_PLANS: BureauSubscriptionPlan[] = [
+  {
+    id: 'bureau-plan-1m',
+    slug: 'BUREAU_1M',
+    name: '1-Month Bureau Subscription',
+    durationMonths: 1,
+    durationDays: 30,
+    pricePKR: 3000,
+    description: 'Monthly office recharge for active Marriage Bureaus with full client visibility & rishta access.',
+    features: [
+      '30 days active Marriage Bureau subscription',
+      'All self-registered & walk-in clients visible',
+      'Unlimited walk-in client dossier publishing',
+      'Listed in your city registration dropdown',
+    ],
+  },
+  {
+    id: 'bureau-plan-3m',
+    slug: 'BUREAU_3M',
+    name: '3-Month Quarter Bureau Subscription',
+    durationMonths: 3,
+    durationDays: 90,
+    pricePKR: 8000,
+    popular: true,
+    description: 'Quarterly office subscription with priority listing and multi-city matchmaking access.',
+    features: [
+      '90 days active Marriage Bureau subscription',
+      'All clients & platform rishtas visible',
+      'Priority placement in city bureau dropdowns',
+      'Dedicated Admin recharge & verification support',
+    ],
+  },
+  {
+    id: 'bureau-plan-1y',
+    slug: 'BUREAU_1Y',
+    name: '1-Year Annual Bureau Subscription',
+    durationMonths: 12,
+    durationDays: 365,
+    pricePKR: 25000,
+    description: 'Full annual Marriage Bureau membership with maximum savings for established Rishta Daftars.',
+    features: [
+      '365 days uninterrupted bureau license',
+      'All clients visible across all service cities',
+      'Verified Royal Partner Bureau badge',
+      'Annual savings compared to monthly recharge',
+    ],
+  },
+];
 
 export const PUBLIC_BUREAUS: MarriageBureau[] = [
   {

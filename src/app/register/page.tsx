@@ -1,1002 +1,330 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Crown,
-  User,
-  GraduationCap,
-  Users,
-  Search,
-  CheckCircle2,
-  ArrowRight,
   ArrowLeft,
-  ShieldCheck,
-  FileCheck,
-  MessageCircle,
+  ArrowRight,
   Building2,
-  MapPin,
+  CheckCircle2,
+  Crown,
+  KeyRound,
+  Lock,
+  Mail,
+  ShieldCheck,
+  User,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
-import { CountryCitySelect } from '@/components/ui/country-city-select';
 import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 
-export default function RegisterWizardPage() {
+export default function SimpleRegisterPage() {
   const router = useRouter();
-  const { register, bureaus } = useAuth();
-  const [currentStep, setCurrentStep] = useState(1);
+  const { sendSignupVerificationCode, completeSimpleRegistration } = useAuth();
 
-  // Form State
-  const [formData, setFormData] = useState({
-    // Step 1: Personal & Account
-    fullName: '',
-    email: '',
-    password: '',
-    phone: '',
-    whatsappNumber: '',
-    gender: 'FEMALE',
-    dateOfBirth: '',
-    height: '5 ft 6 in (168 cm)',
-    weight: '',
-    maritalStatus: 'NEVER_MARRIED',
-    religion: 'ISLAM',
-    sectOrCommunity: '',
-    caste: 'Syed',
-    subClan: '',
-    motherTongue: 'Urdu',
-    citizenship: 'Pakistani',
-    country: 'Pakistan',
-    province: '',
-    city: 'Lahore',
-    area: '',
-    bureauId: '',
-
-    // Step 3: Education & Career
-    highestDegree: "Bachelor's Degree",
-    institution: '',
-    fieldOfStudy: '',
-    profession: '',
-    jobTitle: '',
-    company: '',
-    monthlyIncome: 'PKR 150,000 - 300,000 / month',
-    annualIncome: '',
-    employmentSector: 'PRIVATE',
-
-    // Step 4: Family & Lifestyle
-    fatherOccupation: '',
-    motherOccupation: '',
-    brothersCount: 0,
-    sistersCount: 0,
-    familyType: 'NUCLEAR',
-    familyValues: 'MODERATE',
-    livingStatus: 'Living in Own House',
-    familyLocation: '',
-    diet: 'HALAL_ONLY',
-    smoking: 'NO',
-    drinking: 'NO',
-    languagesSpoken: '',
-    hobbies: '',
-    aboutFamily: '',
-
-    // Step 5: Partner Preferences
-    prefAgeMin: 26,
-    prefAgeMax: 34,
-    prefHeightMin: '',
-    prefHeightMax: '',
-    prefMaritalStatus: 'NEVER_MARRIED',
-    prefReligions: 'ISLAM',
-    prefSects: '',
-    prefCaste: '',
-    prefLocations: '',
-    prefEducation: '',
-    prefProfession: '',
-    prefIncome: '',
-    prefNotes: '',
-
-    // Profile summary
-    bioHeadline: '',
-    aboutMe: '',
-    photoUrl: '',
-
-    // Step 7: Consents
-    agreeTerms: false,
-    agreeTruthfulness: false,
-  });
-
-  // Calculate Age Dynamically
-  const calculatedAge = useMemo(() => {
-    if (!formData.dateOfBirth) return null;
-    const dob = new Date(formData.dateOfBirth);
-    if (Number.isNaN(dob.getTime())) return null;
-    const diffMs = Date.now() - dob.getTime();
-    const ageDt = new Date(diffMs);
-    return Math.abs(ageDt.getUTCFullYear() - 1970);
-  }, [formData.dateOfBirth]);
-
-  // Approved Marriage Bureaus filtered by selected city
-  const approvedBureaus = useMemo(
-    () => bureaus.filter((b) => b.approvalStatus === 'APPROVED'),
-    [bureaus],
-  );
-
-  const cityMatchingBureaus = useMemo(() => {
-    const selectedCity = formData.city.trim().toLowerCase();
-    if (!selectedCity || selectedCity === 'all') return [];
-    return approvedBureaus.filter((b) => {
-      const mainCity = (b.city || '').trim().toLowerCase();
-      const extraCities = (b.serviceCities ?? []).map((c) => c.trim().toLowerCase());
-      return (
-        mainCity === selectedCity ||
-        mainCity.includes(selectedCity) ||
-        selectedCity.includes(mainCity) ||
-        extraCities.some((c) => c === selectedCity || c.includes(selectedCity))
-      );
-    });
-  }, [approvedBureaus, formData.city]);
-
-  const displayedBureaus = cityMatchingBureaus.length > 0 ? cityMatchingBureaus : approvedBureaus;
-  const selectedBureau = approvedBureaus.find((b) => b.id === formData.bureauId) ?? null;
-
-  useEffect(() => {
-    if (!displayedBureaus.length) return;
-    if (!formData.bureauId || !displayedBureaus.some((b) => b.id === formData.bureauId)) {
-      setFormData((prev) => ({ ...prev, bureauId: displayedBureaus[0].id }));
-    }
-  }, [displayedBureaus, formData.bureauId]);
-
-  const updateField = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const steps = [
-    { num: 1, name: 'Account Info', icon: User },
-    { num: 3, name: 'Education & Career', icon: GraduationCap },
-    { num: 4, name: 'Family & Lifestyle', icon: Users },
-    { num: 5, name: 'Partner Criteria', icon: Search },
-    { num: 7, name: 'Consent & Review', icon: FileCheck },
-  ];
-
-  const handleNext = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (currentStep === 1) {
-      if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.dateOfBirth || !formData.country || !formData.city || !formData.bureauId) {
-        toast.error('Please complete your name, email, mobile, birth date, location, Marriage Bureau selection, and password.');
-        return;
-      }
-      if (calculatedAge === null || calculatedAge < 18 || calculatedAge > 100) {
-        toast.error('Registration is available only to adults aged 18 to 100.');
-        return;
-      }
-      if (formData.password.length < 8) {
-        toast.error('Password must contain at least 8 characters.');
-        return;
-      }
-      if (!formData.whatsappNumber) {
-        updateField('whatsappNumber', formData.phone);
-      }
-      toast.info('WhatsApp verification will remain pending until the delivery provider is connected.');
-      setCurrentStep(3);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    if (currentStep === 5) {
-      setCurrentStep(7);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      return;
-    }
-
-    if (currentStep < 7) {
-      setCurrentStep((prev) => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      handleFinalSubmit();
-    }
-  };
-
+  const [step, setStep] = useState<'DETAILS' | 'VERIFY'>('DETAILS');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleFinalSubmit = async () => {
-    if (!formData.agreeTerms || !formData.agreeTruthfulness) {
-      toast.error('Please accept all consent checkboxes before submitting.');
+  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationToken, setVerificationToken] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
+  const [devCodePreview, setDevCodePreview] = useState<string | undefined>(undefined);
+
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username.trim() || !firstName.trim() || !lastName.trim() || !email.trim()) {
+      toast.error('Please enter your username, first name, last name, and email.');
+      return;
+    }
+    if (password.length < 8) {
+      toast.error('Password must contain at least 8 characters.');
       return;
     }
 
     setIsSubmitting(true);
-    const toastId = toast.loading('Creating your account and profile securely...');
+    const toastId = toast.loading('Sending 6-digit verification code to your email...');
+    const res = await sendSignupVerificationCode({
+      username: username.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    setIsSubmitting(false);
+    toast.dismiss(toastId);
 
-    try {
-      // Create the free account first. Payment evidence is submitted from the
-      // authenticated dashboard so it can be bound to the real server user ID.
-      const regResult = await register(
-        {
-          name: formData.fullName,
-          email: formData.email,
-          password: formData.password,
-          phone: formData.whatsappNumber || formData.phone,
-          whatsappNumber: formData.whatsappNumber || formData.phone,
-          bureauId: formData.bureauId,
-        },
-        {
-          bureauId: formData.bureauId,
-          fullName: formData.fullName,
-          displayName: formData.fullName.split(' ')[0] + (formData.fullName.split(' ')[1] ? ' ' + formData.fullName.split(' ')[1][0] + '.' : ''),
-          gender: formData.gender as any,
-          dateOfBirth: formData.dateOfBirth,
-          age: calculatedAge ?? 25,
-          phone: formData.whatsappNumber || formData.phone,
-          maritalStatus: formData.maritalStatus as any,
-          religion: formData.religion as any,
-          sectOrCommunity: formData.sectOrCommunity,
-          caste: formData.caste,
-          subClan: formData.subClan,
-          motherTongue: formData.motherTongue,
-          city: formData.city,
-          country: formData.country,
-          province: formData.province,
-          area: formData.area,
-          citizenship: formData.citizenship,
-          bioHeadline: formData.bioHeadline,
-          aboutMe: formData.aboutMe,
-          approvalStatus: 'PENDING_APPROVAL',
-          isApproved: false,
-          isWhatsappVerified: false,
-          isEmailVerified: false,
-          verificationBadge: 'UNVERIFIED',
-          photos: [],
-          educationCareer: {
-            highestDegree: formData.highestDegree,
-            institution: formData.institution,
-            fieldOfStudy: formData.fieldOfStudy,
-            profession: formData.profession,
-            jobTitle: formData.jobTitle,
-            company: formData.company,
-            annualIncome: formData.annualIncome || formData.monthlyIncome,
-            monthlyIncome: formData.monthlyIncome,
-            employmentSector: formData.employmentSector as any,
-            workingLocation: formData.city,
-          },
-          lifestyle: {
-            height: formData.height,
-            weight: formData.weight,
-            diet: formData.diet as any,
-            smoking: formData.smoking as any,
-            drinking: formData.drinking as any,
-            motherTongue: formData.motherTongue,
-            languagesSpoken: formData.languagesSpoken.split(',').map((s) => s.trim()).filter(Boolean),
-            hobbies: formData.hobbies.split(',').map((s) => s.trim()).filter(Boolean),
-            livingStatus: formData.livingStatus,
-          },
-          familyInfo: {
-            familyType: formData.familyType as any,
-            familyValues: formData.familyValues as any,
-            fatherOccupation: formData.fatherOccupation,
-            motherOccupation: formData.motherOccupation,
-            brothersCount: Number(formData.brothersCount),
-            sistersCount: Number(formData.sistersCount),
-            familyLocation: formData.familyLocation,
-            livingStatus: formData.livingStatus,
-            aboutFamily: formData.aboutFamily,
-          },
-          partnerPreferences: {
-            ageRange: { min: Number(formData.prefAgeMin), max: Number(formData.prefAgeMax) },
-            heightRange: { min: formData.prefHeightMin, max: formData.prefHeightMax },
-            maritalStatus: [formData.prefMaritalStatus as any],
-            religions: [formData.prefReligions as any],
-            sects: formData.prefSects ? [formData.prefSects] : [],
-            caste: formData.prefCaste ? [formData.prefCaste] : [],
-            educationLevels: formData.prefEducation ? [formData.prefEducation] : [],
-            professions: formData.prefProfession ? [formData.prefProfession] : [],
-            preferredLocations: formData.prefLocations.split(',').map((s) => s.trim()).filter(Boolean),
-            monthlyIncome: formData.prefIncome,
-            expectationsNotes: formData.prefNotes,
-          },
-        }
-      );
-
-      setIsSubmitting(false);
-      toast.dismiss(toastId);
-
-      if (!regResult.success) {
-        toast.error('Registration failed: ' + (regResult.error || 'Unknown error'));
-        return;
-      }
-
-      toast.success('Account created. Identity and contact verification remain pending. Submit payment from your dashboard if you want to upgrade.');
-      router.push(regResult.redirectUrl || '/dashboard');
-    } catch (err: any) {
-      setIsSubmitting(false);
-      toast.dismiss(toastId);
-      toast.error('Registration failed: ' + (err.message || 'Unknown error'));
+    if (!res.success || !res.verificationToken) {
+      toast.error(res.error || 'Could not send verification code.');
+      return;
     }
+
+    setVerificationToken(res.verificationToken);
+    setEmailSent(Boolean(res.emailSent));
+    setDevCodePreview(res.devCodePreview);
+    setStep('VERIFY');
+    toast.success(
+      res.emailSent
+        ? `Verification code sent to ${email.trim().toLowerCase()}.`
+        : 'Verification code generated! Enter the 6-digit code below.',
+    );
+  };
+
+  const handleCompleteRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (verificationCode.trim().length < 6) {
+      toast.error('Please enter the 6-digit email verification code.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const toastId = toast.loading('Verifying code and creating your account...');
+    const res = await completeSimpleRegistration({
+      username: username.trim(),
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim().toLowerCase(),
+      password,
+      verificationCode: verificationCode.trim(),
+      verificationToken,
+    });
+    setIsSubmitting(false);
+    toast.dismiss(toastId);
+
+    if (!res.success) {
+      toast.error(res.error || 'Verification failed.');
+      return;
+    }
+
+    toast.success('Email verified & account created! Please complete your profile and select your Marriage Bureau on the dashboard.');
+    router.push(res.redirectUrl || '/dashboard/profile?onboarding=1');
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-brand-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Navbar />
 
-      <main className="flex-1 py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full">
-        {/* Header Title */}
-        <div className="text-center space-y-2 mb-8">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 dark:bg-brand-950/40 px-3.5 py-1 text-xs font-bold text-brand-700 dark:text-brand-300 border border-brand-200/50 shadow-xs">
-            <Crown className="h-3.5 w-3.5 text-gold-500" /> VIP Royal Matchmaking • Member Registration
+      <main className="flex-1 flex items-center justify-center px-4 py-12 bg-gradient-to-b from-brand-50/25 via-background to-background dark:from-brand-950/15">
+        <div className="w-full max-w-lg space-y-6">
+          {/* Header */}
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 dark:bg-brand-950/40 px-3.5 py-1 text-xs font-bold text-brand-700 dark:text-brand-300 border border-brand-200/50">
+              <Crown className="h-3.5 w-3.5 text-gold-500" /> Quick & Verified Member Sign-Up
+            </div>
+            <h1 className="text-3xl font-bold font-serif text-foreground">
+              {step === 'DETAILS' ? 'Create Your Account' : 'Verify Your Email'}
+            </h1>
+            <p className="text-xs text-muted-foreground max-w-md mx-auto">
+              {step === 'DETAILS'
+                ? 'Start with your username, name, and email. Complete your full profile and select your Marriage Bureau right inside your dashboard.'
+                : `Enter the 6-digit verification code sent to ${email.trim().toLowerCase()} to complete sign-up.`}
+            </p>
+            <div className="pt-1">
+              <Link
+                href="/register/bureau"
+                className="inline-flex items-center gap-1.5 rounded-full border border-gold-400/50 bg-gold-50/70 dark:bg-gold-950/30 px-4 py-1.5 text-xs font-bold text-gold-800 dark:text-gold-300 hover:bg-gold-100/80 transition"
+              >
+                <Building2 className="h-3.5 w-3.5 text-gold-600" />
+                Own a Marriage Bureau (Daftar)? Register Bureau Office →
+              </Link>
+            </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold font-serif text-foreground">
-            Confidential Royal Matchmaking Registration
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto">
-            A dignified, connection-based matchmaking platform with city-based Marriage Bureaus and verified families.
-          </p>
-          <div className="pt-2">
-            <Link
-              href="/register/bureau"
-              className="inline-flex items-center gap-1.5 rounded-full border border-gold-400/50 bg-gold-50/70 dark:bg-gold-950/30 px-4 py-1.5 text-xs font-bold text-gold-800 dark:text-gold-300 hover:bg-gold-100/80 transition"
-            >
-              <Building2 className="h-3.5 w-3.5 text-gold-600" />
-              Own a Marriage Bureau (Daftar)? Register your Bureau Office here →
-            </Link>
-          </div>
-        </div>
 
-        {/* Step Progression Bar */}
-        <div className="mb-10">
-          <div className="grid grid-cols-5 gap-1.5 sm:gap-3">
-            {steps.map((step) => {
-              const Icon = step.icon;
-              const isCompleted = currentStep > step.num;
-              const isCurrent = currentStep === step.num;
+          {/* Card */}
+          <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xl space-y-6">
+            {/* Step indicator */}
+            <div className="grid grid-cols-2 gap-3 text-xs font-bold">
+              <div
+                className={`rounded-xl px-3 py-2 flex items-center gap-2 border ${
+                  step === 'DETAILS'
+                    ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300'
+                    : 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                }`}
+              >
+                {step === 'VERIFY' ? <CheckCircle2 className="h-4 w-4" /> : <span>1.</span>}
+                <span>Account Info</span>
+              </div>
+              <div
+                className={`rounded-xl px-3 py-2 flex items-center gap-2 border ${
+                  step === 'VERIFY'
+                    ? 'border-brand-600 bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300'
+                    : 'border-border bg-muted/40 text-muted-foreground'
+                }`}
+              >
+                <span>2.</span>
+                <span>Email Code</span>
+              </div>
+            </div>
 
-              return (
-                <button
-                  key={step.num}
-                  type="button"
-                  onClick={() => {
-                    if (step.num < currentStep) setCurrentStep(step.num);
-                  }}
-                  className={`flex flex-col items-center p-2 rounded-2xl transition text-center ${
-                    isCurrent
-                      ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/25 ring-2 ring-brand-400/40'
-                      : isCompleted
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                      : 'bg-muted/40 text-muted-foreground opacity-60'
-                  }`}
-                >
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 mb-1">
-                    {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-3.5 w-3.5" />}
+            {step === 'DETAILS' ? (
+              <form onSubmit={handleSendCode} className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">Username *</label>
+                  <div className="relative">
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="text"
+                      required
+                      minLength={3}
+                      maxLength={30}
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="e.g. bilal_tariq"
+                      className="w-full rounded-xl border border-border bg-muted/30 py-2.5 pl-10 pr-3 text-xs text-foreground focus:border-brand-500 focus:outline-none"
+                    />
                   </div>
-                  <span className="text-[10px] font-bold hidden sm:block truncate w-full">
-                    {step.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Wizard Form Container */}
-        <div className="rounded-3xl border border-border bg-card p-6 sm:p-10 shadow-xl backdrop-blur-xl">
-          <form onSubmit={handleNext} className="space-y-8">
-            {/* STEP 1: Personal & Account Information (Section 5 - Step 1) */}
-            {currentStep === 1 && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="border-b border-border pb-4">
-                  <h3 className="text-xl font-bold font-serif text-foreground">Step 1: Basic Information</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Enter your basic identity and account credentials. Contact verification remains pending until the delivery provider is connected.
-                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">Letters, numbers, dots, hyphens, or underscores (3–30 chars).</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Full Name *</label>
+                    <label className="text-xs font-semibold text-foreground block mb-1">First Name *</label>
                     <input
                       type="text"
                       required
-                      value={formData.fullName}
-                      onChange={(e) => updateField('fullName', e.target.value)}
-                      placeholder="e.g. Dr. Bilal Tariq"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="e.g. Bilal"
                       className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
                     />
                   </div>
-
                   <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Email Address *</label>
+                    <label className="text-xs font-semibold text-foreground block mb-1">Last Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="e.g. Tariq"
+                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">Email Address *</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                       type="email"
                       required
-                      value={formData.email}
-                      onChange={(e) => updateField('email', e.target.value)}
-                      placeholder="e.g. bilal@example.com"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full rounded-xl border border-border bg-muted/30 py-2.5 pl-10 pr-3 text-xs text-foreground focus:border-brand-500 focus:outline-none"
                     />
                   </div>
+                </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Mobile Number *</label>
-                    <input
-                      type="tel"
-                      required
-                      value={formData.phone}
-                      onChange={(e) => updateField('phone', e.target.value)}
-                      placeholder="e.g. +92 300 1234567"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">WhatsApp Number *</label>
-                    <input
-                      type="tel"
-                      required
-                      value={formData.whatsappNumber || formData.phone}
-                      onChange={(e) => updateField('whatsappNumber', e.target.value)}
-                      placeholder="e.g. +92 300 1234567"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Password *</label>
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">Password *</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                       type="password"
                       required
-                      value={formData.password}
-                      onChange={(e) => updateField('password', e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
+                      minLength={8}
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Minimum 8 characters"
+                      className="w-full rounded-xl border border-border bg-muted/30 py-2.5 pl-10 pr-3 text-xs text-foreground focus:border-brand-500 focus:outline-none"
                     />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Gender *</label>
-                    <select
-                      value={formData.gender}
-                      onChange={(e) => updateField('gender', e.target.value)}
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    >
-                      <option value="FEMALE">Female (Bride Candidate)</option>
-                      <option value="MALE">Male (Groom Candidate)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">
-                      Date of Birth * {calculatedAge !== null && <span className="text-brand-600 font-bold">(Age: {calculatedAge} Yrs)</span>}
-                    </label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.dateOfBirth}
-                      onChange={(e) => updateField('dateOfBirth', e.target.value)}
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Height *</label>
-                    <select
-                      value={formData.height}
-                      onChange={(e) => updateField('height', e.target.value)}
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    >
-                      <option value="5 ft 0 in (152 cm)">5 ft 0 in (152 cm)</option>
-                      <option value="5 ft 2 in (157 cm)">5 ft 2 in (157 cm)</option>
-                      <option value="5 ft 4 in (162 cm)">5 ft 4 in (162 cm)</option>
-                      <option value="5 ft 6 in (168 cm)">5 ft 6 in (168 cm)</option>
-                      <option value="5 ft 8 in (173 cm)">5 ft 8 in (173 cm)</option>
-                      <option value="5 ft 10 in (178 cm)">5 ft 10 in (178 cm)</option>
-                      <option value="6 ft 0 in (183 cm)">6 ft 0 in (183 cm)</option>
-                      <option value="6 ft 2 in (188 cm)">6 ft 2 in (188 cm)</option>
-                      <option value="6 ft 4 in (193 cm)">6 ft 4 in (193 cm)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Marital Status *</label>
-                    <select
-                      value={formData.maritalStatus}
-                      onChange={(e) => updateField('maritalStatus', e.target.value)}
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    >
-                      <option value="NEVER_MARRIED">Never Married (Single)</option>
-                      <option value="DIVORCED">Divorced</option>
-                      <option value="WIDOWED">Widowed</option>
-                      <option value="AWAITING_DIVORCE">Awaiting Divorce</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Caste / Zaat *</label>
-                    <select
-                      value={formData.caste}
-                      onChange={(e) => updateField('caste', e.target.value)}
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    >
-                      <option value="Syed">Syed / Gilani / Bukhari</option>
-                      <option value="Rajput">Rajput / Rana / Bhatti</option>
-                      <option value="Mughal">Mughal / Mirza / Baig</option>
-                      <option value="Arain">Arain / Chaudhry</option>
-                      <option value="Jatt">Jatt / Cheema / Warraich</option>
-                      <option value="Malik">Malik / Awan</option>
-                      <option value="Sheikh">Sheikh / Siddiqui</option>
-                      <option value="Gujjar">Gujjar</option>
-                      <option value="Abbasi">Abbasi</option>
-                      <option value="Memon">Memon</option>
-                      <option value="Niazi">Niazi / Khan / Pathan</option>
-                      <option value="Kashmiri">Kashmiri / Butt / Dar</option>
-                      <option value="Other">Other / Caste No Bar</option>
-                    </select>
                   </div>
                 </div>
 
-                {/* Country & City Dropdowns */}
-                <div className="pt-2">
-                  <CountryCitySelect
-                    selectedCountry={formData.country}
-                    selectedCity={formData.city}
-                    onCountryChange={(c) => updateField('country', c)}
-                    onCityChange={(ct) => updateField('city', ct)}
-                    countryLabel="Country of Residence *"
-                    cityLabel="City of Residence *"
-                    required
-                  />
-                </div>
-
-                {/* Mandatory Marriage Bureau Selector (Auto-filtered by City) */}
-                <div className="rounded-2xl border-2 border-brand-500/30 bg-brand-50/30 dark:bg-brand-950/20 p-4 sm:p-5 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Building2 className="h-4 w-4 text-brand-600" />
-                      Select Marriage Bureau (Daftar) for {formData.city || 'Your City'} *
-                    </label>
-                    <span className="text-[11px] font-semibold text-brand-700 dark:text-brand-300">
-                      {cityMatchingBureaus.length > 0
-                        ? `${cityMatchingBureaus.length} approved bureau(s) in ${formData.city}`
-                        : `Showing ${displayedBureaus.length} national/approved bureaus serving your area`}
-                    </span>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl bg-brand-600 py-3.5 text-xs font-bold text-white shadow-lg shadow-brand-600/20 hover:bg-brand-700 transition disabled:opacity-50"
+                >
+                  {isSubmitting ? 'Sending Code...' : 'Send Email Verification Code'}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleCompleteRegistration} className="space-y-4">
+                <div className="rounded-2xl border border-brand-200 bg-brand-50/50 dark:border-brand-900 dark:bg-brand-950/30 p-4 text-xs space-y-2">
+                  <div className="font-bold text-foreground flex items-center gap-1.5">
+                    <Mail className="h-4 w-4 text-brand-600" />
+                    {emailSent ? 'Check your email inbox' : 'Email verification code'}
                   </div>
-
-                  <select
-                    required
-                    value={formData.bureauId}
-                    onChange={(e) => updateField('bureauId', e.target.value)}
-                    className="w-full rounded-xl border border-border bg-card p-3 text-xs font-semibold text-foreground focus:border-brand-500 focus:outline-none"
-                  >
-                    {displayedBureaus.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name} — {b.city} ({b.bureauCode})
-                      </option>
-                    ))}
-                  </select>
-
-                  {selectedBureau && (
-                    <div className="rounded-xl border border-border bg-card p-3.5 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="font-bold text-foreground flex items-center gap-2">
-                          <span>{selectedBureau.name}</span>
-                          <span className="rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-bold">
-                            Admin Approved • {selectedBureau.bureauCode}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-brand-600 shrink-0" />
-                          <span>{selectedBureau.address} ({selectedBureau.city})</span>
-                        </div>
-                        {selectedBureau.description && (
-                          <p className="text-[11px] text-muted-foreground line-clamp-2">{selectedBureau.description}</p>
-                        )}
-                      </div>
-                      <div className="text-[11px] font-mono text-muted-foreground shrink-0">
-                        <div>Head: {selectedBureau.ownerName}</div>
-                        <div>Tel: {selectedBureau.phone}</div>
-                      </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {emailSent
+                      ? `We sent a 6-digit verification code to ${email.trim().toLowerCase()}.`
+                      : `Email delivery is not configured in this environment. Use your verification code below for ${email.trim().toLowerCase()}:`}
+                  </p>
+                  {devCodePreview && (
+                    <div className="rounded-xl bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-800 px-3 py-2 text-center font-mono text-base font-extrabold tracking-[0.3em] text-amber-900 dark:text-amber-200">
+                      {devCodePreview}
                     </div>
                   )}
                 </div>
-              </div>
-            )}
 
-
-            {/* STEP 3: Education & Career (Section 8) */}
-            {currentStep === 3 && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="border-b border-border pb-4">
-                  <h3 className="text-xl font-bold font-serif text-foreground">Step 3: Education & Profession</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Academic qualifications and career standing. Income brackets can be kept confidential upon request.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Education Level *</label>
-                    <select
-                      value={formData.highestDegree}
-                      onChange={(e) => updateField('highestDegree', e.target.value)}
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    >
-                      <option value="Doctorate / PhD">Doctorate / PhD</option>
-                      <option value="Medical Doctor (MBBS / MD / FCPS)">Medical Doctor (MBBS / MD / FCPS)</option>
-                      <option value="Master's Degree">Master's Degree (MS / MPhil / MBA / MSc)</option>
-                      <option value="Bachelor's Degree">Bachelor's Degree (BS / BE / BBA / BSc)</option>
-                      <option value="Chartered Accountant (CA / ACCA / CFA)">Chartered Accountant (CA / ACCA / CFA)</option>
-                      <option value="Law Graduate (LLB / LLM)">Law Graduate (LLB / LLM)</option>
-                      <option value="Other">Other Higher Education</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Degree Name & University *</label>
+                <div>
+                  <label className="text-xs font-semibold text-foreground block mb-1">6-Digit Verification Code *</label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                       type="text"
                       required
-                      value={formData.institution}
-                      onChange={(e) => updateField('institution', e.target.value)}
-                      placeholder="e.g. MS Computer Science (LUMS / IBA)"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
+                      inputMode="numeric"
+                      maxLength={6}
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="Enter 6-digit code"
+                      className="w-full rounded-xl border border-border bg-muted/30 py-3 pl-10 pr-3 text-sm font-mono tracking-[0.25em] text-foreground focus:border-brand-500 focus:outline-none"
                     />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Profession / Occupation *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.profession}
-                      onChange={(e) => updateField('profession', e.target.value)}
-                      placeholder="e.g. Senior Software Architect / Consultant Physician"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Company / Organization</label>
-                    <input
-                      type="text"
-                      value={formData.company}
-                      onChange={(e) => updateField('company', e.target.value)}
-                      placeholder="e.g. Tech Solutions / Private Hospital"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Monthly Income Bracket (PKR)</label>
-                    <select
-                      value={formData.monthlyIncome}
-                      onChange={(e) => updateField('monthlyIncome', e.target.value)}
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    >
-                      <option value="PKR 150,000 - 300,000 / month">PKR 150,000 - 300,000 / month</option>
-                      <option value="PKR 300,000 - 600,000 / month">PKR 300,000 - 600,000 / month</option>
-                      <option value="PKR 600,000 - 1,200,000 / month">PKR 600,000 - 1,200,000 / month</option>
-                      <option value="PKR 1,200,000+ / month">PKR 1,200,000+ / month</option>
-                      <option value="Not Disclosed">Prefer not to disclose</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Employment Sector</label>
-                    <select
-                      value={formData.employmentSector}
-                      onChange={(e) => updateField('employmentSector', e.target.value)}
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    >
-                      <option value="PRIVATE">Private Corporate</option>
-                      <option value="GOVERNMENT">Government / Civil Services</option>
-                      <option value="BUSINESS">Family Business / Entrepreneur</option>
-                      <option value="SELF_EMPLOYED">Independent Practitioner</option>
-                    </select>
                   </div>
                 </div>
-              </div>
+
+                <div className="flex items-center justify-between gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setStep('DETAILS')}
+                    className="inline-flex items-center gap-1 rounded-xl border border-border px-4 py-2.5 text-xs font-semibold hover:bg-muted"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" /> Change Details
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-2xl bg-brand-600 py-3 text-xs font-bold text-white shadow-lg hover:bg-brand-700 disabled:opacity-50"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    {isSubmitting ? 'Verifying...' : 'Verify & Complete Sign-Up'}
+                  </button>
+                </div>
+
+                <div className="text-center">
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={(e) => void handleSendCode(e)}
+                    className="text-[11px] font-semibold text-brand-600 hover:underline"
+                  >
+                    Didn&apos;t receive the code? Resend Verification Code
+                  </button>
+                </div>
+              </form>
             )}
 
-            {/* STEP 4: Family & Lifestyle (Section 8) */}
-            {currentStep === 4 && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="border-b border-border pb-4">
-                  <h3 className="text-xl font-bold font-serif text-foreground">Step 4: Family Background & Values</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Culturally grounded family background, parental occupations, and living arrangements.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Father's Occupation *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.fatherOccupation}
-                      onChange={(e) => updateField('fatherOccupation', e.target.value)}
-                      placeholder="e.g. Retired Civil Servant / Businessman"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Mother's Details</label>
-                    <input
-                      type="text"
-                      value={formData.motherOccupation}
-                      onChange={(e) => updateField('motherOccupation', e.target.value)}
-                      placeholder="e.g. Homemaker / Educator"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Brothers & Sisters Count</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="number"
-                        min={0}
-                        value={formData.brothersCount}
-                        onChange={(e) => updateField('brothersCount', e.target.value)}
-                        placeholder="Brothers"
-                        className="rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                      />
-                      <input
-                        type="number"
-                        min={0}
-                        value={formData.sistersCount}
-                        onChange={(e) => updateField('sistersCount', e.target.value)}
-                        placeholder="Sisters"
-                        className="rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Family Type & Living Status</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <select
-                        value={formData.familyType}
-                        onChange={(e) => updateField('familyType', e.target.value)}
-                        className="rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                      >
-                        <option value="NUCLEAR">Nuclear Family</option>
-                        <option value="JOINT">Joint Family</option>
-                        <option value="EXTENDED">Extended Family</option>
-                      </select>
-                      <select
-                        value={formData.livingStatus}
-                        onChange={(e) => updateField('livingStatus', e.target.value)}
-                        className="rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                      >
-                        <option value="Living in Own House">Own Residence</option>
-                        <option value="Living with Parents">With Parents</option>
-                        <option value="Rented House">Rented</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="text-xs font-semibold text-foreground block mb-1">About Family Background</label>
-                    <textarea
-                      rows={2}
-                      value={formData.aboutFamily}
-                      onChange={(e) => updateField('aboutFamily', e.target.value)}
-                      placeholder="Noble origins, values, ancestral roots..."
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 5: Looking For / Partner Criteria (Section 8) */}
-            {currentStep === 5 && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="border-b border-border pb-4">
-                  <h3 className="text-xl font-bold font-serif text-foreground">Step 5: Looking For (Partner Preferences)</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Define preferences used by Senior Family Consultants and compatibility algorithms to suggest matching candidates.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Preferred Age Range</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="number"
-                        value={formData.prefAgeMin}
-                        onChange={(e) => updateField('prefAgeMin', e.target.value)}
-                        placeholder="Min Age"
-                        className="rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                      />
-                      <input
-                        type="number"
-                        value={formData.prefAgeMax}
-                        onChange={(e) => updateField('prefAgeMax', e.target.value)}
-                        placeholder="Max Age"
-                        className="rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Preferred Caste / Zaat</label>
-                    <input
-                      type="text"
-                      value={formData.prefCaste}
-                      onChange={(e) => updateField('prefCaste', e.target.value)}
-                      placeholder="e.g. Syed, Rajput, or Caste No Bar"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Preferred Education</label>
-                    <input
-                      type="text"
-                      value={formData.prefEducation}
-                      onChange={(e) => updateField('prefEducation', e.target.value)}
-                      placeholder="e.g. Masters, Doctor, Engineer"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold text-foreground block mb-1">Preferred Cities / Countries</label>
-                    <input
-                      type="text"
-                      value={formData.prefLocations}
-                      onChange={(e) => updateField('prefLocations', e.target.value)}
-                      placeholder="e.g. Lahore, Islamabad, Karachi, UK, UAE"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="text-xs font-semibold text-foreground block mb-1">Specific Expectations & Notes</label>
-                    <textarea
-                      rows={2}
-                      value={formData.prefNotes}
-                      onChange={(e) => updateField('prefNotes', e.target.value)}
-                      placeholder="Religious commitment, family expectations, values..."
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none resize-none"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 pt-2 border-t border-border">
-                    <label className="text-xs font-semibold text-foreground block mb-1">Profile Headline</label>
-                    <input
-                      type="text"
-                      value={formData.bioHeadline}
-                      onChange={(e) => updateField('bioHeadline', e.target.value)}
-                      placeholder="e.g. Practicing physician seeking a sincere, family-oriented partner"
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="text-xs font-semibold text-foreground block mb-1">About Yourself</label>
-                    <textarea
-                      rows={3}
-                      value={formData.aboutMe}
-                      onChange={(e) => updateField('aboutMe', e.target.value)}
-                      placeholder="Briefly describe your personality, values, and life outlook..."
-                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-
-            {/* STEP 7: Consent & Final Confirmation (Section 12, 31) */}
-            {currentStep === 7 && (
-              <div className="space-y-6 animate-in fade-in duration-300">
-                <div className="border-b border-border pb-4">
-                  <h3 className="text-xl font-bold font-serif text-foreground">Step 7: Final Review & Submission</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Confirm your registration. Your profile will be queued for Admin Approval before appearing publicly.
-                  </p>
-                </div>
-
-                {/* Summary Card */}
-                <div className="rounded-2xl bg-muted/30 p-5 border border-border space-y-3 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Applicant:</span>
-                    <strong className="text-foreground">{formData.fullName} ({calculatedAge ?? '--'} Yrs, {formData.caste})</strong>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Selected Marriage Bureau:</span>
-                    <strong className="text-brand-700 dark:text-brand-300">
-                      {selectedBureau ? `${selectedBureau.name} (${selectedBureau.city})` : 'Not selected'}
-                    </strong>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">WhatsApp Verified:</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-amber-600">
-                      <MessageCircle className="h-3.5 w-3.5" /> Pending provider setup ({formData.whatsappNumber || formData.phone})
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Account Plan:</span>
-                    <strong className="text-brand-600">Free registration — upgrade securely after sign-in</strong>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Initial Profile Status:</span>
-                    <span className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 px-2.5 py-0.5 text-[10px] font-bold">
-                      Pending Admin Approval
-                    </span>
-                  </div>
-                </div>
-
-                {/* Consent Checkboxes */}
-                <div className="space-y-3 pt-2">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.agreeTerms}
-                      onChange={(e) => updateField('agreeTerms', e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-border text-brand-600 focus:ring-brand-500"
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      I agree to the <strong>Terms of Service</strong>, <strong>Matrimonial Privacy Policy</strong>, and <strong>Community Guidelines</strong>. I understand contact details are unlocked only through mutual connection requests or authorized credit deductions.
-                    </span>
-                  </label>
-
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.agreeTruthfulness}
-                      onChange={(e) => updateField('agreeTruthfulness', e.target.checked)}
-                      className="mt-0.5 h-4 w-4 rounded border-border text-brand-600 focus:ring-brand-500"
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      I solemnly certify that all education, marital status, and family details provided are accurate and authentic under penalty of permanent ban.
-                    </span>
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between border-t border-border pt-6">
-              {currentStep > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setCurrentStep((prev) => prev === 7 ? 5 : prev === 3 ? 1 : prev - 1)}
-                  className="flex items-center gap-1.5 rounded-xl border border-border px-5 py-2.5 text-xs font-bold text-foreground hover:bg-muted transition"
-                >
-                  <ArrowLeft className="h-4 w-4" /> Previous Step
-                </button>
-              ) : (
-                <Link
-                  href="/login"
-                  className="text-xs text-muted-foreground hover:text-brand-600 transition font-medium"
-                >
-                  Already registered? Sign In
-                </Link>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex items-center gap-2 rounded-xl bg-brand-600 px-7 py-3 text-xs font-bold text-white shadow-lg shadow-brand-600/30 hover:bg-brand-700 transition disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  'Submitting Registration...'
-                ) : currentStep === 7 ? (
-                  <>
-                    <ShieldCheck className="h-4 w-4" /> Submit Profile for Approval
-                  </>
-                ) : (
-                  <>
-                    Continue <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+            <p className="border-t border-border pt-4 text-center text-xs text-muted-foreground">
+              Already have an account?{' '}
+              <Link href="/login" className="font-bold text-brand-600 hover:underline">
+                Sign In
+              </Link>
+            </p>
+          </div>
         </div>
       </main>
 

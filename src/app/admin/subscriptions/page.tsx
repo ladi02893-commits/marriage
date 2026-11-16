@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { SubscriptionPlan } from '@/lib/types';
+import { BureauPlanSlug, SubscriptionPlan } from '@/lib/types';
 import {
   convertPKRToCountryCurrency,
   getCurrencyForCountry,
@@ -23,7 +23,9 @@ import {
 } from '@/lib/currency';
 
 export default function AdminSubscriptionsPage() {
-  const { plans, updatePlan, addPlan } = useAuth();
+  const { plans, bureauPlans, updatePlan, addPlan, updateBureauPlanPricing } = useAuth();
+  const [bureauPriceDrafts, setBureauPriceDrafts] = useState<Record<string, number>>({});
+  const [savingBureauPlan, setSavingBureauPlan] = useState<string | null>(null);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -531,6 +533,69 @@ export default function AdminSubscriptionsPage() {
             </div>
           );
         })}
+      </div>
+
+      {/* Marriage Bureau Subscription Packages (1-Month / 3-Month / 1-Year) */}
+      <div className="rounded-3xl border border-amber-500/30 bg-zinc-900 p-6 space-y-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+          <div>
+            <h2 className="text-lg font-bold font-serif text-white flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-amber-400" /> Marriage Bureau Subscription Packages
+            </h2>
+            <p className="text-xs text-zinc-400">
+              Set the 1-Month (default PKR 3,000), 3-Month, and 1-Year subscription recharge prices paid by Marriage Bureaus.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {bureauPlans.map((bp) => {
+            const draftPrice = bureauPriceDrafts[bp.slug] ?? bp.pricePKR;
+            return (
+              <div key={bp.id} className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-[10px] font-bold text-amber-400">{bp.slug}</span>
+                  <span className="text-[11px] text-zinc-400">{bp.durationDays} Days</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">{bp.name}</h3>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">{bp.description}</p>
+                </div>
+                <div className="pt-1">
+                  <label className="block text-[10px] font-bold uppercase text-zinc-400 mb-1">
+                    Subscription Price (PKR)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      value={draftPrice}
+                      onChange={(e) =>
+                        setBureauPriceDrafts((prev) => ({
+                          ...prev,
+                          [bp.slug]: Number(e.target.value),
+                        }))
+                      }
+                      className="w-full rounded-xl border border-zinc-700 bg-zinc-900 p-2 text-xs font-mono text-white focus:border-amber-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      disabled={savingBureauPlan === bp.slug}
+                      onClick={async () => {
+                        setSavingBureauPlan(bp.slug);
+                        await updateBureauPlanPricing(bp.slug as BureauPlanSlug, { pricePKR: draftPrice });
+                        setSavingBureauPlan(null);
+                      }}
+                      className="shrink-0 inline-flex items-center gap-1 rounded-xl bg-amber-500 px-3 py-2 text-xs font-bold text-black hover:bg-amber-400 disabled:opacity-50"
+                    >
+                      <Save className="h-3.5 w-3.5" /> Save
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Multi-Currency Matrix */}

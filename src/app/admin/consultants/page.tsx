@@ -6,6 +6,7 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  CreditCard,
   Eye,
   MapPin,
   Phone,
@@ -19,10 +20,17 @@ import {
 } from 'lucide-react';
 import { CountryCitySelect } from '@/components/ui/country-city-select';
 import { useAuth } from '@/lib/auth-context';
-import { MarriageBureau } from '@/lib/types';
+import { BureauPlanSlug, MarriageBureau } from '@/lib/types';
 
 export default function AdminMarriageBureausPage() {
-  const { bureaus, profiles, updateBureauStatus, adminCreateBureau } = useAuth();
+  const {
+    bureaus,
+    bureauPlans,
+    profiles,
+    updateBureauStatus,
+    adminCreateBureau,
+    activateBureauSubscription,
+  } = useAuth();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -137,13 +145,21 @@ export default function AdminMarriageBureausPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-zinc-950 hover:bg-amber-400 transition shadow-sm"
-        >
-          <Plus className="h-4 w-4" /> Add Approved Bureau
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/subscriptions"
+            className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2.5 text-xs font-bold text-amber-400 hover:bg-zinc-800 transition"
+          >
+            <CreditCard className="h-4 w-4" /> Edit Bureau Package Prices ({bureauPlans.map((p) => `${p.durationMonths}M: ${p.pricePKR.toLocaleString()}`).join(' • ')} PKR)
+          </Link>
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-zinc-950 hover:bg-amber-400 transition shadow-sm"
+          >
+            <Plus className="h-4 w-4" /> Add Approved Bureau
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -270,6 +286,49 @@ export default function AdminMarriageBureausPage() {
                         Admin Note: {bureau.reviewerNotes}
                       </div>
                     )}
+
+                    {/* Bureau Subscription & Pending Recharge Bar */}
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-3 space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                        <span className="font-semibold text-zinc-300 flex items-center gap-1">
+                          <CreditCard className="h-3.5 w-3.5 text-amber-400" />
+                          Subscription:
+                          <strong className={bureau.subscriptionStatus === 'ACTIVE' ? 'text-emerald-400' : 'text-amber-300'}>
+                            {bureau.subscriptionStatus === 'ACTIVE' && bureau.subscriptionExpiresAt
+                              ? `ACTIVE (${bureau.subscriptionPlanSlug?.replace('BUREAU_', '')} • until ${new Date(bureau.subscriptionExpiresAt).toLocaleDateString()})`
+                              : bureau.subscriptionStatus || 'UNSUBSCRIBED'}
+                          </strong>
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {(['BUREAU_1M', 'BUREAU_3M', 'BUREAU_1Y'] as BureauPlanSlug[]).map((slug) => (
+                            <button
+                              key={slug}
+                              type="button"
+                              onClick={() => void activateBureauSubscription(bureau.id, slug)}
+                              className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-[10px] font-bold text-zinc-200 hover:border-amber-500 hover:text-amber-400"
+                              title="Activate or extend bureau subscription"
+                            >
+                              +{slug.replace('BUREAU_', '')}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {bureau.pendingRechargeRequest && (
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-[11px]">
+                          <div className="text-amber-200">
+                            Pending Recharge: <strong>{bureau.pendingRechargeRequest.planName}</strong> (PKR {bureau.pendingRechargeRequest.amountPKR.toLocaleString()}) • Ref: <span className="font-mono">{bureau.pendingRechargeRequest.transactionId}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void activateBureauSubscription(bureau.id, bureau.pendingRechargeRequest!.planSlug)}
+                            className="rounded-lg bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-emerald-500"
+                          >
+                            Approve Recharge
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 

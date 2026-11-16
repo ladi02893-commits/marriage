@@ -1,13 +1,16 @@
 import { insforgeAdmin } from '@/lib/insforge/server';
-import { PUBLIC_BUREAUS } from '@/lib/public-config';
-import { MarriageBureau } from '@/lib/types';
+import { PUBLIC_BUREAU_PLANS, PUBLIC_BUREAUS } from '@/lib/public-config';
+import { BureauSubscriptionPlan, MarriageBureau } from '@/lib/types';
 
 const BUREAUS_CMS_KEY = 'marriage_bureaus_registry';
 const USER_BUREAU_MAP_KEY = 'marriage_bureaus_user_map';
+const BUREAU_PLANS_CMS_KEY = 'marriage_bureaus_subscription_plans';
 
 export type UserBureauLink = {
   bureauId: string;
   createdByBureau?: boolean;
+  customBureauName?: string;
+  username?: string;
 };
 
 function mergeBureaus(saved: MarriageBureau[]): MarriageBureau[] {
@@ -140,11 +143,30 @@ export async function getUserBureauMap(): Promise<Record<string, UserBureauLink>
   }
 }
 
-export async function linkUserToBureau(userId: string, bureauId: string, createdByBureau = false): Promise<void> {
+export async function linkUserToBureau(
+  userId: string,
+  bureauId: string,
+  createdByBureau = false,
+  extra?: { customBureauName?: string; username?: string },
+): Promise<void> {
   const currentMap = await getUserBureauMap();
+  const previous = currentMap[userId];
   const nextMap: Record<string, UserBureauLink> = {
     ...currentMap,
-    [userId]: { bureauId, createdByBureau },
+    [userId]: {
+      bureauId,
+      createdByBureau,
+      ...(extra?.customBureauName !== undefined
+        ? { customBureauName: extra.customBureauName || undefined }
+        : previous?.customBureauName
+        ? { customBureauName: previous.customBureauName }
+        : {}),
+      ...(extra?.username !== undefined
+        ? { username: extra.username || undefined }
+        : previous?.username
+        ? { username: previous.username }
+        : {}),
+    },
   };
   const { error: cmsError } = await insforgeAdmin.database
     .from('cms_contents')
@@ -152,19 +174,57 @@ export async function linkUserToBureau(userId: string, bureauId: string, created
   if (cmsError) throw cmsError;
 
   // Keep existing users.assigned_consultant_id column synchronized
-  const { error: userUpdateError } = await insforgeAdmin.database
-    .from('users')
-    .update({ assigned_consultant_id: bureauId })
-    .eq('id', userId);
-  if (userUpdateError) throw userUpdateError;
+  if (bureauId) {
+    const { error: userUpdateError } = await insforgeAdmin.database
+      .from('users')
+      .update({ assigned_consultant_id: bureauId })
+      .eq('id', userId);
+    if (userUpdateError) throw userUpdateError;
+  }
 
   // Best-effort sync to dedicated columns if migration has been run
   try {
     await Promise.allSettled([
-      insforgeAdmin.database.from('users').update({ bureau_id: bureauId, created_by_bureau: createdByBureau }).eq('id', userId),
-      insforgeAdmin.database.from('matrimonial_profiles').update({ bureau_id: bureauId, created_by_bureau: createdByBureau }).eq('user_id', userId),
+      insforgeAdmin.database.from('users').update({ bureau_id: bureauId || null, created_by_bureau: createdByBureau }).eq('id', userId),
+      insforgeAdmin.database.from('matrimonial_profiles').update({ bureau_id: bureauId || null, created_by_bureau: createdByBureau }).eq('user_id', userId),
     ]);
   } catch {
     // Ignore when columns are not yet migrated
   }
+}
+
+export async function getBureauPlans(): Promise<BureauSubscriptionPlan[]> {
+  try {
+    const { data } = await insforgeAdmin.database
+      .from('cms_contents')
+      .select('data')
+      .eq('key', BUREAU_PLANS_CMS_KEY)
+      .maybeSingle();
+    const raw = data?.data as { items?: BureauSubscriptionPlan[] } | BureauSubscriptionPlan[] | null;
+    const saved = Array.isArray(raw) ? raw : Array.isArray(raw?.items) ? raw.items : [];
+    const bySlug = new Map<string, BureauSubscriptionPlan>();
+    for (const seed of PUBLIC_BUREAU_PLANS) {
+      bySlug.set(seed.slug, seed);
+    }
+    for (const plan of saved) {
+      if (plan && plan.slug && bySlug.has(plan.slug)) {
+        const base = bySlug.get(plan.slug)!;
+        bySlug.set(plan.slug, {
+          ...base,
+          ...plan,
+          pricePKR: Math.max(0, Number(plan.pricePKR ?? base.pricePKR) || base.pricePKR),
+        });
+      }
+    }
+    return Array.from(bySlug.values());
+  } catch {
+    return [...PUBLIC_BUREAU_PLANS];
+  }
+}
+
+export async function saveBureauPlans(plans: BureauSubscriptionPlan[]): Promise<void> {
+  const { error } = await insforgeAdmin.database
+    .from('cms_contents')
+    .upsert([{ key: BUREAU_PLANS_CMS_KEY, data: { items: plans }, updated_at: new Date().toISOString() }], { onConflict: 'key' });
+  if (error) throw error;
 }

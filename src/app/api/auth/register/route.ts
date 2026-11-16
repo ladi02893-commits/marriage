@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { insforgeAdmin } from '@/lib/insforge/server';
 import {
@@ -6,53 +6,45 @@ import {
   AUTH_COOKIE_NAME,
   hashPassword,
   signAuthToken,
+  signEmailVerificationToken,
+  verifyEmailVerificationToken,
 } from '@/lib/auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { toSafeUser } from '@/lib/user-dto';
 import { toProfileDto } from '@/lib/profile-dto';
 import { rejectCrossSiteMutation } from '@/lib/api-auth';
-import { getBureausRegistry, linkUserToBureau } from '@/lib/bureau-store';
+import { linkUserToBureau } from '@/lib/bureau-store';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const USERNAME_PATTERN = /^[a-zA-Z0-9_.-]{3,30}$/;
 const BLOCKED_PASSWORDS = new Set(['password', 'password123', 'admin123', '12345678', 'qwerty123']);
 
 function text(value: unknown, maxLength: number): string {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
-function stringArray(value: unknown, fallback: string[] = []): string[] {
-  if (!Array.isArray(value)) return fallback;
-  return value.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean).slice(0, 20);
+function escapeHtml(value: string): string {
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
 export async function POST(request: NextRequest) {
   const crossSite = rejectCrossSiteMutation(request);
   if (crossSite) return crossSite;
+
   let createdUserId: string | null = null;
   try {
     const body = await request.json();
+    const action = typeof body.action === 'string' ? body.action : 'COMPLETE_REGISTRATION';
     const email = text(body.email, 254).toLowerCase();
+    const username = text(body.username, 30);
+    const firstName = text(body.firstName, 50);
+    const lastName = text(body.lastName, 50);
     const password = typeof body.password === 'string' ? body.password : '';
-    const fullName = text(body.fullName, 100);
-    const phone = text(body.phone ?? body.whatsappNumber, 30);
-    const whatsappNumber = text(body.whatsappNumber ?? body.phone, 30);
-    const dateOfBirth = text(body.dateOfBirth, 20);
-    const country = text(body.country, 80);
-    const city = text(body.city, 80);
-    const bureauId = text(body.bureauId, 100);
 
-    const [settingsRes, cmsRes, bureaus] = await Promise.all([
+    const [settingsRes, cmsRes] = await Promise.all([
       insforgeAdmin.database.from('system_settings').select('*').eq('id', 'default-settings').maybeSingle(),
       insforgeAdmin.database.from('cms_contents').select('data').eq('key', 'system_settings_extended').maybeSingle(),
-      getBureausRegistry(),
     ]);
-    const selectedBureau = bureaus.find((b) => b.id === bureauId && b.approvalStatus === 'APPROVED');
-    if (!selectedBureau) {
-      return NextResponse.json(
-        { success: false, error: 'Please select an approved Marriage Bureau for your city.' },
-        { status: 400 },
-      );
-    }
     const dbSettings = settingsRes.data as Record<string, any> | null;
     const extended = (cmsRes.data?.data as Record<string, any> | null) ?? {};
     if (extended.allowNewRegistrations === false) {
@@ -62,20 +54,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const minAge = Math.max(18, Number(dbSettings?.min_age ?? 18));
-    const freeConnections = Math.max(
-      0,
-      Number(extended.freeTierConnectionsLimit ?? dbSettings?.free_tier_monthly_interest_limit ?? 3),
-    );
-    const prefix =
-      typeof extended.profileIdPrefix === 'string' && /^[A-Za-z0-9-]{1,8}$/.test(extended.profileIdPrefix.trim())
-        ? extended.profileIdPrefix.trim()
-        : 'TP-';
-    const approvalStatus = extended.requireAdminProfileApproval === false ? 'APPROVED' : 'PENDING_APPROVAL';
-
-    if (!EMAIL_PATTERN.test(email) || fullName.length < 2 || !dateOfBirth || !country || !city || !['MALE', 'FEMALE'].includes(body.gender)) {
+    if (!USERNAME_PATTERN.test(username)) {
       return NextResponse.json(
-        { success: false, error: 'Valid identity, location, email address, and date of birth are required.' },
+        { success: false, error: 'Username must be 3–30 characters using letters, numbers, dots, hyphens, or underscores.' },
+        { status: 400 },
+      );
+    }
+    if (firstName.length < 1 || lastName.length < 1 || !EMAIL_PATTERN.test(email)) {
+      return NextResponse.json(
+        { success: false, error: 'First name, last name, and a valid email address are required.' },
         { status: 400 },
       );
     }
@@ -86,20 +73,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
-      return NextResponse.json({ success: false, error: 'Use a valid date of birth.' }, { status: 400 });
-    }
-    const birthDate = new Date(`${dateOfBirth}T00:00:00.000Z`);
-    if (Number.isNaN(birthDate.getTime()) || birthDate.toISOString().slice(0, 10) !== dateOfBirth) {
-      return NextResponse.json({ success: false, error: 'Use a valid date of birth.' }, { status: 400 });
-    }
-    const age = Math.floor((Date.now() - birthDate.getTime()) / 31_557_600_000);
-    if (!Number.isFinite(age) || age < minAge || age > 100) {
-      return NextResponse.json({ success: false, error: `You must be at least ${minAge} years old.` }, { status: 400 });
-    }
-
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const limit = checkRateLimit(`register:${ip}`, 5, 60 * 60 * 1000);
+    const limit = checkRateLimit(`register:${ip}`, 15, 60 * 60 * 1000);
     if (!limit.allowed) {
       return NextResponse.json(
         { success: false, error: 'Too many registration attempts. Please try again later.' },
@@ -117,24 +92,99 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'An account with this email already exists.' }, { status: 409 });
     }
 
+    // -------------------------------------------------------------------------
+    // STEP 1: Send 6-digit verification code to the user's email
+    // -------------------------------------------------------------------------
+    if (action === 'SEND_VERIFICATION_CODE') {
+      const code = String(randomInt(100000, 1000000));
+      const verificationToken = await signEmailVerificationToken({
+        email,
+        username,
+        firstName,
+        lastName,
+        code,
+      });
+
+      let emailSent = false;
+      try {
+        const emailResult = await insforgeAdmin.emails.send({
+          to: email,
+          subject: `${code} — Your Email Verification Code`,
+          html: `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;border:1px solid #e5e7eb;border-radius:16px">
+            <h2 style="margin:0 0 12px;color:#7c2d12">Email Verification</h2>
+            <p style="font-size:14px;color:#374151">Assalam-o-Alaikum ${escapeHtml(firstName)} ${escapeHtml(lastName)} (@${escapeHtml(username)}),</p>
+            <p style="font-size:14px;color:#374151">Use the 6-digit code below to verify your email address and complete registration:</p>
+            <div style="margin:20px 0;padding:16px;background:#fef3c7;border-radius:12px;text-align:center;font-size:28px;font-weight:bold;letter-spacing:6px;color:#78350f">${code}</div>
+            <p style="font-size:12px;color:#6b7280">This code expires in 15 minutes.</p>
+          </div>`,
+        });
+        emailSent = !emailResult.error;
+      } catch {
+        emailSent = false;
+      }
+
+      return NextResponse.json({
+        success: true,
+        verificationRequired: true,
+        verificationToken,
+        emailSent,
+        devCodePreview: emailSent ? undefined : code,
+        message: emailSent
+          ? `Verification code sent to ${email}.`
+          : `Verification code generated for ${email}.`,
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // STEP 2: Verify the 6-digit code and create the user + starter profile
+    // -------------------------------------------------------------------------
+    const verificationCode = text(body.verificationCode, 12);
+    const verificationToken = typeof body.verificationToken === 'string' ? body.verificationToken.trim() : '';
+    const verifiedPayload = await verifyEmailVerificationToken(verificationToken);
+
+    if (
+      !verifiedPayload ||
+      verifiedPayload.email !== email ||
+      verifiedPayload.code !== verificationCode
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired email verification code. Please check the 6-digit code and try again.' },
+        { status: 400 },
+      );
+    }
+
+    const freeConnections = Math.max(
+      0,
+      Number(extended.freeTierConnectionsLimit ?? dbSettings?.free_tier_monthly_interest_limit ?? 3),
+    );
+    const prefix =
+      typeof extended.profileIdPrefix === 'string' && /^[A-Za-z0-9-]{1,8}$/.test(extended.profileIdPrefix.trim())
+        ? extended.profileIdPrefix.trim()
+        : 'TP-';
+
+    const resolvedFirstName = verifiedPayload.firstName || firstName;
+    const resolvedLastName = verifiedPayload.lastName || lastName;
+    const resolvedUsername = verifiedPayload.username || username;
+    const fullName = `${resolvedFirstName} ${resolvedLastName}`.trim();
+    const displayName = resolvedUsername || resolvedFirstName;
     const profileIdCode = `${prefix}${randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase()}`;
+
     const { data: newUser, error: userError } = await insforgeAdmin.database
       .from('users')
       .insert([{
         email,
         password_hash: await hashPassword(password),
         name: fullName,
-        phone: phone || null,
-        whatsapp_number: whatsappNumber || null,
+        phone: null,
+        whatsapp_number: null,
         role: 'USER',
         subscription_tier: 'FREE',
         is_verified: false,
         is_whatsapp_verified: false,
-        is_email_verified: false,
+        is_email_verified: true,
         avatar_url: null,
         account_status: 'ACTIVE',
         profile_id_code: profileIdCode,
-        assigned_consultant_id: selectedBureau.id,
         total_connections: freeConnections,
         used_connections: 0,
         remaining_connections: freeConnections,
@@ -144,79 +194,60 @@ export async function POST(request: NextRequest) {
     if (userError || !newUser) throw userError ?? new Error('User could not be created.');
     createdUserId = newUser.id;
 
-    const gender = body.gender;
     const { data: profile, error: profileError } = await insforgeAdmin.database
       .from('matrimonial_profiles')
       .insert([{
         user_id: newUser.id,
-        profile_created_for: text(body.profileCreatedFor, 30) || 'SELF',
+        profile_created_for: 'SELF',
         full_name: fullName,
-        display_name: text(body.displayName, 60) || fullName.split(/\s+/)[0],
-        gender,
-        date_of_birth: birthDate.toISOString(),
-        marital_status: text(body.maritalStatus, 40) || 'NEVER_MARRIED',
-        religion: text(body.religion, 50) || 'ISLAM',
-        sect_or_community: text(body.sectOrCommunity, 80) || null,
-        caste_or_sub_clan: text(body.casteOrSubClan ?? body.caste ?? body.subClan, 100) || null,
-        mother_tongue: text(body.motherTongue, 50) || 'Urdu',
-        country,
-        state_province: text(body.stateProvince ?? body.province, 80) || null,
-        city,
-        bio_headline: text(body.bioHeadline, 180),
-        about_me: text(body.aboutMe, 2000),
-        completion_percentage: 60,
-        approval_status: approvalStatus,
+        display_name: displayName,
+        gender: body.gender === 'MALE' ? 'MALE' : 'FEMALE',
+        date_of_birth: '2000-01-01T00:00:00.000Z',
+        marital_status: 'NEVER_MARRIED',
+        religion: 'ISLAM',
+        mother_tongue: 'Urdu',
+        country: text(body.country, 80) || 'Pakistan',
+        city: text(body.city, 80) || 'Not specified',
+        bio_headline: '',
+        about_me: '',
+        completion_percentage: 20,
+        approval_status: 'PENDING_APPROVAL',
       }])
       .select()
       .single();
     if (profileError || !profile) throw profileError ?? new Error('Profile could not be created.');
 
-    const family = body.familyInfo && typeof body.familyInfo === 'object' ? body.familyInfo : {};
-    const prefs = body.partnerPreferences && typeof body.partnerPreferences === 'object' ? body.partnerPreferences : {};
-    const minPrefAge = Math.max(18, Math.min(99, Number(prefs.ageRange?.min ?? prefs.minAge ?? 20) || 20));
-    const maxPrefAge = Math.max(minPrefAge, Math.min(100, Number(prefs.ageRange?.max ?? prefs.maxAge ?? 40) || 40));
-
     const childWrites = [
       insforgeAdmin.database.from('education_careers').insert([{
         profile_id: profile.id,
-        highest_degree: text(body.highestDegree, 120) || 'Not specified',
-        institution: text(body.institution, 160) || null,
-        field_of_study: text(body.fieldOfStudy, 120) || null,
-        profession: text(body.profession, 120) || 'Not specified',
-        job_title: text(body.jobTitle, 120) || null,
-        company_name: text(body.company ?? body.companyName, 160) || null,
-        annual_income: text(body.annualIncome, 80) || null,
+        highest_degree: 'Not specified',
+        profession: 'Not specified',
       }]),
       insforgeAdmin.database.from('lifestyles').insert([{
         profile_id: profile.id,
-        height: text(body.height, 30) || 'Not specified',
-        diet: ['VEGETARIAN', 'NON_VEGETARIAN', 'HALAL_ONLY', 'EGGETARIAN', 'VEGAN'].includes(body.diet) ? body.diet : 'HALAL_ONLY',
-        smoking: ['NO', 'OCCASIONALLY', 'REGULARLY'].includes(body.smoking) ? body.smoking : 'NO',
-        drinking: ['NO', 'OCCASIONALLY', 'SOCIALLY', 'REGULARLY'].includes(body.drinking) ? body.drinking : 'NO',
-        mother_tongue: text(body.motherTongue, 50) || 'Urdu',
-        languages_spoken: [text(body.motherTongue, 50) || 'Urdu'],
+        height: 'Not specified',
+        diet: 'HALAL_ONLY',
+        smoking: 'NO',
+        drinking: 'NO',
+        mother_tongue: 'Urdu',
+        languages_spoken: ['Urdu'],
       }]),
       insforgeAdmin.database.from('family_infos').insert([{
         profile_id: profile.id,
-        family_type: text(family.familyType, 40) || 'NUCLEAR',
-        family_values: text(family.familyValues, 40) || 'MODERATE',
-        father_occupation: text(family.fatherOccupation, 160) || null,
-        mother_occupation: text(family.motherOccupation, 160) || null,
-        brothers_count: Math.max(0, Number(family.brothersCount) || 0),
-        sisters_count: Math.max(0, Number(family.sistersCount) || 0),
-        family_location: text(family.familyLocation, 160) || ([city, country].filter(Boolean).join(', ') || null),
-        about_family: text(family.aboutFamily, 1000) || null,
+        family_type: 'NUCLEAR',
+        family_values: 'MODERATE',
+        brothers_count: 0,
+        sisters_count: 0,
       }]),
       insforgeAdmin.database.from('partner_preferences').insert([{
         profile_id: profile.id,
-        min_age: minPrefAge,
-        max_age: maxPrefAge,
-        religions: stringArray(prefs.religions, [text(body.religion, 50) || 'ISLAM']),
-        marital_statuses: stringArray(prefs.maritalStatuses ?? prefs.maritalStatus, [text(body.maritalStatus, 40) || 'NEVER_MARRIED']),
-        education_levels: stringArray(prefs.educationLevels),
-        professions: stringArray(prefs.professions),
-        countries: stringArray(prefs.preferredLocations),
-        expectations_notes: text(prefs.expectationsNotes, 1000) || null,
+        min_age: 20,
+        max_age: 38,
+        religions: ['ISLAM'],
+        marital_statuses: ['NEVER_MARRIED'],
+        education_levels: [],
+        professions: [],
+        countries: ['Pakistan'],
       }]),
       insforgeAdmin.database.from('privacy_settings').insert([{
         profile_id: profile.id,
@@ -225,12 +256,19 @@ export async function POST(request: NextRequest) {
         show_age: true,
         show_income: false,
       }]),
+      insforgeAdmin.database.from('notifications').insert([{
+        user_id: newUser.id,
+        title: 'Complete your profile & select your Marriage Bureau',
+        description: 'Fill out all required and optional profile details, choose your Marriage Bureau name, and submit your profile for Admin approval.',
+        type: 'SYSTEM',
+        link_url: '/dashboard/profile?onboarding=1',
+      }]),
     ];
     const childResults = await Promise.all(childWrites);
     const childError = childResults.find((result) => result.error)?.error;
     if (childError) throw childError;
 
-    await linkUserToBureau(newUser.id, selectedBureau.id, false);
+    await linkUserToBureau(newUser.id, '', false, { username: resolvedUsername });
 
     const { data: fullProfile, error: fetchProfileError } = await insforgeAdmin.database
       .from('matrimonial_profiles')
@@ -247,15 +285,13 @@ export async function POST(request: NextRequest) {
     });
     const response = NextResponse.json({
       success: true,
-      user: toSafeUser({ ...newUser, profile: { id: profile.id, photos: [] } }),
-      profile: await toProfileDto(fullProfile, true, true, {
-        id: selectedBureau.id,
-        name: selectedBureau.name,
-        bureauCode: selectedBureau.bureauCode,
-        createdByBureau: false,
-      }),
-      redirectUrl: '/dashboard',
-      message: 'Account created. Email and WhatsApp verification are pending.',
+      user: {
+        ...toSafeUser({ ...newUser, profile: { id: profile.id, photos: [] } }),
+        username: resolvedUsername,
+      },
+      profile: await toProfileDto(fullProfile, true, true, { username: resolvedUsername }),
+      redirectUrl: '/dashboard/profile?onboarding=1',
+      message: 'Account verified! Please complete your profile details and select your Marriage Bureau on the dashboard.',
     }, { status: 201 });
     response.cookies.set({
       name: AUTH_COOKIE_NAME,

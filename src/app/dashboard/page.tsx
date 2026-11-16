@@ -28,7 +28,7 @@ export default function DashboardOverviewPage() {
     favorites,
     conversations,
     connectionQuota,
-    consultants,
+    bureaus,
     consultantRecommendations,
   } = useAuth();
 
@@ -37,7 +37,17 @@ export default function DashboardOverviewPage() {
   // Profile ID code (VRM-000001)
   const profileIdCode = currentProfile?.profileIdCode || currentUser?.profileIdCode || 'ID pending';
 
-  const assignedConsultant = consultants.find((consultant) => consultant.id === currentUser?.assignedConsultantId);
+  const resolvedBureauId =
+    currentProfile?.bureauId ||
+    currentUser?.bureauId ||
+    currentUser?.assignedConsultantId;
+  const selectedBureau = bureaus.find((b) => b.id === resolvedBureauId);
+  const resolvedBureauName = selectedBureau?.name || currentProfile?.bureauName || currentUser?.bureauName;
+  const needsProfileCompletion =
+    completion < 75 ||
+    !resolvedBureauName ||
+    !currentProfile?.city ||
+    currentProfile.city === 'Not specified';
 
   // Determine current user's profile and target opposite gender
   const userProfile = React.useMemo(() => {
@@ -149,6 +159,27 @@ export default function DashboardOverviewPage() {
           </div>
         </div>
       </div>
+
+      {/* Post-Signup Profile Completion & Bureau Selection Prompt */}
+      {needsProfileCompletion && (
+        <div className="rounded-3xl border-2 border-amber-400/60 bg-amber-50/70 dark:bg-amber-950/30 p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4" /> Complete Your Matrimonial Profile & Marriage Bureau Selection
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Fill out all required and optional profile details, choose your Marriage Bureau (Daftar) name, and click{' '}
+              <strong className="text-foreground">Save &amp; Send Request to Admin</strong> so an Administrator can approve your profile.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/profile?onboarding=1"
+            className="shrink-0 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-xs font-bold text-white shadow-sm hover:bg-brand-700"
+          >
+            Complete Profile &amp; Select Bureau <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      )}
 
       {/* Connection Quota Engine (Section 3) */}
       <div
@@ -265,27 +296,38 @@ export default function DashboardOverviewPage() {
         </div>
       </div>
 
-      {/* Consultant assignment */}
-      {assignedConsultant ? (
+      {/* Selected Marriage Bureau Card */}
+      {resolvedBureauName ? (
         <div className="rounded-3xl border border-gold-500/30 bg-card p-6 shadow-sm">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              <img src={assignedConsultant.photoUrl || assignedConsultant.avatarUrl || '/avatar-placeholder.svg'} alt={assignedConsultant.name} className="h-16 w-16 rounded-2xl border-2 border-gold-500 object-cover" />
+              <img src="/avatar-placeholder.svg" alt={resolvedBureauName} className="h-16 w-16 rounded-2xl border-2 border-gold-500 object-cover" />
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gold-600">Assigned consultant</span>
-                <h3 className="text-lg font-bold font-serif text-foreground">{assignedConsultant.name}</h3>
-                <p className="text-xs text-muted-foreground">{assignedConsultant.title}</p>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gold-600">My Marriage Bureau (Daftar)</span>
+                <h3 className="text-lg font-bold font-serif text-foreground">{resolvedBureauName}</h3>
+                <p className="text-xs text-muted-foreground">
+                  {selectedBureau
+                    ? `${selectedBureau.city}, ${selectedBureau.country} • ${selectedBureau.bureauCode}`
+                    : 'Registered Marriage Bureau Office'}
+                </p>
               </div>
             </div>
             <Link href="/dashboard/consultant" className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-brand-700">
-              <MessageSquare className="h-3.5 w-3.5" /> View contact details
+              <MessageSquare className="h-3.5 w-3.5" /> View Bureau Contact
             </Link>
           </div>
         </div>
       ) : (
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-          <h3 className="font-bold font-serif text-foreground">No consultant assigned</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Consultant details will appear only after a real administrator assignment.</p>
+        <div className="rounded-3xl border border-dashed border-brand-400/50 bg-card p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-bold font-serif text-foreground">No Marriage Bureau selected yet</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Select your Marriage Bureau name in your profile settings before submitting your profile to Admin.
+            </p>
+          </div>
+          <Link href="/dashboard/profile" className="shrink-0 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-brand-700">
+            Select Marriage Bureau →
+          </Link>
         </div>
       )}
 

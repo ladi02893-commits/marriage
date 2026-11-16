@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ADMIN_ROLES, BUREAU_ROLES, rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
 import { getCurrentUserFromCookies } from '@/lib/auth';
-import { getBureausRegistry, getUserBureauMap } from '@/lib/bureau-store';
+import { getBureausRegistry, getUserBureauMap, linkUserToBureau } from '@/lib/bureau-store';
 import { insforgeAdmin } from '@/lib/insforge/server';
 import { toProfileDto } from '@/lib/profile-dto';
 
@@ -27,7 +27,7 @@ function computeCompletionPercentage(profile: Row): number {
   const checks = [
     Boolean(profile.full_name),
     Boolean(profile.date_of_birth),
-    Boolean(profile.city && profile.country),
+    Boolean(profile.city && profile.city !== 'Not specified' && profile.country),
     Boolean(profile.bio_headline && String(profile.bio_headline).trim().length >= 5),
     Boolean(profile.about_me && String(profile.about_me).trim().length >= 20),
     Boolean(career.highest_degree && career.highest_degree !== 'Not specified'),
@@ -38,7 +38,7 @@ function computeCompletionPercentage(profile: Row): number {
     Array.isArray(profile.photos) && profile.photos.length > 0,
   ];
   const score = Math.round((checks.filter(Boolean).length / checks.length) * 100);
-  return Math.max(25, Math.min(100, score));
+  return Math.max(20, Math.min(100, score));
 }
 
 
@@ -133,6 +133,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: await Promise.all(visibleProfiles.map((profile) => {
         const resolvedBureauId = resolveBureauId(profile);
+        const mapEntry = userBureauMap[profile.user_id];
         const bureauObj = resolvedBureauId ? bureauById.get(resolvedBureauId) : undefined;
         const isClientOfOwnBureau = Boolean(ownBureau && resolvedBureauId === ownBureau.id);
         return toProfileDto(
@@ -141,9 +142,10 @@ export async function GET(request: NextRequest) {
           isAdmin || isClientOfOwnBureau || (Boolean(currentUser) && profile.user_id === currentUser?.id),
           {
             id: resolvedBureauId,
-            name: bureauObj?.name ?? null,
+            name: bureauObj?.name ?? mapEntry?.customBureauName ?? null,
             bureauCode: bureauObj?.bureauCode ?? null,
-            createdByBureau: Boolean(profile.created_by_bureau || userBureauMap[profile.user_id]?.createdByBureau),
+            createdByBureau: Boolean(profile.created_by_bureau || mapEntry?.createdByBureau),
+            username: mapEntry?.username ?? null,
           },
         );
       })),
@@ -223,6 +225,58 @@ export async function PATCH(request: NextRequest) {
       }
       profileData.approval_status = body.approvalStatus;
       approvalChangedTo = body.approvalStatus;
+    } else if (body.submitForApproval === true && existing.user_id === auth.user.id) {
+      profileData.approval_status = 'PENDING_APPROVAL';
+    }
+
+    // Optional contact/name updates on user row
+    const userContactUpdate: Record<string, string> = {};
+    if (typeof body.fullName === 'string' && body.fullName.trim()) {
+      userContactUpdate.name = body.fullName.trim().slice(0, 100);
+    }
+    if (typeof body.phone === 'string' && body.phone.trim()) {
+      userContactUpdate.phone = body.phone.trim().slice(0, 30);
+    }
+    if (typeof body.whatsappNumber === 'string' && body.whatsappNumber.trim()) {
+      userContactUpdate.whatsapp_number = body.whatsappNumber.trim().slice(0, 30);
+    }
+    if (Object.keys(userContactUpdate).length > 0) {
+      const { error: userUpdateError } = await insforgeAdmin.database
+        .from('users')
+        .update(userContactUpdate)
+        .eq('id', existing.user_id);
+      if (userUpdateError) throw userUpdateError;
+    }
+
+    // Marriage Bureau linking or custom bureau name update
+    const nextUsername = typeof body.username === 'string' && body.username.trim()
+      ? body.username.trim().slice(0, 30)
+      : undefined;
+    if (body.bureauId === 'CUSTOM') {
+      const customBureauName = typeof body.customBureauName === 'string' ? body.customBureauName.trim().slice(0, 140) : '';
+      if (customBureauName.length < 2) {
+        return NextResponse.json({ success: false, error: 'Please enter your Marriage Bureau name.' }, { status: 400 });
+      }
+      await linkUserToBureau(existing.user_id, 'custom-bureau', false, {
+        customBureauName,
+        username: nextUsername,
+      });
+    } else if (typeof body.bureauId === 'string' && body.bureauId.trim()) {
+      const bureaus = await getBureausRegistry();
+      const targetBureau = bureaus.find((b) => b.id === body.bureauId.trim() && b.approvalStatus === 'APPROVED');
+      if (!targetBureau) {
+        return NextResponse.json({ success: false, error: 'Selected Marriage Bureau was not found or is not approved.' }, { status: 400 });
+      }
+      await linkUserToBureau(existing.user_id, targetBureau.id, false, {
+        customBureauName: '',
+        username: nextUsername,
+      });
+    } else if (nextUsername) {
+      const userBureauMap = await getUserBureauMap();
+      const currentEntry = userBureauMap[existing.user_id];
+      await linkUserToBureau(existing.user_id, currentEntry?.bureauId ?? '', Boolean(currentEntry?.createdByBureau), {
+        username: nextUsername,
+      });
     }
 
     const relatedWrites = [];
@@ -327,7 +381,15 @@ export async function PATCH(request: NextRequest) {
       refreshed.completion_percentage = newCompletion;
     }
 
-    if (approvalChangedTo && existing.user_id !== auth.user.id) {
+    if (body.submitForApproval === true && existing.user_id === auth.user.id) {
+      await insforgeAdmin.database.from('notifications').insert([{
+        user_id: existing.user_id,
+        title: 'Profile approval request sent to Admin',
+        description: 'Your complete matrimonial profile and Marriage Bureau details have been saved and submitted for Administrator approval.',
+        type: 'SYSTEM',
+        link_url: '/dashboard/profile',
+      }]);
+    } else if (approvalChangedTo && existing.user_id !== auth.user.id) {
       const notes = typeof body.reviewerNotes === 'string' && body.reviewerNotes.trim()
         ? ` Note: ${body.reviewerNotes.trim().slice(0, 300)}`
         : '';
@@ -343,7 +405,24 @@ export async function PATCH(request: NextRequest) {
       }]);
     }
 
-    return NextResponse.json({ success: true, data: await toProfileDto(refreshed, true, true) });
+    const [bureausAfter, userBureauMapAfter] = await Promise.all([
+      getBureausRegistry(),
+      getUserBureauMap(),
+    ]);
+    const refreshedMapEntry = userBureauMapAfter[refreshed.user_id];
+    const refreshedBureauId = refreshed.bureau_id ?? refreshedMapEntry?.bureauId ?? relation(refreshed.user).assigned_consultant_id ?? null;
+    const refreshedBureauObj = refreshedBureauId ? bureausAfter.find((b) => b.id === refreshedBureauId) : undefined;
+
+    return NextResponse.json({
+      success: true,
+      data: await toProfileDto(refreshed, true, true, {
+        id: refreshedBureauId,
+        name: refreshedBureauObj?.name ?? refreshedMapEntry?.customBureauName ?? null,
+        bureauCode: refreshedBureauObj?.bureauCode ?? null,
+        createdByBureau: Boolean(refreshed.created_by_bureau || refreshedMapEntry?.createdByBureau),
+        username: refreshedMapEntry?.username ?? null,
+      }),
+    });
   } catch (error) {
     console.error('Profile update failed:', error);
     return NextResponse.json({ success: false, error: 'Profile could not be updated.' }, { status: 500 });

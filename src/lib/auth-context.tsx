@@ -7,6 +7,8 @@ import {
   AdminAuditLog,
   BlockedUser,
   BureauApprovalStatus,
+  BureauPlanSlug,
+  BureauSubscriptionPlan,
   ChatMessage,
   CMSContent,
   ConnectionTransaction,
@@ -34,7 +36,7 @@ import {
   User,
   VerificationRequest,
 } from './types';
-import { PUBLIC_BUREAUS, PUBLIC_CMS, PUBLIC_EXTRA_PACKS, PUBLIC_PLANS, PUBLIC_SETTINGS } from './public-config';
+import { PUBLIC_BUREAU_PLANS, PUBLIC_BUREAUS, PUBLIC_CMS, PUBLIC_EXTRA_PACKS, PUBLIC_PLANS, PUBLIC_SETTINGS } from './public-config';
 
 type ApiRecord = Record<string, any>;
 
@@ -128,6 +130,7 @@ function useAuthValue() {
   const [receivingAccounts, setReceivingAccounts] = useState<ReceivingAccount[]>([]);
   const [connectionTransactions] = useState<ConnectionTransaction[]>([]);
   const [bureaus, setBureaus] = useState<MarriageBureau[]>(PUBLIC_BUREAUS);
+  const [bureauPlans, setBureauPlans] = useState<BureauSubscriptionPlan[]>(PUBLIC_BUREAU_PLANS);
   const consultants = useMemo<Consultant[]>(
     () =>
       bureaus
@@ -166,9 +169,12 @@ function useAuthValue() {
   const isAdmin = currentUser ? ['SUPER_ADMIN', 'ADMIN'].includes(currentUser.role) : false;
 
   const refreshDatabase = useCallback(async () => {
-    const endpoints: Array<[string, (value: unknown) => void]> = [
+    const endpoints: Array<[string, (value: unknown, raw?: ApiRecord) => void]> = [
       ['/api/profiles', (value) => setProfiles(Array.isArray(value) ? value as MatrimonialProfile[] : [])],
-      ['/api/bureaus', (value) => { if (Array.isArray(value)) setBureaus(value as MarriageBureau[]); }],
+      ['/api/bureaus', (value, raw) => {
+        if (Array.isArray(value)) setBureaus(value as MarriageBureau[]);
+        if (Array.isArray(raw?.bureauPlans)) setBureauPlans(raw.bureauPlans as BureauSubscriptionPlan[]);
+      }],
       ['/api/receiving-accounts', (value) => setReceivingAccounts(Array.isArray(value) ? value as ReceivingAccount[] : [])],
       ['/api/admin/plans', (value) => { if (Array.isArray(value) && value.length > 0) setPlans(value as SubscriptionPlan[]); }],
       ['/api/admin/settings', (value) => { if (value && typeof value === 'object' && !Array.isArray(value)) setSettings(value as SystemSettings); }],
@@ -194,8 +200,8 @@ function useAuthValue() {
     }
 
     const results = await Promise.allSettled(endpoints.map(async ([url, assign]) => {
-      const result = await apiRequest<{ data: unknown }>(url);
-      assign(result.data);
+      const result = await apiRequest<ApiRecord & { data: unknown }>(url);
+      assign(result.data, result);
       return { url, data: result.data };
     }));
     for (const result of results) {
@@ -344,18 +350,87 @@ function useAuthValue() {
     }
   };
 
-  const updateCurrentUserProfile = (data: Partial<MatrimonialProfile>) => {
-    if (!currentProfile) return;
-    void (async () => {
-      try {
-        const result = await apiRequest<{ data: MatrimonialProfile }>('/api/profiles', {
-          method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: currentProfile.id, ...data }),
-        });
-        setCurrentProfile(result.data);
-        setProfiles((previous) => previous.map((profile) => profile.id === result.data.id ? result.data : profile));
-        toast.success('Profile updated.');
-      } catch (error) { toast.error(error instanceof Error ? error.message : 'Profile update failed.'); }
-    })();
+  const sendSignupVerificationCode = async (data: {
+    username: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+  }) => {
+    try {
+      const result = await apiRequest<{
+        verificationToken: string;
+        emailSent: boolean;
+        devCodePreview?: string;
+        message: string;
+      }>('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'SEND_VERIFICATION_CODE', ...data }),
+      });
+      return {
+        success: true,
+        verificationToken: result.verificationToken,
+        emailSent: result.emailSent,
+        devCodePreview: result.devCodePreview,
+        message: result.message,
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Verification code could not be sent.' };
+    }
+  };
+
+  const completeSimpleRegistration = async (data: {
+    username: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    verificationCode: string;
+    verificationToken: string;
+  }) => {
+    try {
+      const result = await apiRequest<{ user: User; profile: MatrimonialProfile; redirectUrl: string }>('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'COMPLETE_REGISTRATION', ...data }),
+      });
+      setCurrentUser(result.user);
+      setCurrentProfile(result.profile);
+      return { success: true, redirectUrl: result.redirectUrl || '/dashboard/profile?onboarding=1', user: result.user };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Registration could not be completed.' };
+    }
+  };
+
+  const updateCurrentUserProfile = async (
+    data: Partial<MatrimonialProfile> & {
+      submitForApproval?: boolean;
+      bureauId?: string;
+      customBureauName?: string;
+      username?: string;
+    },
+  ): Promise<boolean> => {
+    if (!currentProfile) return false;
+    try {
+      const result = await apiRequest<{ data: MatrimonialProfile }>('/api/profiles', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: currentProfile.id, ...data }),
+      });
+      setCurrentProfile(result.data);
+      setProfiles((previous) => previous.map((profile) => profile.id === result.data.id ? result.data : profile));
+      await refreshDatabase();
+      toast.success(
+        data.submitForApproval
+          ? 'Profile saved and request sent to Admin for approval!'
+          : 'Profile updated.',
+      );
+      return true;
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Profile update failed.');
+      return false;
+    }
   };
 
   const sendInterest = async (targetProfileId: string, message?: string) => {
@@ -538,9 +613,55 @@ function useAuthValue() {
   return {
     currentUser, currentProfile, users, profiles, interests, favorites, conversations, messages, notifications,
     plans, extraPacks, invoices, verifications, reports, tickets, coupons, cms, auditLogs, settings,
-    paymentProofs, receivingAccounts, connectionTransactions, consultants, bureaus, ownBureau, consultantRecommendations,
+    paymentProofs, receivingAccounts, connectionTransactions, consultants, bureaus, bureauPlans, ownBureau, consultantRecommendations,
     consultantNotes, blockedUsers, connectionQuota, refreshDatabase,
-    login, register, logout, switchUser, updateCurrentUserProfile,
+    login, register, sendSignupVerificationCode, completeSimpleRegistration, logout, switchUser, updateCurrentUserProfile,
+    updateBureauPlanPricing: async (slug: BureauPlanSlug, data: Partial<BureauSubscriptionPlan>) => {
+      try {
+        const result = await apiRequest<{ data: BureauSubscriptionPlan[] }>('/api/bureaus', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'UPDATE_BUREAU_PLAN', slug, ...data }),
+        });
+        if (Array.isArray(result.data)) setBureauPlans(result.data);
+        await refreshDatabase();
+        toast.success('Bureau subscription pricing updated.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Bureau plan pricing update failed.');
+        return false;
+      }
+    },
+    submitBureauRecharge: async (data: { planSlug: BureauPlanSlug; paymentMethod: string; transactionId: string }) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'RECHARGE_BUREAU', ...data }),
+        });
+        await refreshDatabase();
+        toast.success('Bureau subscription recharge request submitted to Admin.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Recharge request failed.');
+        return false;
+      }
+    },
+    activateBureauSubscription: async (bureauId: string, planSlug: BureauPlanSlug) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'ACTIVATE_BUREAU_SUBSCRIPTION', bureauId, planSlug }),
+        });
+        await refreshDatabase();
+        toast.success('Bureau subscription activated.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Bureau subscription activation failed.');
+        return false;
+      }
+    },
     registerBureau: async (data: Record<string, unknown>) => {
       try {
         const result = await apiRequest<{ user: User; bureau: MarriageBureau; redirectUrl: string }>('/api/bureaus', {

@@ -22,6 +22,7 @@ export type BureauMeta = {
   name?: string | null;
   bureauCode?: string | null;
   createdByBureau?: boolean;
+  username?: string | null;
 };
 
 export async function toProfileDto(profile: Row, canSeePrivate: boolean, isOwnerOrAdmin = false, bureauMeta?: BureauMeta) {
@@ -139,6 +140,7 @@ export async function toProfileDto(profile: Row, canSeePrivate: boolean, isOwner
     bureauName: (profile.bureau_name ?? bureauMeta?.name) ?? undefined,
     bureauCode: (profile.bureau_code ?? bureauMeta?.bureauCode) ?? undefined,
     createdByBureau: Boolean(profile.created_by_bureau ?? bureauMeta?.createdByBureau),
+    username: bureauMeta?.username ?? undefined,
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   };
