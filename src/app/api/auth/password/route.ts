@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIE_MAX_AGE, AUTH_COOKIE_NAME, hashPassword, signAuthToken, verifyPassword } from '@/lib/auth';
 import { rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
-import { checkRateLimit } from '@/lib/rate-limit';
+import { checkRateLimit, clearRateLimit } from '@/lib/rate-limit';
 
 const BLOCKED_PASSWORDS = new Set(['password', 'password123', 'admin123', '12345678', 'qwerty123']);
 
@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
     if (updateError) throw updateError;
     if (!updated) return NextResponse.json({ success: false, error: 'Session changed. Please sign in again.' }, { status: 409 });
 
+    clearRateLimit(`password:${auth.user.id}`);
     const token = await signAuthToken({ userId: user.id, email: user.email, role: user.role, sessionVersion });
     const response = NextResponse.json({ success: true, message: 'Password updated. Other sessions have been signed out.' });
     response.cookies.set({

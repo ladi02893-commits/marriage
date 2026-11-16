@@ -15,8 +15,7 @@ interface FileUploadProps {
 
 export function FileUpload({
   onUploadSuccess,
-  bucket = 'uploads',
-  folder = '',
+  bucket = 'avatars',
   accept = 'image/*',
   maxSizeMB = 5,
   label = 'Upload Image',
@@ -44,7 +43,6 @@ export function FileUpload({
       const formData = new FormData();
       formData.append('file', file);
       formData.append('bucket', bucket);
-      if (folder) formData.append('folder', folder);
 
       const res = await fetch('/api/upload', {
         method: 'POST',

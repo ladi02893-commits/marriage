@@ -106,8 +106,22 @@ export default function DashboardOverviewPage() {
               <span className="font-mono text-xs font-bold bg-white/10 px-2.5 py-0.5 rounded-full text-gold-200 border border-white/20">
                 ID: {profileIdCode}
               </span>
-              <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold px-2 py-0.5">
-                {currentProfile?.approvalStatus === 'PENDING_APPROVAL' ? 'Pending Approval' : 'Verified Active'}
+              <span
+                className={`rounded-full text-[10px] font-bold px-2 py-0.5 border ${
+                  currentProfile?.approvalStatus === 'APPROVED'
+                    ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-300'
+                    : currentProfile?.approvalStatus === 'REJECTED' || currentProfile?.approvalStatus === 'SUSPENDED'
+                    ? 'bg-rose-500/20 border-rose-500/30 text-rose-300'
+                    : 'bg-amber-500/20 border-amber-500/30 text-amber-300'
+                }`}
+              >
+                {currentProfile?.approvalStatus === 'APPROVED'
+                  ? 'Verified Active'
+                  : currentProfile?.approvalStatus === 'REJECTED'
+                  ? 'Needs Revision'
+                  : currentProfile?.approvalStatus === 'CHANGES_REQUESTED'
+                  ? 'Changes Requested'
+                  : 'Pending Approval'}
               </span>
             </div>
 
@@ -193,7 +207,7 @@ export default function DashboardOverviewPage() {
                 </span>
               ) : (
                 <span>
-                  Connections only deduct when contact details are unlocked or interests are accepted. Free browsing does not deduct credits.
+                  1 connection credit is used when you send an interest request. Free browsing does not deduct credits.
                 </span>
               )}
             </p>
@@ -426,7 +440,7 @@ export default function DashboardOverviewPage() {
               + Add Family Details
             </Link>
           )}
-          {(!currentProfile?.partnerPreferences?.preferredLocations || currentProfile.partnerPreferences.preferredLocations.length === 0) && (
+          {!currentProfile?.partnerPreferences?.expectationsNotes && (
             <Link
               href="/dashboard/profile"
               className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 dark:bg-brand-950/50 border border-brand-200/60 rounded-lg px-2.5 py-1"
@@ -434,9 +448,18 @@ export default function DashboardOverviewPage() {
               + Add Partner Preferences
             </Link>
           )}
-          <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 rounded-lg px-2.5 py-1 flex items-center gap-1">
-            <Check className="h-3 w-3" /> WhatsApp Verified
-          </span>
+          {currentUser?.isVerified ? (
+            <span className="text-[11px] text-emerald-600 font-semibold bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 rounded-lg px-2.5 py-1 flex items-center gap-1">
+              <Check className="h-3 w-3" /> Identity Verified
+            </span>
+          ) : (
+            <Link
+              href="/dashboard/verification"
+              className="text-[11px] font-semibold text-brand-600 hover:text-brand-700 bg-brand-50 dark:bg-brand-950/50 border border-brand-200/60 rounded-lg px-2.5 py-1"
+            >
+              + Verify Identity
+            </Link>
+          )}
         </div>
       </div>
 

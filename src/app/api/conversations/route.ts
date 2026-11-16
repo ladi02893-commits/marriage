@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
+import { ADMIN_ROLES, rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
 
-const CONVERSATION_SELECT = '*,participantA:users!participant_a_id(id,name,avatar_url),participantB:users!participant_b_id(id,name,avatar_url),messages(id,text,created_at,sender_id,is_read)';
+const CONVERSATION_SELECT =
+  '*,participantA:users!participant_a_id(id,name,avatar_url,profile:matrimonial_profiles(display_name,photos:profile_photos(url,is_primary,is_approved))),participantB:users!participant_b_id(id,name,avatar_url,profile:matrimonial_profiles(display_name,photos:profile_photos(url,is_primary,is_approved))),messages(id,text,created_at,sender_id,is_read)';
 
 export async function GET() {
   const auth = await requireUser();
   if (auth.response) return auth.response;
   try {
-    const { data, error } = await insforgeAdmin.database.from('conversations')
-      .select(CONVERSATION_SELECT)
-      .or(`participant_a_id.eq.${auth.user.id},participant_b_id.eq.${auth.user.id}`)
-      .order('updated_at', { ascending: false });
+    let query = insforgeAdmin.database.from('conversations').select(CONVERSATION_SELECT);
+    if (!ADMIN_ROLES.has(auth.user.role)) {
+      query = query.or(`participant_a_id.eq.${auth.user.id},participant_b_id.eq.${auth.user.id}`);
+    }
+    const { data, error } = await query.order('updated_at', { ascending: false });
     if (error) throw error;
     return NextResponse.json({ success: true, data: data ?? [], total: data?.length ?? 0 });
   } catch (error) {

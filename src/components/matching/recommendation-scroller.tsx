@@ -123,7 +123,8 @@ export function RecommendationScroller({
                 <div className="absolute bottom-2.5 left-3 right-3 text-white">
                   <h4 className="text-sm font-bold truncate">{profile.displayName}</h4>
                   <p className="text-[11px] text-zinc-200">
-                    {profile.age} yrs • {profile.lifestyle?.height || "5' 6\""}
+                    {profile.age && profile.privacy?.showAge !== false ? `${profile.age} yrs • ` : ''}
+                    {profile.lifestyle?.height || 'Height N/A'}
                   </p>
                 </div>
               </div>

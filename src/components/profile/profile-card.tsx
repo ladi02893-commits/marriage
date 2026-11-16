@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ShieldCheck,
   MapPin,
@@ -32,6 +33,7 @@ interface ProfileCardProps {
 }
 
 export function ProfileCard({ profile, className, showScore = true }: ProfileCardProps) {
+  const router = useRouter();
   const {
     currentUser,
     currentProfile,
@@ -78,6 +80,11 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!currentUser) {
+      toast.info('Please sign in to bookmark profiles.');
+      router.push('/login');
+      return;
+    }
     if (isSameGender) {
       toast.error('Opposite gender matching only: You cannot bookmark profiles of the same gender.');
       return;
@@ -110,6 +117,11 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
   };
 
   const handleInterestAction = () => {
+    if (!currentUser) {
+      toast.info('Please sign in to connect with profiles.');
+      router.push('/login');
+      return;
+    }
     if (isSameGender) {
       toast.error('Opposite gender matching only: You cannot send connection requests to profiles of the same gender.');
       return;
@@ -198,7 +210,12 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
           <div className="mb-2">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-foreground line-clamp-1 group-hover:text-brand-600 transition">
-                {profile.displayName}, <span className="text-muted-foreground font-normal">{profile.age} yrs</span>
+                {profile.displayName}
+                {profile.age && profile.privacy?.showAge !== false ? (
+                  <>
+                    , <span className="text-muted-foreground font-normal">{profile.age} yrs</span>
+                  </>
+                ) : null}
               </h3>
               <span className="text-[11px] font-semibold text-gold-700 dark:text-gold-300 font-serif">
                 {profile.caste || 'Noble Origin'}
@@ -234,7 +251,7 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
             <div className="mb-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/60 p-2.5 text-xs flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 font-bold">
                 <Phone className="h-3.5 w-3.5" />
-                <span>{profile.phone || '+92 300 8492019'}</span>
+                <span>{profile.phone || profile.whatsappNumber || 'Contact shared on request'}</span>
               </div>
               <span className="text-[10px] text-emerald-600 font-bold">Contact Unlocked</span>
             </div>

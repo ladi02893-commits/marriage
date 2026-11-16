@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, currentProfile, notifications, connectionQuota, logout } = useAuth();
+  const { currentUser, currentProfile, notifications, connectionQuota, logout, markNotificationRead } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -34,12 +34,6 @@ export function Navbar() {
     currentUser?.role === 'SUPER_ADMIN' ||
     currentUser?.role === 'ADMIN';
   const isConsultant = currentUser?.role === 'CONSULTANT';
-
-  React.useEffect(() => {
-    if (isAdmin && !pathname.startsWith('/admin')) {
-      router.replace('/admin');
-    }
-  }, [isAdmin, pathname, router]);
 
   // Guest nav links
   const guestNavLinks = [
@@ -148,7 +142,10 @@ export function Navbar() {
               {/* Notification Bell */}
               <div className="relative">
                 <button
-                  onClick={() => setNotificationsOpen(!notificationsOpen)}
+                  onClick={() => {
+                    setNotificationsOpen(!notificationsOpen);
+                    setUserDropdownOpen(false);
+                  }}
                   className="relative flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition hover:text-brand-800 hover:border-gold-300"
                   aria-label="Notifications"
                 >
@@ -180,7 +177,10 @@ export function Navbar() {
                           <Link
                             key={n.id}
                             href={n.linkUrl || '/dashboard/connections'}
-                            onClick={() => setNotificationsOpen(false)}
+                            onClick={() => {
+                              if (!n.isRead) markNotificationRead(n.id);
+                              setNotificationsOpen(false);
+                            }}
                             className={cn(
                               'block rounded-lg p-2 text-left text-xs transition',
                               !n.isRead ? 'bg-brand-50/70 border-l-2 border-brand-800' : 'hover:bg-muted'
@@ -221,12 +221,16 @@ export function Navbar() {
               {/* User Profile Pill */}
               <div className="relative">
                 <button
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  onClick={() => {
+                    setUserDropdownOpen(!userDropdownOpen);
+                    setNotificationsOpen(false);
+                  }}
                   className="flex items-center gap-2.5 rounded-full border border-border bg-card hover:bg-muted/70 py-1.5 pl-1.5 pr-3.5 text-xs font-semibold text-foreground transition hover:border-gold-400/50 shadow-sm"
                 >
                   <img
                     src={
                       currentUser.avatarUrl ||
+                      currentProfile?.photos?.[0]?.url ||
                       '/avatar-placeholder.svg'
                     }
                     alt={currentUser.name}

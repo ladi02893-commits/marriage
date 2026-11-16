@@ -55,20 +55,36 @@ async function apiRequest<T = ApiRecord>(url: string, init?: RequestInit): Promi
   return data as T;
 }
 
-function camelConversation(row: ApiRecord): Conversation {
+function getParticipantPhoto(participant: ApiRecord | undefined): string | undefined {
+  if (!participant) return undefined;
+  if (typeof participant.avatar_url === 'string' && participant.avatar_url) return participant.avatar_url;
+  const prof = Array.isArray(participant.profile) ? participant.profile[0] : participant.profile;
+  const photos = Array.isArray(prof?.photos) ? prof.photos : [];
+  const primary =
+    photos.find((p: ApiRecord) => p.is_primary && p.is_approved) ??
+    photos.find((p: ApiRecord) => p.is_approved) ??
+    photos.find((p: ApiRecord) => p.is_primary) ??
+    photos[0];
+  return typeof primary?.url === 'string' ? primary.url : undefined;
+}
+
+function camelConversation(row: ApiRecord, currentUserId?: string): Conversation {
   const participantA = Array.isArray(row.participantA) ? row.participantA[0] : row.participantA;
   const participantB = Array.isArray(row.participantB) ? row.participantB[0] : row.participantB;
+  const unreadCount = Array.isArray(row.messages)
+    ? row.messages.filter((m: ApiRecord) => !m.is_read && m.sender_id !== currentUserId).length
+    : 0;
   return {
     id: row.id,
     participantAId: row.participant_a_id,
     participantAName: participantA?.name ?? 'Member',
-    participantAPhoto: participantA?.avatar_url ?? undefined,
+    participantAPhoto: getParticipantPhoto(participantA),
     participantBId: row.participant_b_id,
     participantBName: participantB?.name ?? 'Member',
-    participantBPhoto: participantB?.avatar_url ?? undefined,
+    participantBPhoto: getParticipantPhoto(participantB),
     lastMessageText: row.last_message_text ?? '',
     lastMessageTime: row.last_message_time ?? '',
-    unreadCount: 0,
+    unreadCount,
     status: 'ACTIVE',
   };
 }
@@ -118,13 +134,13 @@ function useAuthValue() {
 
   const refreshDatabase = useCallback(async () => {
     const endpoints: Array<[string, (value: unknown) => void]> = [
+      ['/api/profiles', (value) => setProfiles(Array.isArray(value) ? value as MatrimonialProfile[] : [])],
       ['/api/receiving-accounts', (value) => setReceivingAccounts(Array.isArray(value) ? value as ReceivingAccount[] : [])],
       ['/api/admin/plans', (value) => { if (Array.isArray(value) && value.length > 0) setPlans(value as SubscriptionPlan[]); }],
       ['/api/admin/settings', (value) => { if (value && typeof value === 'object' && !Array.isArray(value)) setSettings(value as SystemSettings); }],
     ];
     if (currentUser?.id) {
       endpoints.push(
-        ['/api/profiles', (value) => setProfiles(Array.isArray(value) ? value as MatrimonialProfile[] : [])],
         ['/api/interests', (value) => setInterests(Array.isArray(value) ? value as InterestRequest[] : [])],
         ['/api/favorites', (value) => setFavorites(Array.isArray(value) ? value as FavoriteItem[] : [])],
         ['/api/notifications', (value) => setNotifications(Array.isArray(value) ? value as NotificationItem[] : [])],
@@ -132,7 +148,7 @@ function useAuthValue() {
         ['/api/invoices', (value) => setInvoices(Array.isArray(value) ? value as Invoice[] : [])],
         ['/api/payments/proofs', (value) => setPaymentProofs(Array.isArray(value) ? value as PaymentProof[] : [])],
         ['/api/verifications', (value) => setVerifications(Array.isArray(value) ? value as VerificationRequest[] : [])],
-        ['/api/conversations', (value) => setConversations(Array.isArray(value) ? (value as ApiRecord[]).map(camelConversation) : [])],
+        ['/api/conversations', (value) => setConversations(Array.isArray(value) ? (value as ApiRecord[]).map((row) => camelConversation(row, currentUser.id)) : [])],
       );
       if (isAdmin) {
         endpoints.push(
@@ -153,20 +169,30 @@ function useAuthValue() {
     }
 
     if (currentUser?.id) {
-      const session = await apiRequest<{ user: User; profile: MatrimonialProfile | null }>('/api/auth/me');
-      setCurrentUser(session.user);
-      setCurrentProfile(session.profile);
-      const ownProfile = session.profile;
-      if (ownProfile) setProfiles((previous) => [ownProfile, ...previous.filter((profile) => profile.id !== ownProfile.id)]);
+      try {
+        const session = await apiRequest<{ user: User; profile: MatrimonialProfile | null }>('/api/auth/me');
+        setCurrentUser(session.user);
+        setCurrentProfile(session.profile);
+        const ownProfile = session.profile;
+        if (ownProfile) setProfiles((previous) => [ownProfile, ...previous.filter((profile) => profile.id !== ownProfile.id)]);
 
-      const conversationsResult = results.find((result) => result.status === 'fulfilled' && result.value.url === '/api/conversations');
-      if (conversationsResult?.status === 'fulfilled') {
-        const rows = (Array.isArray(conversationsResult.value.data) ? conversationsResult.value.data : []) as ApiRecord[];
-        const loaded = await Promise.all(rows.map(async (row) => {
-          const result = await apiRequest<{ data: ApiRecord[] }>(`/api/messages?conversationId=${encodeURIComponent(row.id)}`);
-          return [row.id, result.data.map(camelMessage)] as const;
-        }));
-        setMessages(Object.fromEntries(loaded));
+        const conversationsResult = results.find((result) => result.status === 'fulfilled' && result.value.url === '/api/conversations');
+        if (conversationsResult?.status === 'fulfilled') {
+          const rows = (Array.isArray(conversationsResult.value.data) ? conversationsResult.value.data : []) as ApiRecord[];
+          const loaded = await Promise.allSettled(rows.map(async (row) => {
+            const result = await apiRequest<{ data: ApiRecord[] }>(`/api/messages?conversationId=${encodeURIComponent(row.id)}`);
+            return [row.id, result.data.map(camelMessage)] as const;
+          }));
+          const nextMessages: Record<string, ChatMessage[]> = {};
+          for (const entry of loaded) {
+            if (entry.status === 'fulfilled') {
+              nextMessages[entry.value[0]] = entry.value[1];
+            }
+          }
+          setMessages(nextMessages);
+        }
+      } catch (error) {
+        console.error('Post-refresh session sync failed:', error);
       }
     }
   }, [currentUser?.id, isAdmin]);
@@ -198,13 +224,14 @@ function useAuthValue() {
     const used = privileged ? 0 : currentUser?.usedConnections ?? 0;
     const remaining = privileged ? 99_999 : currentUser?.remainingConnections ?? Math.max(0, total - used);
     const usagePercentage = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
-    const alertLevel = remaining <= 0 ? 'LOCKED_100'
+    const alertLevel = !currentUser ? 'NORMAL'
+      : remaining <= 0 ? 'LOCKED_100'
       : usagePercentage >= 90 ? 'WARNING_90'
       : usagePercentage >= 80 ? 'WARNING_80'
       : usagePercentage >= 70 ? 'WARNING_70' : 'NORMAL';
     return {
       used, total, remaining, usagePercentage, alertLevel,
-      isReached: !privileged && remaining <= 0,
+      isReached: Boolean(currentUser) && !privileged && remaining <= 0,
       planName: currentUser?.subscriptionTier === 'PREMIUM_PLUS' || currentUser?.subscriptionTier === 'VIP'
         ? 'VIP Royal Package' : currentUser?.subscriptionTier === 'PREMIUM' ? 'Premium Package' : 'Basic Package',
     };
@@ -233,14 +260,24 @@ function useAuthValue() {
           phone: userData.phone, whatsappNumber: userData.whatsappNumber, displayName: profileData.displayName,
           gender: profileData.gender, dateOfBirth: profileData.dateOfBirth, maritalStatus: profileData.maritalStatus,
           religion: profileData.religion, sectOrCommunity: profileData.sectOrCommunity,
+          caste: profileData.caste, subClan: profileData.subClan,
           motherTongue: profileData.motherTongue, city: profileData.city, country: profileData.country,
           stateProvince: profileData.state ?? profileData.province, bioHeadline: profileData.bioHeadline,
           aboutMe: profileData.aboutMe,
           highestDegree: profileData.educationCareer?.highestDegree,
           institution: profileData.educationCareer?.institution,
+          fieldOfStudy: profileData.educationCareer?.fieldOfStudy,
           profession: profileData.educationCareer?.profession,
-          annualIncome: profileData.educationCareer?.annualIncome,
+          jobTitle: profileData.educationCareer?.jobTitle,
+          company: profileData.educationCareer?.company,
+          annualIncome: profileData.educationCareer?.annualIncome ?? profileData.educationCareer?.monthlyIncome,
+          employmentSector: profileData.educationCareer?.employmentSector,
           height: profileData.lifestyle?.height,
+          diet: profileData.lifestyle?.diet,
+          smoking: profileData.lifestyle?.smoking,
+          drinking: profileData.lifestyle?.drinking,
+          familyInfo: profileData.familyInfo,
+          partnerPreferences: profileData.partnerPreferences,
         }),
       });
       setCurrentUser(result.user);
@@ -469,7 +506,23 @@ function useAuthValue() {
     paymentProofs, receivingAccounts, connectionTransactions, consultants, consultantRecommendations,
     consultantNotes, blockedUsers, connectionQuota, refreshDatabase,
     login, register, logout, switchUser, updateCurrentUserProfile,
-    updateUserSubscription: (_tier: SubscriptionTier, _days = 365) => unavailable('Direct subscription changes'),
+    updateUserSubscription: async (tier: SubscriptionTier, _days = 365, targetUserId?: string) => {
+      const id = targetUserId ?? currentUser?.id;
+      if (!id) return false;
+      try {
+        await apiRequest('/api/users', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, subscriptionTier: tier }),
+        });
+        await refreshDatabase();
+        toast.success(`Subscription updated to ${tier}.`);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Subscription update failed.');
+        return false;
+      }
+    },
     verifyWhatsAppCode: (_code: string) => ({ success: false, message: 'WhatsApp verification will be available after the provider integration is configured.' }),
     sendInterest,
     acceptInterest: (id: string) => updateInterest(id, 'ACCEPTED'),
@@ -499,8 +552,36 @@ function useAuthValue() {
     isContactUnlocked,
     canViewContactDetails: isContactUnlocked,
     canAccessProfile: (_id: string) => true,
-    refundConnectionCredit: (_userId: string, _profileId: string, _reason: string) => { unavailable('Connection refunds'); return false; },
-    addExtraConnections: (_userId: string, _count: number) => unavailable('Connection top-ups'),
+    refundConnectionCredit: async (userId: string, _profileId: string, _reason: string) => {
+      try {
+        await apiRequest('/api/users', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: userId, refundConnection: 1 }),
+        });
+        await refreshDatabase();
+        toast.success('1 connection credit refunded.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Connection refund failed.');
+        return false;
+      }
+    },
+    addExtraConnections: async (userId: string, count: number) => {
+      try {
+        await apiRequest('/api/users', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: userId, addConnections: count }),
+        });
+        await refreshDatabase();
+        toast.success(`Added ${count} connection credits.`);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Connection top-up failed.');
+        return false;
+      }
+    },
     toggleFavorite: async (profileId: string) => {
       const existing = favorites.some((favorite) => favorite.targetProfileId === profileId);
       try {
@@ -541,12 +622,18 @@ function useAuthValue() {
       })
         .catch((error) => toast.error(error instanceof Error ? error.message : 'Notification update failed.'));
     },
-    createSupportTicket: (data: Partial<SupportTicket> & { message?: string }) => {
-      void apiRequest('/api/support', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
-      }).then(async () => { await refreshDatabase(); toast.success('Support ticket created.'); })
-        .catch((error) => toast.error(error instanceof Error ? error.message : 'Ticket creation failed.'));
-      return null;
+    createSupportTicket: async (data: Partial<SupportTicket> & { message?: string }): Promise<boolean> => {
+      try {
+        await apiRequest('/api/support', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
+        });
+        await refreshDatabase();
+        toast.success('Support ticket created.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Ticket creation failed.');
+        return false;
+      }
     },
     replySupportTicket: (id: string, text: string, _sender: 'USER' | 'AGENT' = 'USER', _attachment?: string) => {
       void apiRequest('/api/support', {

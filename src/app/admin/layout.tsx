@@ -19,7 +19,6 @@ import {
   LogOut,
   Menu,
   X,
-  Heart,
   Crown,
   HelpCircle,
 } from 'lucide-react';
@@ -61,7 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (currentUser === null) {
       // If logged out completely, send to login
       const timeout = setTimeout(() => {
-        router.push('/login?redirect=/admin');
+        router.push('/login?returnTo=/admin');
       }, 500);
       return () => clearTimeout(timeout);
     }
@@ -88,7 +87,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Audit Logs', href: '/admin/audit-logs', icon: History },
   ];
 
-  if (currentUser && currentUser.role === 'USER') {
+  if (currentUser && !['SUPER_ADMIN', 'ADMIN'].includes(currentUser.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white p-6">
         <div className="max-w-md w-full rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center space-y-4 shadow-2xl">
@@ -249,6 +248,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <link.icon className="h-4 w-4" />
                   <span>{link.name}</span>
                 </div>
+                {Boolean(link.badge) && (
+                  <span
+                    className={cn(
+                      'flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold',
+                      pathname === link.href ? 'bg-zinc-950 text-amber-400' : 'bg-amber-500 text-zinc-950'
+                    )}
+                  >
+                    {link.badge}
+                  </span>
+                )}
               </Link>
             ))}
             <div className="pt-2 border-t border-zinc-800">

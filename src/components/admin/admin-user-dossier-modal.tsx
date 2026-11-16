@@ -84,9 +84,10 @@ export function AdminUserDossierModal({
   );
 
   // Mutual / Connected interests
-  const connectedInterests = [...sentInterests, ...receivedInterests].filter(
-    (i, idx, arr) => i.status === 'ACCEPTED' && arr.findIndex((x) => x.id === i.id) === idx
+  const allUniqueInterests = [...sentInterests, ...receivedInterests].filter(
+    (i, idx, arr) => arr.findIndex((x) => x.id === i.id) === idx
   );
+  const connectedInterests = allUniqueInterests.filter((i) => i.status === 'ACCEPTED');
 
   // Filtered list based on sub-filter
   const displayInterests = (
@@ -96,9 +97,7 @@ export function AdminUserDossierModal({
       ? receivedInterests
       : connectionFilter === 'CONNECTED'
       ? connectedInterests
-      : [...sentInterests, ...receivedInterests].filter(
-          (i, idx, arr) => arr.findIndex((x) => x.id === i.id) === idx
-        )
+      : allUniqueInterests
   ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   // Conversations involving this user
@@ -117,10 +116,18 @@ export function AdminUserDossierModal({
     (p) => p.userId === user.id || p.userEmail === user.email
   );
 
-  const cleanPhone = (profile?.phone || user.email).replace(/[^0-9]/g, '');
-  const whatsappUrl = `https://wa.me/${cleanPhone || '923001234567'}?text=${encodeURIComponent(
-    `Assalam-o-Alaikum ${user.name}, this is the Administrator from VIP Royal Matchmaking regarding your account.`
-  )}`;
+  const cleanPhone = (
+    profile?.whatsappNumber ||
+    profile?.phone ||
+    user.whatsappNumber ||
+    user.phone ||
+    ''
+  ).replace(/[^0-9]/g, '');
+  const whatsappUrl = cleanPhone
+    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
+        `Assalam-o-Alaikum ${user.name}, this is the Administrator from VIP Royal Matchmaking regarding your account.`
+      )}`
+    : null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
@@ -173,16 +180,18 @@ export function AdminUserDossierModal({
 
           {/* Header Quick Controls */}
           <div className="flex items-center gap-2">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
-              title="Message on WhatsApp"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">WhatsApp</span>
-            </a>
+            {whatsappUrl && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
+                title="Message on WhatsApp"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">WhatsApp</span>
+              </a>
+            )}
 
             {currentUser?.role === 'SUPER_ADMIN' && user.role === 'USER' && <button
               type="button"
@@ -219,7 +228,7 @@ export function AdminUserDossierModal({
             <Heart className="h-4 w-4" />
             <span>Connections & Interests</span>
             <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-mono text-zinc-300">
-              {sentInterests.length + receivedInterests.length}
+              {allUniqueInterests.length}
             </span>
           </button>
 
@@ -308,7 +317,7 @@ export function AdminUserDossierModal({
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {(
                     [
-                      { key: 'ALL', label: 'All Interactions', count: sentInterests.length + receivedInterests.length },
+                      { key: 'ALL', label: 'All Interactions', count: allUniqueInterests.length },
                       { key: 'SENT', label: 'Sent by User', count: sentInterests.length },
                       { key: 'RECEIVED', label: 'Received Inbound', count: receivedInterests.length },
                       { key: 'CONNECTED', label: 'Connected / Accepted', count: connectedInterests.length },
@@ -440,15 +449,17 @@ export function AdminUserDossierModal({
                         </div>
 
                         {/* Action Buttons for this Connection */}
-                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                          <Link
-                            href={`/profile/${counterpartProfileId || counterpartProfile?.id || 'profile-1'}`}
-                            target="_blank"
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 hover:text-white transition cursor-pointer"
-                          >
-                            <Eye className="h-3.5 w-3.5 text-amber-400" /> View Candidate Dossier
-                          </Link>
-                        </div>
+                        {(counterpartProfileId || counterpartProfile?.id) && (
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                            <Link
+                              href={`/profile/${counterpartProfileId || counterpartProfile?.id}`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 hover:text-white transition cursor-pointer"
+                            >
+                              <Eye className="h-3.5 w-3.5 text-amber-400" /> View Candidate Dossier
+                            </Link>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -514,17 +525,17 @@ export function AdminUserDossierModal({
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Height:</span>
-                          <span className="font-semibold text-white">{profile.lifestyle?.height || '5 ft 9 in'}</span>
+                          <span className="font-semibold text-white">{profile.lifestyle?.height || 'Not specified'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Religion & Sect:</span>
                           <span className="font-semibold text-white">
-                            {profile.religion} ({profile.sectOrCommunity || 'Sunni'})
+                            {profile.religion} {profile.sectOrCommunity ? `(${profile.sectOrCommunity})` : ''}
                           </span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Mother Tongue:</span>
-                          <span className="font-semibold text-white">{profile.motherTongue}</span>
+                          <span className="font-semibold text-white">{profile.motherTongue || 'Not specified'}</span>
                         </div>
                       </div>
                     </div>
@@ -537,24 +548,24 @@ export function AdminUserDossierModal({
                       <div className="divide-y divide-zinc-800 text-zinc-300">
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Highest Degree:</span>
-                          <span className="font-semibold text-white">{profile.educationCareer?.highestDegree}</span>
+                          <span className="font-semibold text-white">{profile.educationCareer?.highestDegree || 'Not specified'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Institution:</span>
-                          <span className="font-semibold text-white">{profile.educationCareer?.institution}</span>
+                          <span className="font-semibold text-white">{profile.educationCareer?.institution || 'Not specified'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Profession:</span>
-                          <span className="font-semibold text-white">{profile.educationCareer?.profession}</span>
+                          <span className="font-semibold text-white">{profile.educationCareer?.profession || 'Not specified'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Designation / Role:</span>
-                          <span className="font-semibold text-white">{profile.educationCareer?.jobTitle || 'Executive'}</span>
+                          <span className="font-semibold text-white">{profile.educationCareer?.jobTitle || 'Not specified'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
-                          <span className="text-zinc-500">Monthly Income:</span>
+                          <span className="text-zinc-500">Annual / Monthly Income:</span>
                           <span className="font-mono font-bold text-amber-400">
-                            {profile.educationCareer?.monthlyIncome ? `PKR ${profile.educationCareer.monthlyIncome.toLocaleString()}` : 'PKR 250,000+'}
+                            {profile.educationCareer?.annualIncome || profile.educationCareer?.monthlyIncome || 'Not specified'}
                           </span>
                         </div>
                       </div>
@@ -568,21 +579,21 @@ export function AdminUserDossierModal({
                       <div className="divide-y divide-zinc-800 text-zinc-300">
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Father Profession:</span>
-                          <span className="font-semibold text-white">{profile.familyInfo?.fatherOccupation || 'Business / Retired'}</span>
+                          <span className="font-semibold text-white">{profile.familyInfo?.fatherOccupation || 'Not specified'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Mother Profession:</span>
-                          <span className="font-semibold text-white">{profile.familyInfo?.motherOccupation || 'Homemaker'}</span>
+                          <span className="font-semibold text-white">{profile.familyInfo?.motherOccupation || 'Not specified'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Siblings:</span>
                           <span className="font-semibold text-white">
-                            {profile.familyInfo?.brothersCount || 1} Brothers, {profile.familyInfo?.sistersCount || 1} Sisters
+                            {profile.familyInfo?.brothersCount ?? 0} Brothers, {profile.familyInfo?.sistersCount ?? 0} Sisters
                           </span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Family Values:</span>
-                          <span className="font-semibold text-white">{profile.familyInfo?.familyValues || 'Moderate Religious'}</span>
+                          <span className="font-semibold text-white">{profile.familyInfo?.familyValues || 'Not specified'}</span>
                         </div>
                       </div>
                     </div>
@@ -595,7 +606,7 @@ export function AdminUserDossierModal({
                       <div className="divide-y divide-zinc-800 text-zinc-300">
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Primary Mobile:</span>
-                          <span className="font-mono font-bold text-white">{profile.phone || 'Not provided'}</span>
+                          <span className="font-mono font-bold text-white">{profile.phone || user.phone || 'Not provided'}</span>
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Email Address:</span>
@@ -607,7 +618,7 @@ export function AdminUserDossierModal({
                         </div>
                         <div className="flex justify-between py-1.5">
                           <span className="text-zinc-500">Citizenship:</span>
-                          <span className="font-semibold text-white">{profile.citizenship || 'Pakistani'}</span>
+                          <span className="font-semibold text-white">{profile.citizenship || profile.country || 'Not specified'}</span>
                         </div>
                       </div>
                     </div>
@@ -653,7 +664,7 @@ export function AdminUserDossierModal({
 
                         <div className="text-right text-xs">
                           <span className="text-[10px] text-zinc-500 block">
-                            {new Date(conv.lastMessageTime).toLocaleDateString()}
+                            {conv.lastMessageTime ? new Date(conv.lastMessageTime).toLocaleDateString() : 'No messages yet'}
                           </span>
                           <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-mono text-zinc-300">
                             {convMessages.length} Messages
@@ -678,11 +689,13 @@ export function AdminUserDossierModal({
                     <div>
                       <span className="text-xs font-bold text-white uppercase tracking-wider block">Membership Plan</span>
                       <h4 className="text-sm font-bold font-serif text-amber-300">
-                        {user.subscriptionTier === 'PREMIUM_PLUS'
-                          ? 'VIP Bespoke Matchmaking'
+                        {user.subscriptionTier === 'PREMIUM_PLUS' || user.subscriptionTier === 'VIP'
+                          ? 'VIP Royal Package'
                           : user.subscriptionTier === 'PREMIUM'
-                          ? 'Elite Executive Plan (PREMIUM)'
-                          : 'Basic Standard Plan (FREE)'}
+                          ? 'Premium Package'
+                          : user.subscriptionTier === 'BASIC'
+                          ? 'Basic Package'
+                          : 'Free Starter Plan'}
                       </h4>
                     </div>
                   </div>
@@ -690,16 +703,16 @@ export function AdminUserDossierModal({
                   <div className="text-left sm:text-right">
                     <span className="text-[10px] text-zinc-400 block uppercase">Plan Expiry Date</span>
                     <span className="text-xs font-mono font-bold text-white">
-                      {user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Lifetime / Free (3 Connects Limit)'}
+                      {user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Active Quota Based'}
                     </span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
                   <div className="p-2.5 rounded-xl bg-zinc-800/60 border border-zinc-700/40">
-                    <span className="text-zinc-400 block">Connection Limit</span>
+                    <span className="text-zinc-400 block">Connection Credits</span>
                     <span className="font-bold text-white font-mono">
-                      {user.subscriptionTier === 'PREMIUM_PLUS' ? 'Unlimited' : user.subscriptionTier === 'PREMIUM' ? '50 / month' : '3 / month (Free)'}
+                      {user.remainingConnections ?? 0} / {user.totalConnections ?? 3} Remaining
                     </span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-zinc-800/60 border border-zinc-700/40">
@@ -751,6 +764,52 @@ export function AdminUserDossierModal({
                         <span className="font-serif font-bold text-amber-400 text-sm">
                           {inv.currency} {inv.amount.toLocaleString()}
                         </span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {userProofs.map((proof) => (
+                    <div
+                      key={proof.id}
+                      className="p-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 flex items-center justify-between gap-4"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-white text-xs">{proof.planName}</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              proof.status === 'VERIFIED' || proof.status === 'APPROVED'
+                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                                : proof.status === 'REJECTED'
+                                ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                                : 'bg-amber-950 text-amber-300 border border-amber-800'
+                            }`}
+                          >
+                            {proof.status}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                          TRX: {proof.transactionId} • {new Date(proof.submittedAt).toLocaleDateString()} via {proof.paymentMethod}
+                        </div>
+                        {proof.rejectionReason && (
+                          <div className="text-[11px] text-rose-400 mt-1">Reason: {proof.rejectionReason}</div>
+                        )}
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="font-serif font-bold text-amber-400 text-sm block">
+                          {proof.currency} {proof.amount.toLocaleString()}
+                        </span>
+                        {proof.screenshotUrl && (
+                          <a
+                            href={proof.screenshotUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] text-cyan-400 hover:underline font-semibold"
+                          >
+                            View Receipt
+                          </a>
+                        )}
                       </div>
                     </div>
                   ))}

@@ -2,11 +2,9 @@
 
 import React, { useState } from 'react';
 import { Lock, Bell, UserX } from 'lucide-react';
-import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 
 export default function AccountSettingsPage() {
-  const { currentUser } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

@@ -2,17 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rejectCrossSiteMutation, requireAdmin, requireUser } from '@/lib/api-auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
 
+const REPORT_SELECT = '*,reporter:users!reporter_id(id,name,email),reportedUser:users!reported_user_id(id,name,email)';
+
 function mapReport(report: Record<string, any>) {
+  const reporter = Array.isArray(report.reporter) ? report.reporter[0] : report.reporter;
+  const reportedUser = Array.isArray(report.reportedUser) ? report.reportedUser[0] : report.reportedUser;
   return {
     ...report,
     reporterId: report.reporter_id,
     reportedUserId: report.reported_user_id,
-    reportedUserName: report.reportedUser?.name ?? 'Reported user',
-    reportedUserEmail: report.reportedUser?.email ?? '',
-    reporterName: report.reporter?.name ?? 'Reporter',
-    reporterEmail: report.reporter?.email ?? '',
+    reportedUserName: reportedUser?.name ?? 'Reported user',
+    reportedUserEmail: reportedUser?.email ?? '',
+    reporterName: reporter?.name ?? 'Reporter',
+    reporterEmail: reporter?.email ?? '',
     evidenceUrl: report.evidence_url,
     adminActionTaken: report.admin_action_taken,
+    timestamp: report.created_at,
     createdAt: report.created_at,
   };
 }
@@ -22,7 +27,7 @@ export async function GET() {
   if (auth.response) return auth.response;
   try {
     const { data, error } = await insforgeAdmin.database.from('abuse_reports')
-      .select('*,reporter:users!reporter_id(id,name,email),reportedUser:users!reported_user_id(id,name,email)')
+      .select(REPORT_SELECT)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return NextResponse.json({ success: true, data: (data ?? []).map(mapReport), total: data?.length ?? 0 });
@@ -42,7 +47,19 @@ export async function POST(request: NextRequest) {
     const reportedUserId = typeof body.reportedUserId === 'string' ? body.reportedUserId : '';
     const category = typeof body.category === 'string' ? body.category.toUpperCase() : '';
     const description = typeof body.description === 'string' ? body.description.trim().slice(0, 2000) : '';
-    const categories = ['FAKE_PROFILE', 'HARASSMENT', 'INAPPROPRIATE_CONTENT', 'SPAM', 'SCAM', 'OTHER'];
+    const categories = [
+      'FAKE_PROFILE',
+      'INCORRECT_INFORMATION',
+      'MISREPRESENTATION',
+      'HARASSMENT',
+      'FRAUD',
+      'INAPPROPRIATE_BEHAVIOUR',
+      'INAPPROPRIATE_CONTENT',
+      'ALREADY_MARRIED',
+      'SPAM',
+      'SCAM',
+      'OTHER',
+    ];
     if (!reportedUserId || reportedUserId === auth.user.id || !categories.includes(category) || description.length < 10) {
       return NextResponse.json({ success: false, error: 'A valid report target, category, and description are required.' }, { status: 400 });
     }
@@ -56,7 +73,7 @@ export async function POST(request: NextRequest) {
       description,
       evidence_url: typeof body.evidenceUrl === 'string' ? body.evidenceUrl.trim().slice(0, 500) || null : null,
       status: 'OPEN',
-    }]).select().single();
+    }]).select(REPORT_SELECT).single();
     if (error) throw error;
     return NextResponse.json({ success: true, data: mapReport(created), message: 'Report submitted for review.' }, { status: 201 });
   } catch (error) {
@@ -79,7 +96,7 @@ export async function PATCH(request: NextRequest) {
     const { data, error } = await insforgeAdmin.database.from('abuse_reports').update({
       status,
       admin_action_taken: typeof body.adminActionTaken === 'string' ? body.adminActionTaken.trim().slice(0, 1000) : null,
-    }).eq('id', body.id).select().single();
+    }).eq('id', body.id).select(REPORT_SELECT).single();
     if (error) throw error;
     return NextResponse.json({ success: true, data: mapReport(data) });
   } catch (error) {

@@ -37,6 +37,9 @@ export async function PATCH(request: NextRequest) {
       update.account_status = body.accountStatus;
       update.session_version = current.session_version + 1;
     }
+    if (typeof body.subscriptionTier === 'string' && ['FREE', 'BASIC', 'PREMIUM', 'PREMIUM_PLUS', 'VIP'].includes(body.subscriptionTier.toUpperCase())) {
+      update.subscription_tier = body.subscriptionTier.toUpperCase() === 'VIP' ? 'PREMIUM_PLUS' : body.subscriptionTier.toUpperCase();
+    }
     if (typeof body.role === 'string') {
       if (auth.user.role !== 'SUPER_ADMIN') return NextResponse.json({ success: false, error: 'Only a super administrator can change roles.' }, { status: 403 });
       if (!['USER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'].includes(body.role)) return NextResponse.json({ success: false, error: 'Invalid role.' }, { status: 400 });
@@ -48,14 +51,43 @@ export async function PATCH(request: NextRequest) {
     if (typeof body.assignedConsultantId === 'string' || body.assignedConsultantId === null) {
       update.assigned_consultant_id = body.assignedConsultantId;
     }
-    if (typeof body.totalConnections === 'number' && Number.isInteger(body.totalConnections) && body.totalConnections >= current.used_connections) {
-      update.total_connections = body.totalConnections;
-      update.remaining_connections = body.totalConnections - current.used_connections;
+    let nextTotal = Number(current.total_connections ?? 0);
+    let nextUsed = Number(current.used_connections ?? 0);
+    let connectionsChanged = false;
+    if (typeof body.totalConnections === 'number' && Number.isInteger(body.totalConnections) && body.totalConnections >= nextUsed) {
+      nextTotal = body.totalConnections;
+      connectionsChanged = true;
+    }
+    if (typeof body.addConnections === 'number' && Number.isInteger(body.addConnections) && body.addConnections > 0) {
+      nextTotal += body.addConnections;
+      connectionsChanged = true;
+    }
+    if (typeof body.refundConnection === 'number' && Number.isInteger(body.refundConnection) && body.refundConnection > 0) {
+      if (nextUsed >= body.refundConnection) {
+        nextUsed -= body.refundConnection;
+      } else {
+        nextTotal += body.refundConnection;
+      }
+      connectionsChanged = true;
+    }
+    if (connectionsChanged) {
+      update.total_connections = nextTotal;
+      update.used_connections = nextUsed;
+      update.remaining_connections = Math.max(0, nextTotal - nextUsed);
     }
     if (!Object.keys(update).length) return NextResponse.json({ success: false, error: 'No valid changes supplied.' }, { status: 400 });
 
     const { data, error } = await insforgeAdmin.database.from('users').update(update).eq('id', body.id).select(USER_SELECT).single();
     if (error) throw error;
+    if (typeof body.isVerified === 'boolean') {
+      await insforgeAdmin.database
+        .from('matrimonial_profiles')
+        .update({
+          verification_badge: body.isVerified ? 'APPROVED' : 'UNVERIFIED',
+          is_identity_verified: body.isVerified,
+        })
+        .eq('user_id', body.id);
+    }
     return NextResponse.json({ success: true, data: toSafeUser(data) });
   } catch (error) {
     console.error('User update failed:', error);

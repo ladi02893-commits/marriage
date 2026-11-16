@@ -10,7 +10,6 @@ import {
   Sparkles,
   ArrowRight,
   CheckCircle2,
-  Star,
   ChevronRight,
   PhoneCall,
   BadgeCheck,
@@ -24,7 +23,7 @@ import { useAuth } from '@/lib/auth-context';
 
 export default function HomePage() {
   const router = useRouter();
-  const { currentUser, currentProfile, profiles, cms, plans, consultants } = useAuth();
+  const { currentUser, currentProfile, profiles, cms } = useAuth();
 
   React.useEffect(() => {
     if (currentUser && ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {

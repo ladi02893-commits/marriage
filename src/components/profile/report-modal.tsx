@@ -22,16 +22,17 @@ export function ReportModal({ reportedUserId, reportedUserName, isOpen, onClose 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description.trim()) {
-      toast.error('Please describe the reason for your report.');
+    if (description.trim().length < 10) {
+      toast.error('Please provide at least 10 characters describing the reason for your report.');
       return;
     }
 
     setIsSubmitting(true);
-    const result = await submitReport(reportedUserId, category, description);
+    const result = await submitReport(reportedUserId, category, description.trim());
     setIsSubmitting(false);
     if (result.success) {
       toast.success(result.message);
+      setDescription('');
       onClose();
     } else {
       toast.error(result.message);
@@ -70,6 +71,7 @@ export function ReportModal({ reportedUserId, reportedUserName, isOpen, onClose 
               <option value="HARASSMENT">Harassment or Abusive Behavior</option>
               <option value="INAPPROPRIATE_CONTENT">Inappropriate / Vulgar Content</option>
               <option value="SCAM">Financial Scam / Commercial Solicitations</option>
+              <option value="SPAM">Spam or Commercial Solicitation</option>
               <option value="MISREPRESENTATION">Misrepresentation of Marital Status / Age</option>
               <option value="OTHER">Other Violation</option>
             </select>

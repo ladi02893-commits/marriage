@@ -89,17 +89,28 @@ export async function PATCH(request: NextRequest) {
     if (!admin && ticket.user_id !== auth.user.id) return NextResponse.json({ success: false, error: 'You cannot access this ticket.' }, { status: 403 });
 
     if (typeof body.text === 'string' && body.text.trim()) {
+      const replyText = body.text.trim().slice(0, 4000);
       const { error } = await insforgeAdmin.database.from('ticket_messages').insert([{
         ticket_id: id,
         sender: admin ? 'AGENT' : 'USER',
         sender_name: auth.user.name,
-        text: body.text.trim().slice(0, 4000),
+        text: replyText,
       }]);
       if (error) throw error;
       const { error: updateError } = await insforgeAdmin.database.from('support_tickets').update({
         status: admin ? 'WAITING_FOR_USER' : 'IN_PROGRESS',
       }).eq('id', id);
       if (updateError) throw updateError;
+      if (admin && ticket.user_id !== auth.user.id) {
+        const { error: notifError } = await insforgeAdmin.database.from('notifications').insert([{
+          user_id: ticket.user_id,
+          title: 'Support ticket reply',
+          description: replyText.slice(0, 140),
+          type: 'SUPPORT_REPLY',
+          link_url: '/dashboard/support',
+        }]);
+        if (notifError) console.error('Support reply notification failed:', notifError.message);
+      }
     } else if (typeof body.status === 'string') {
       if (!admin || !['OPEN', 'IN_PROGRESS', 'WAITING_FOR_USER', 'RESOLVED', 'CLOSED'].includes(body.status)) {
         return NextResponse.json({ success: false, error: 'Administrator access and a valid status are required.' }, { status: 403 });

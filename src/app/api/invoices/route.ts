@@ -12,6 +12,7 @@ export async function GET() {
     if (error) throw error;
     const invoices = (data ?? []).map((invoice) => ({
       ...invoice,
+      amount: Number(invoice.amount ?? 0),
       userId: invoice.user_id,
       invoiceNumber: invoice.invoice_number,
       paymentMethod: invoice.payment_method,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-context';
 import { SubscriptionPlan } from '@/lib/types';
@@ -26,9 +26,20 @@ export function CheckoutModal({ isOpen, onClose, plan, onSuccess }: CheckoutModa
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  useEffect(() => {
+    if (isOpen) {
+      setAccountId('');
+      setTransactionId('');
+      setSenderAccount('');
+      setReceipt(null);
+      setReceiptName('');
+      setSubmitted(false);
+    }
+  }, [isOpen, plan?.id]);
+
   if (!isOpen || !plan) return null;
   const accounts = receivingAccounts.filter((account) => account.isActive &&
-    ['BANK_TRANSFER', 'JAZZCASH', 'EASYPAISA', 'RAAST', 'SADAPAY'].includes(account.provider));
+    ['BANK_TRANSFER', 'JAZZCASH', 'EASYPAISA', 'RAAST', 'SADAPAY', 'NAYAPAY', 'OTHER'].includes(account.provider));
   const selectedAccount = accounts.find((account) => account.id === accountId) ?? accounts[0];
 
   const uploadReceipt = async (file: File) => {

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Send,
   ShieldCheck,
@@ -9,9 +10,12 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { formatRelativeTime } from '@/lib/utils';
 import { toast } from 'sonner';
 
-export default function MessagesChatPage() {
+function MessagesChatContent() {
+  const searchParams = useSearchParams();
+  const requestedConvId = searchParams.get('conversationId') || '';
   const { conversations, messages, currentUser, currentProfile, sendMessage } = useAuth();
 
   const userConversations = conversations.filter(
@@ -22,8 +26,14 @@ export default function MessagesChatPage() {
       (currentProfile && (c.participantAId === currentProfile.userId || c.participantBId === currentProfile.userId))
   );
 
-  const [selectedConvId, setSelectedConvId] = useState<string>('');
+  const [selectedConvId, setSelectedConvId] = useState<string>(requestedConvId);
   const [inputText, setInputText] = useState('');
+
+  useEffect(() => {
+    if (requestedConvId) {
+      setSelectedConvId(requestedConvId);
+    }
+  }, [requestedConvId]);
 
   const activeConv = userConversations.find((c) => c.id === (selectedConvId || userConversations[0]?.id)) || userConversations[0];
   const activeConvId = activeConv?.id || '';
@@ -110,7 +120,9 @@ export default function MessagesChatPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-foreground truncate">{name}</span>
-                        <span className="text-[10px] text-muted-foreground">{conv.lastMessageTime}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {conv.lastMessageTime ? formatRelativeTime(conv.lastMessageTime) : ''}
+                        </span>
                       </div>
                       <p className="text-[11px] text-muted-foreground truncate mt-0.5">
                         {conv.lastMessageText}
@@ -189,7 +201,7 @@ export default function MessagesChatPage() {
                         {msg.text}
                       </div>
                       <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground px-1">
-                        <span>{msg.timestamp}</span>
+                        <span>{msg.timestamp ? formatRelativeTime(msg.timestamp) : ''}</span>
                         {isMe && <CheckCheck className="h-3 w-3 text-brand-600" />}
                       </div>
                     </div>
@@ -238,5 +250,13 @@ export default function MessagesChatPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MessagesChatPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-xs text-muted-foreground">Loading messages...</div>}>
+      <MessagesChatContent />
+    </Suspense>
   );
 }

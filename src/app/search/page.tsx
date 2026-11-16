@@ -12,6 +12,7 @@ import {
   Bookmark,
   Users,
   X,
+  MessageCircle,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -45,6 +46,7 @@ function SearchContent() {
   const rawMaxAge = searchParams.get('maxAge');
   const initialMaxAge = rawMaxAge && !isNaN(Number(rawMaxAge)) ? Number(rawMaxAge) : '';
   const initialProfileId = searchParams.get('profileId') || '';
+  const initialEducation = searchParams.get('education') || 'ALL';
 
   // Filter State
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
@@ -59,6 +61,7 @@ function SearchContent() {
   const [country, setCountry] = useState<string>(initialCountry);
   const [city, setCity] = useState<string>(initialCity);
   const [profession, setProfession] = useState<string>('ALL');
+  const [education, setEducation] = useState<string>(initialEducation);
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
   const [whatsappVerifiedOnly, setWhatsappVerifiedOnly] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<string>('COMPATIBILITY');
@@ -76,11 +79,12 @@ function SearchContent() {
     if (country !== 'ALL') count++;
     if (city !== 'ALL') count++;
     if (profession !== 'ALL') count++;
+    if (education !== 'ALL') count++;
     if (verifiedOnly) count++;
     if (whatsappVerifiedOnly) count++;
     if (profileIdSearch.trim()) count++;
     return count;
-  }, [gender, targetOppositeGender, minAge, maxAge, religion, sect, caste, maritalStatus, country, city, profession, verifiedOnly, whatsappVerifiedOnly, profileIdSearch]);
+  }, [gender, targetOppositeGender, minAge, maxAge, religion, sect, caste, maritalStatus, country, city, profession, education, verifiedOnly, whatsappVerifiedOnly, profileIdSearch]);
 
   // Sync opposite gender if user logs in
   React.useEffect(() => {
@@ -123,26 +127,40 @@ function SearchContent() {
         if (religion !== 'ALL' && p.religion !== religion) return false;
 
         // Sect filter
-        if (sect !== 'ALL' && p.sectOrCommunity && !p.sectOrCommunity.toLowerCase().includes(sect.toLowerCase())) return false;
+        if (sect !== 'ALL' && (!p.sectOrCommunity || !p.sectOrCommunity.toLowerCase().includes(sect.toLowerCase()))) return false;
 
         // Caste filter
-        if (caste !== 'ALL' && p.caste && !p.caste.toLowerCase().includes(caste.toLowerCase())) return false;
+        if (caste !== 'ALL' && (!p.caste || !p.caste.toLowerCase().includes(caste.toLowerCase()))) return false;
 
         // Marital status filter
         if (maritalStatus !== 'ALL' && p.maritalStatus !== maritalStatus) return false;
 
         // Country filter
-        if (country !== 'ALL' && !p.country.toLowerCase().includes(country.toLowerCase())) return false;
+        if (country !== 'ALL' && !(p.country || '').toLowerCase().includes(country.toLowerCase())) return false;
 
         // City filter
-        if (city !== 'ALL' && !p.city.toLowerCase().includes(city.toLowerCase())) return false;
+        if (city !== 'ALL' && !(p.city || '').toLowerCase().includes(city.toLowerCase())) return false;
 
         // Profession filter
         if (
           profession !== 'ALL' &&
-          !p.educationCareer?.profession.toLowerCase().includes(profession.toLowerCase())
+          !(p.educationCareer?.profession || '').toLowerCase().includes(profession.toLowerCase())
         )
           return false;
+
+        // Education level filter
+        if (education !== 'ALL') {
+          const deg = (p.educationCareer?.highestDegree || '').toLowerCase();
+          if (education === 'DOCTORATE') {
+            if (!['doctor', 'phd', 'md', 'mbbs', 'fcps', 'specialist'].some((kw) => deg.includes(kw))) return false;
+          } else if (education === 'MASTERS') {
+            if (!['master', 'ms', 'mphil', 'mba', 'msc', 'llm'].some((kw) => deg.includes(kw))) return false;
+          } else if (education === 'BACHELORS') {
+            if (!['bachelor', 'bs', 'be', 'bba', 'bsc', 'llb', 'ca', 'acca'].some((kw) => deg.includes(kw))) return false;
+          } else if (!deg.includes(education.toLowerCase())) {
+            return false;
+          }
+        }
 
         // Verified filter
         if (verifiedOnly && p.verificationBadge !== 'APPROVED') return false;
@@ -154,10 +172,10 @@ function SearchContent() {
         if (searchTerm.trim()) {
           const term = searchTerm.toLowerCase();
           const matchCode = p.profileIdCode && p.profileIdCode.toLowerCase().includes(term);
-          const matchName = p.fullName.toLowerCase().includes(term);
-          const matchCity = p.city.toLowerCase().includes(term);
-          const matchProf = p.educationCareer?.profession?.toLowerCase().includes(term);
-          const matchBio = p.aboutMe.toLowerCase().includes(term);
+          const matchName = (p.fullName || '').toLowerCase().includes(term);
+          const matchCity = (p.city || '').toLowerCase().includes(term);
+          const matchProf = (p.educationCareer?.profession || '').toLowerCase().includes(term);
+          const matchBio = (p.aboutMe || '').toLowerCase().includes(term);
           const matchCaste = p.caste && p.caste.toLowerCase().includes(term);
           if (!matchCode && !matchName && !matchCity && !matchProf && !matchBio && !matchCaste) return false;
         }
@@ -206,6 +224,9 @@ function SearchContent() {
   }, [
     profiles,
     currentProfile,
+    currentUser,
+    userProfile,
+    targetOppositeGender,
     profileIdSearch,
     gender,
     minAge,
@@ -217,6 +238,7 @@ function SearchContent() {
     country,
     city,
     profession,
+    education,
     verifiedOnly,
     whatsappVerifiedOnly,
     searchTerm,
@@ -236,6 +258,7 @@ function SearchContent() {
     setCountry('ALL');
     setCity('ALL');
     setProfession('ALL');
+    setEducation('ALL');
     setVerifiedOnly(false);
     setWhatsappVerifiedOnly(false);
     setSortBy('COMPATIBILITY');
@@ -424,10 +447,22 @@ function SearchContent() {
                   <button onClick={() => setProfession('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
                 </span>
               )}
+              {education !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Education: {education}
+                  <button onClick={() => setEducation('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
               {verifiedOnly && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-medium text-blue-700 border border-blue-200 dark:bg-blue-950 dark:border-blue-800 dark:text-blue-300">
                   ID Verified
                   <button onClick={() => setVerifiedOnly(false)} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
+              {whatsappVerifiedOnly && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 border border-emerald-200 dark:bg-emerald-950 dark:border-emerald-800 dark:text-emerald-300">
+                  WhatsApp Verified
+                  <button onClick={() => setWhatsappVerifiedOnly(false)} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
                 </span>
               )}
               {profileIdSearch.trim() && (
@@ -687,8 +722,23 @@ function SearchContent() {
               </select>
             </div>
 
-            {/* Verified Badge Checkbox */}
-            <div className="pt-2 border-t border-border">
+            {/* Education Level */}
+            <div>
+              <label className="text-xs font-semibold text-foreground block mb-1.5">Education Level</label>
+              <select
+                value={education}
+                onChange={(e) => setEducation(e.target.value)}
+                className="w-full rounded-xl border border-border bg-muted/40 p-2.5 text-xs text-foreground focus:outline-none"
+              >
+                <option value="ALL">Any Education Level</option>
+                <option value="DOCTORATE">Doctorate / MBBS / Specialist</option>
+                <option value="MASTERS">Masters / MS / MPhil / MBA</option>
+                <option value="BACHELORS">Bachelors / BS / BE / CA</option>
+              </select>
+            </div>
+
+            {/* Verified Badge Checkboxes */}
+            <div className="pt-2 border-t border-border space-y-2.5">
               <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
                 <input
                   type="checkbox"
@@ -698,6 +748,17 @@ function SearchContent() {
                 />
                 <ShieldCheck className="h-4 w-4 text-blue-600" />
                 <span>Show ID Verified Only</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  checked={whatsappVerifiedOnly}
+                  onChange={(e) => setWhatsappVerifiedOnly(e.target.checked)}
+                  className="rounded border-border text-brand-600 focus:ring-brand-500"
+                />
+                <MessageCircle className="h-4 w-4 text-emerald-600" />
+                <span>Show WhatsApp Verified Only</span>
               </label>
               </div>
             </div>

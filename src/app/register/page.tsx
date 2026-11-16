@@ -37,12 +37,12 @@ export default function RegisterWizardPage() {
     whatsappNumber: '',
     gender: 'FEMALE',
     dateOfBirth: '',
-    height: '',
+    height: '5 ft 6 in (168 cm)',
     weight: '',
     maritalStatus: 'NEVER_MARRIED',
     religion: 'ISLAM',
     sectOrCommunity: '',
-    caste: '',
+    caste: 'Syed',
     subClan: '',
     motherTongue: 'Urdu',
     citizenship: 'Pakistani',
@@ -52,13 +52,13 @@ export default function RegisterWizardPage() {
     area: '',
 
     // Step 3: Education & Career
-    highestDegree: '',
+    highestDegree: "Bachelor's Degree",
     institution: '',
     fieldOfStudy: '',
     profession: '',
     jobTitle: '',
     company: '',
-    monthlyIncome: '',
+    monthlyIncome: 'PKR 150,000 - 300,000 / month',
     annualIncome: '',
     employmentSector: 'PRIVATE',
 
@@ -69,7 +69,7 @@ export default function RegisterWizardPage() {
     sistersCount: 0,
     familyType: 'NUCLEAR',
     familyValues: 'MODERATE',
-    livingStatus: '',
+    livingStatus: 'Living in Own House',
     familyLocation: '',
     diet: 'HALAL_ONLY',
     smoking: 'NO',
@@ -99,17 +99,18 @@ export default function RegisterWizardPage() {
     photoUrl: '',
 
     // Step 7: Consents
-    agreeTerms: true,
-    agreeTruthfulness: true,
+    agreeTerms: false,
+    agreeTruthfulness: false,
   });
 
   // Calculate Age Dynamically
   const calculatedAge = useMemo(() => {
-    if (!formData.dateOfBirth) return 26;
+    if (!formData.dateOfBirth) return null;
     const dob = new Date(formData.dateOfBirth);
+    if (Number.isNaN(dob.getTime())) return null;
     const diffMs = Date.now() - dob.getTime();
     const ageDt = new Date(diffMs);
-    return Math.abs(ageDt.getUTCFullYear() - 1970) || 26;
+    return Math.abs(ageDt.getUTCFullYear() - 1970);
   }, [formData.dateOfBirth]);
 
   const updateField = (field: string, value: any) => {
@@ -131,7 +132,7 @@ export default function RegisterWizardPage() {
         toast.error('Please complete your name, email, mobile, birth date, location, and password.');
         return;
       }
-      if (calculatedAge < 18 || calculatedAge > 100) {
+      if (calculatedAge === null || calculatedAge < 18 || calculatedAge > 100) {
         toast.error('Registration is available only to adults aged 18 to 100.');
         return;
       }
@@ -189,7 +190,7 @@ export default function RegisterWizardPage() {
           displayName: formData.fullName.split(' ')[0] + (formData.fullName.split(' ')[1] ? ' ' + formData.fullName.split(' ')[1][0] + '.' : ''),
           gender: formData.gender as any,
           dateOfBirth: formData.dateOfBirth,
-          age: calculatedAge,
+          age: calculatedAge ?? 25,
           phone: formData.whatsappNumber || formData.phone,
           maritalStatus: formData.maritalStatus as any,
           religion: formData.religion as any,
@@ -217,7 +218,7 @@ export default function RegisterWizardPage() {
             profession: formData.profession,
             jobTitle: formData.jobTitle,
             company: formData.company,
-            annualIncome: formData.annualIncome,
+            annualIncome: formData.annualIncome || formData.monthlyIncome,
             monthlyIncome: formData.monthlyIncome,
             employmentSector: formData.employmentSector as any,
             workingLocation: formData.city,
@@ -229,8 +230,8 @@ export default function RegisterWizardPage() {
             smoking: formData.smoking as any,
             drinking: formData.drinking as any,
             motherTongue: formData.motherTongue,
-            languagesSpoken: formData.languagesSpoken.split(',').map((s) => s.trim()),
-            hobbies: formData.hobbies.split(',').map((s) => s.trim()),
+            languagesSpoken: formData.languagesSpoken.split(',').map((s) => s.trim()).filter(Boolean),
+            hobbies: formData.hobbies.split(',').map((s) => s.trim()).filter(Boolean),
             livingStatus: formData.livingStatus,
           },
           familyInfo: {
@@ -249,11 +250,11 @@ export default function RegisterWizardPage() {
             heightRange: { min: formData.prefHeightMin, max: formData.prefHeightMax },
             maritalStatus: [formData.prefMaritalStatus as any],
             religions: [formData.prefReligions as any],
-            sects: [formData.prefSects],
-            caste: [formData.prefCaste],
-            educationLevels: [formData.prefEducation],
-            professions: [formData.prefProfession],
-            preferredLocations: formData.prefLocations.split(',').map((s) => s.trim()),
+            sects: formData.prefSects ? [formData.prefSects] : [],
+            caste: formData.prefCaste ? [formData.prefCaste] : [],
+            educationLevels: formData.prefEducation ? [formData.prefEducation] : [],
+            professions: formData.prefProfession ? [formData.prefProfession] : [],
+            preferredLocations: formData.prefLocations.split(',').map((s) => s.trim()).filter(Boolean),
             monthlyIncome: formData.prefIncome,
             expectationsNotes: formData.prefNotes,
           },
@@ -418,7 +419,7 @@ export default function RegisterWizardPage() {
 
                   <div>
                     <label className="text-xs font-semibold text-foreground block mb-1">
-                      Date of Birth * <span className="text-brand-600 font-bold">(Age: {calculatedAge} Yrs)</span>
+                      Date of Birth * {calculatedAge !== null && <span className="text-brand-600 font-bold">(Age: {calculatedAge} Yrs)</span>}
                     </label>
                     <input
                       type="date"
@@ -765,6 +766,28 @@ export default function RegisterWizardPage() {
                       className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none resize-none"
                     />
                   </div>
+
+                  <div className="sm:col-span-2 pt-2 border-t border-border">
+                    <label className="text-xs font-semibold text-foreground block mb-1">Profile Headline</label>
+                    <input
+                      type="text"
+                      value={formData.bioHeadline}
+                      onChange={(e) => updateField('bioHeadline', e.target.value)}
+                      placeholder="e.g. Practicing physician seeking a sincere, family-oriented partner"
+                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-semibold text-foreground block mb-1">About Yourself</label>
+                    <textarea
+                      rows={3}
+                      value={formData.aboutMe}
+                      onChange={(e) => updateField('aboutMe', e.target.value)}
+                      placeholder="Briefly describe your personality, values, and life outlook..."
+                      className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none resize-none"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -784,7 +807,7 @@ export default function RegisterWizardPage() {
                 <div className="rounded-2xl bg-muted/30 p-5 border border-border space-y-3 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Applicant:</span>
-                    <strong className="text-foreground">{formData.fullName} ({calculatedAge} Yrs, {formData.caste})</strong>
+                    <strong className="text-foreground">{formData.fullName} ({calculatedAge ?? '--'} Yrs, {formData.caste})</strong>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">WhatsApp Verified:</span>

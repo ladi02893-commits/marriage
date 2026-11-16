@@ -29,6 +29,7 @@ export async function toProfileDto(profile: Row, canSeePrivate: boolean, isOwner
   const showContact = isOwnerOrAdmin || (canSeePrivate && privacy.contact_visibility !== 'NONE');
   const showAge = isOwnerOrAdmin || privacy.show_age !== false;
   const showIncome = isOwnerOrAdmin || privacy.show_income === true;
+  const computedAge = ageFromBirthDate(profile.date_of_birth) ?? 25;
   const photos = showPhotos ? await Promise.all((profile.photos ?? [])
     .filter((photo: Row) => isOwnerOrAdmin || photo.is_approved)
     .map(async (photo: Row) => {
@@ -50,7 +51,7 @@ export async function toProfileDto(profile: Row, canSeePrivate: boolean, isOwner
     displayName: profile.display_name,
     gender: profile.gender,
     dateOfBirth: showAge ? profile.date_of_birth : undefined,
-    age: showAge ? ageFromBirthDate(profile.date_of_birth) : undefined,
+    age: computedAge,
     maritalStatus: profile.marital_status,
     religion: profile.religion,
     sectOrCommunity: profile.sect_or_community ?? undefined,
@@ -60,6 +61,7 @@ export async function toProfileDto(profile: Row, canSeePrivate: boolean, isOwner
     whatsappNumber: showContact ? user.whatsapp_number ?? undefined : undefined,
     city: profile.city,
     country: profile.country,
+    citizenship: profile.citizenship ?? profile.country ?? '',
     state: profile.state_province ?? undefined,
     province: profile.state_province ?? undefined,
     bioHeadline: profile.bio_headline,

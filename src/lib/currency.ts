@@ -130,21 +130,6 @@ export function convertPKRToCountryCurrency(
 }
 
 /**
- * Format a given amount in PKR into localized currency string
- */
-function formatCurrencyByCountry(
-  amountInPKR: number,
-  country?: string,
-  options?: { round?: boolean; showCode?: boolean }
-): string {
-  const res = convertPKRToCountryCurrency(amountInPKR, country, options);
-  if (options?.showCode && res.code !== 'PKR') {
-    return `${res.code} ${res.formatted}`;
-  }
-  return res.formatted;
-}
-
-/**
  * Primary Connection Packages & Additional Packs Base Prices (PKR)
  * Section 2:
  * Basic: Rs. 2,000 (30 Connections)

@@ -35,17 +35,18 @@ export class MatchingService {
     const prefs = userProfile.partnerPreferences;
     const matchReasons: string[] = [];
     const improvementTips: string[] = [];
+    const candidateAge = typeof candidate.age === 'number' && Number.isFinite(candidate.age) ? candidate.age : null;
 
     // 1. Age Score (15%)
     let ageScore = 50;
-    if (prefs?.ageRange) {
-      if (candidate.age >= prefs.ageRange.min && candidate.age <= prefs.ageRange.max) {
+    if (prefs?.ageRange && candidateAge !== null) {
+      if (candidateAge >= prefs.ageRange.min && candidateAge <= prefs.ageRange.max) {
         ageScore = 100;
-        matchReasons.push(`Age (${candidate.age}) aligns perfectly with your preference (${prefs.ageRange.min} - ${prefs.ageRange.max} yrs)`);
+        matchReasons.push(`Age (${candidateAge}) aligns perfectly with your preference (${prefs.ageRange.min} - ${prefs.ageRange.max} yrs)`);
       } else {
         const diff = Math.min(
-          Math.abs(candidate.age - prefs.ageRange.min),
-          Math.abs(candidate.age - prefs.ageRange.max)
+          Math.abs(candidateAge - prefs.ageRange.min),
+          Math.abs(candidateAge - prefs.ageRange.max)
         );
         ageScore = Math.max(20, 100 - diff * 15);
       }
@@ -55,13 +56,17 @@ export class MatchingService {
 
     // 2. Location Score (15%)
     let locationScore = 40;
-    if (userProfile.city.toLowerCase() === candidate.city.toLowerCase()) {
+    const userCity = (userProfile.city || '').toLowerCase();
+    const candCity = (candidate.city || '').toLowerCase();
+    const userCountry = (userProfile.country || '').toLowerCase();
+    const candCountry = (candidate.country || '').toLowerCase();
+    if (userCity && candCity && userCity === candCity) {
       locationScore = 100;
       matchReasons.push(`Located in the same city (${candidate.city})`);
-    } else if (userProfile.country.toLowerCase() === candidate.country.toLowerCase()) {
+    } else if (userCountry && candCountry && userCountry === candCountry) {
       locationScore = 80;
       matchReasons.push(`Located in the same country (${candidate.country})`);
-    } else if (prefs?.preferredLocations?.some((loc) => loc.toLowerCase() === candidate.city.toLowerCase() || loc.toLowerCase() === candidate.country.toLowerCase())) {
+    } else if (prefs?.preferredLocations?.some((loc) => loc.toLowerCase() === candCity || loc.toLowerCase() === candCountry)) {
       locationScore = 90;
       matchReasons.push(`Located in your preferred region (${candidate.city}, ${candidate.country})`);
     } else {

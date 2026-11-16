@@ -1,25 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
+import { toProfileDto } from '@/lib/profile-dto';
 
-const FAVORITE_SELECT = 'id,user_id,target_profile_id,created_at,targetProfile:matrimonial_profiles!target_profile_id(*,photos:profile_photos(*),educationCareer:education_careers(*))';
+const FAVORITE_SELECT = 'id,user_id,target_profile_id,created_at,targetProfile:matrimonial_profiles!target_profile_id(*,photos:profile_photos(*),educationCareer:education_careers(*),lifestyle:lifestyles(*),familyInfo:family_infos(*),partnerPreferences:partner_preferences(*),privacySettings:privacy_settings(*),user:users(id,phone,whatsapp_number,profile_id_code,is_verified,is_whatsapp_verified,is_email_verified,account_status))';
 
-function mapFavorite(row: Record<string, any>) {
+async function mapFavorite(row: Record<string, any>) {
   const profile = Array.isArray(row.targetProfile) ? row.targetProfile[0] : row.targetProfile;
   return {
     id: row.id,
     userId: row.user_id,
     targetProfileId: row.target_profile_id,
     createdAt: row.created_at,
-    targetProfile: profile ? {
-      ...profile,
-      userId: profile.user_id,
-      fullName: profile.display_name,
-      displayName: profile.display_name,
-      dateOfBirth: undefined,
-      full_name: undefined,
-      date_of_birth: undefined,
-    } : null,
+    targetProfile: profile ? await toProfileDto(profile, false, false) : null,
   };
 }
 
@@ -29,7 +22,7 @@ export async function GET() {
   const { data, error } = await insforgeAdmin.database.from('favorites')
     .select(FAVORITE_SELECT).eq('user_id', auth.user.id).order('created_at', { ascending: false });
   if (error) return NextResponse.json({ success: false, error: 'Favorites could not be loaded.' }, { status: 503 });
-  return NextResponse.json({ success: true, data: (data ?? []).map(mapFavorite) });
+  return NextResponse.json({ success: true, data: await Promise.all((data ?? []).map(mapFavorite)) });
 }
 
 export async function POST(request: NextRequest) {
@@ -46,11 +39,16 @@ export async function POST(request: NextRequest) {
     if (!target || target.user_id === auth.user.id || target.approval_status !== 'APPROVED') {
       return NextResponse.json({ success: false, error: 'Profile is unavailable.' }, { status: 404 });
     }
+    const { data: existing } = await insforgeAdmin.database.from('favorites')
+      .select(FAVORITE_SELECT).eq('user_id', auth.user.id).eq('target_profile_id', target.id).maybeSingle();
+    if (existing) {
+      return NextResponse.json({ success: true, data: await mapFavorite(existing) });
+    }
     const { data, error } = await insforgeAdmin.database.from('favorites').insert([{
       user_id: auth.user.id, target_profile_id: target.id,
     }]).select(FAVORITE_SELECT).single();
     if (error) throw error;
-    return NextResponse.json({ success: true, data: mapFavorite(data) }, { status: 201 });
+    return NextResponse.json({ success: true, data: await mapFavorite(data) }, { status: 201 });
   } catch (error) {
     console.error('Favorite creation failed:', error);
     return NextResponse.json({ success: false, error: 'Favorite could not be saved.' }, { status: 500 });

@@ -49,9 +49,17 @@ export default function VerificationHubPage() {
           <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-4 py-1.5 text-xs font-bold text-blue-800 dark:bg-blue-950 dark:text-blue-300">
             <ShieldCheck className="h-4 w-4" /> VERIFIED MEMBER
           </span>
-        ) : (
+        ) : userVerif?.status === 'PENDING' ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-4 py-1.5 text-xs font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
             <Clock className="h-4 w-4" /> Verification Pending
+          </span>
+        ) : userVerif?.status === 'REJECTED' ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-4 py-1.5 text-xs font-bold text-rose-800 dark:bg-rose-950 dark:text-rose-300">
+            <Clock className="h-4 w-4" /> Verification Rejected
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-4 py-1.5 text-xs font-bold text-muted-foreground">
+            <Clock className="h-4 w-4" /> Unverified
           </span>
         )}
       </div>
@@ -67,8 +75,10 @@ export default function VerificationHubPage() {
             <p className="text-xs text-muted-foreground leading-relaxed">
               {currentUser?.isVerified
                 ? 'Your government identity document and facial biometric selfie have been verified by VIP Royal compliance officers. The Blue Shield badge is prominently displayed on your profile card.'
-                : userVerif
-                ? `Verification request (${userVerif.documentType}) is currently ${userVerif.status.toLowerCase()}. Our compliance team will audit it shortly.`
+                : userVerif?.status === 'PENDING'
+                ? `Your verification request (${userVerif.documentType}) is currently pending review. Our compliance team will audit it shortly.`
+                : userVerif?.status === 'REJECTED'
+                ? `Your previous verification request (${userVerif.documentType}) was not approved.${userVerif.reviewerNotes ? ` Reviewer notes: ${userVerif.reviewerNotes}` : ' Please upload clear documents below to resubmit.'}`
                 : 'You have not yet submitted your government ID. Submit below to gain the verified badge.'}
             </p>
           </div>
@@ -76,7 +86,7 @@ export default function VerificationHubPage() {
       </div>
 
       {/* Submit Verification Form */}
-      {!currentUser?.isVerified && (
+      {!currentUser?.isVerified && userVerif?.status !== 'PENDING' && (
         <div className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-sm">
           <h3 className="text-base font-bold font-serif text-foreground mb-1">
             Submit Government ID for Audit

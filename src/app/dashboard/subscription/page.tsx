@@ -32,7 +32,7 @@ export default function SubscriptionBillingPage() {
       <div>
         <div className="flex items-center justify-between"><h2 className="text-lg font-bold">Available packages</h2><Link href="/pricing" className="text-xs font-semibold text-brand-600 hover:underline">Compare details</Link></div>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
-          {plans.map((plan) => <div key={plan.slug} className="flex flex-col rounded-2xl border border-border bg-card p-5">
+          {plans.filter((plan) => plan.monthlyPrice > 0).map((plan) => <div key={plan.slug} className="flex flex-col rounded-2xl border border-border bg-card p-5">
             <h3 className="font-bold">{plan.name}</h3>
             <p className="mt-2 text-xl font-black text-brand-600">PKR {plan.monthlyPrice.toLocaleString()}</p>
             <p className="mt-1 text-xs text-muted-foreground">One-time payment · {plan.connectionsLimit ?? plan.connectionLimit ?? 'Specified'} credits</p>
@@ -46,7 +46,13 @@ export default function SubscriptionBillingPage() {
       </div>
       <p className="text-xs text-muted-foreground">Card payments, coupon codes, and separate top-up packs are not available yet.</p>
       <CheckoutModal isOpen={selectedPlan !== null} onClose={() => setSelectedPlan(null)} plan={selectedPlan} />
-      <InvoiceReceiptModal isOpen={selectedInvoice !== null} onClose={() => setSelectedInvoice(null)} invoice={selectedInvoice} />
+      <InvoiceReceiptModal
+        isOpen={selectedInvoice !== null}
+        onClose={() => setSelectedInvoice(null)}
+        invoice={selectedInvoice}
+        userName={currentUser?.name}
+        userEmail={currentUser?.email}
+      />
     </div>
   );
 }

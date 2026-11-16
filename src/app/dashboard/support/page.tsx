@@ -9,10 +9,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { SupportCategory } from '@/lib/types';
+import { formatRelativeTime } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function SupportTicketsPage() {
-  const { tickets, currentUser, currentProfile, createSupportTicket, replySupportTicket } = useAuth();
+  const { tickets, currentUser, createSupportTicket, replySupportTicket } = useAuth();
   const [newTicketOpen, setNewTicketOpen] = useState(false);
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState<SupportCategory>('CONNECTION_ISSUE');
@@ -24,24 +25,26 @@ export default function SupportTicketsPage() {
     (t) => t.userId === currentUser?.id || (currentUser?.email && t.userEmail === currentUser.email)
   );
 
-  const handleCreateTicket = (e: React.FormEvent) => {
+  const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject.trim() || !message.trim()) {
-      toast.error('Please enter a ticket subject and description.');
+    if (subject.trim().length < 3 || message.trim().length < 10) {
+      toast.error('Please enter a subject (min 3 characters) and detailed message (min 10 characters).');
       return;
     }
 
-    createSupportTicket({
-      subject,
+    const ok = await createSupportTicket({
+      subject: subject.trim(),
       category,
       relatedProfileId: relatedProfileId.trim() || undefined,
-      message,
+      message: message.trim(),
     });
 
-    setSubject('');
-    setMessage('');
-    setRelatedProfileId('');
-    setNewTicketOpen(false);
+    if (ok) {
+      setSubject('');
+      setMessage('');
+      setRelatedProfileId('');
+      setNewTicketOpen(false);
+    }
   };
 
   const handleSendReply = (ticketId: string) => {
@@ -199,7 +202,7 @@ export default function SupportTicketsPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3">
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-xs font-bold text-brand-700 dark:text-brand-300 bg-brand-100/70 dark:bg-brand-950/60 px-2.5 py-0.5 rounded-lg border border-brand-200 dark:border-brand-900">
-                    {t.id}
+                    {t.ticketCode || t.id}
                   </span>
                   <h4 className="text-sm font-bold text-foreground">{t.subject}</h4>
                 </div>
@@ -238,7 +241,9 @@ export default function SupportTicketsPage() {
                         <span className={`font-bold ${isStaff ? 'text-brand-700 dark:text-brand-300' : 'text-foreground'}`}>
                           {m.senderName} {isStaff && '• Senior Support Officer'}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">{m.timestamp}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {m.timestamp ? formatRelativeTime(m.timestamp) : ''}
+                        </span>
                       </div>
                       <p className="text-foreground/90">{m.text}</p>
                     </div>

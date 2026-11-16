@@ -1,15 +1,20 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ArrowRight, Eye, EyeOff, Heart, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Footer } from '@/components/footer';
 import { Navbar } from '@/components/navbar';
 import { useAuth } from '@/lib/auth-context';
 
-export default function LoginPage() {
+function LoginContent() {
   const { currentUser, login } = useAuth();
+  const searchParams = useSearchParams();
+  const rawReturn = searchParams.get('returnTo') || searchParams.get('redirect') || '';
+  const safeReturnTo = rawReturn.startsWith('/') && !rawReturn.startsWith('//') ? rawReturn : '';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -18,12 +23,12 @@ export default function LoginPage() {
   useEffect(() => {
     if (currentUser) {
       if (['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
-        window.location.href = '/admin';
+        window.location.href = safeReturnTo.startsWith('/admin') ? safeReturnTo : '/admin';
       } else {
-        window.location.href = '/dashboard';
+        window.location.href = safeReturnTo && !safeReturnTo.startsWith('/admin') ? safeReturnTo : '/dashboard';
       }
     }
-  }, [currentUser]);
+  }, [currentUser, safeReturnTo]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -37,10 +42,13 @@ export default function LoginPage() {
     }
     toast.success('Signed in successfully.');
     if (['ADMIN', 'SUPER_ADMIN'].includes(result.user?.role || '')) {
-      window.location.href = '/admin';
+      window.location.href = safeReturnTo.startsWith('/admin') ? safeReturnTo : '/admin';
       return;
     }
-    window.location.href = result.redirectUrl || '/dashboard';
+    window.location.href =
+      safeReturnTo && !safeReturnTo.startsWith('/admin')
+        ? safeReturnTo
+        : result.redirectUrl || '/dashboard';
   };
 
   return (
@@ -110,5 +118,13 @@ export default function LoginPage() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <LoginContent />
+    </Suspense>
   );
 }

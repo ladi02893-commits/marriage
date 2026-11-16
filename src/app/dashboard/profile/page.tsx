@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import {
   User,
   GraduationCap,
@@ -11,7 +10,6 @@ import {
   Heart,
   Save,
   Trash2,
-  ShieldAlert,
 } from 'lucide-react';
 import { FileUpload } from '@/components/ui/file-upload';
 import { useAuth } from '@/lib/auth-context';
@@ -19,13 +17,12 @@ import { CountryCitySelect } from '@/components/ui/country-city-select';
 import { toast } from 'sonner';
 
 export default function ProfileEditorPage() {
-  const { currentProfile, currentUser, updateCurrentUserProfile, refreshDatabase } = useAuth();
+  const { currentProfile, updateCurrentUserProfile, refreshDatabase } = useAuth();
   const [activeTab, setActiveTab] = useState<'photos' | 'basic' | 'career' | 'lifestyle' | 'family' | 'prefs'>('basic');
-
-  const isAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
 
   const [form, setForm] = useState({
     fullName: currentProfile?.fullName || '',
+    displayName: currentProfile?.displayName || '',
     gender: currentProfile?.gender || 'FEMALE',
     dateOfBirth: currentProfile?.dateOfBirth?.slice(0, 10) || '',
     maritalStatus: currentProfile?.maritalStatus || 'NEVER_MARRIED',
@@ -55,6 +52,8 @@ export default function ProfileEditorPage() {
     familyValues: currentProfile?.familyInfo?.familyValues || 'MODERATE',
     fatherOccupation: currentProfile?.familyInfo?.fatherOccupation || '',
     motherOccupation: currentProfile?.familyInfo?.motherOccupation || '',
+    brothersCount: currentProfile?.familyInfo?.brothersCount ?? 0,
+    sistersCount: currentProfile?.familyInfo?.sistersCount ?? 0,
     familyLocation: currentProfile?.familyInfo?.familyLocation || '',
     aboutFamily: currentProfile?.familyInfo?.aboutFamily || '',
 
@@ -68,6 +67,7 @@ export default function ProfileEditorPage() {
     if (!currentProfile) return;
     setForm({
       fullName: currentProfile.fullName || '',
+      displayName: currentProfile.displayName || '',
       gender: currentProfile.gender || 'FEMALE',
       dateOfBirth: currentProfile.dateOfBirth?.slice(0, 10) || '',
       maritalStatus: currentProfile.maritalStatus || 'NEVER_MARRIED',
@@ -91,6 +91,8 @@ export default function ProfileEditorPage() {
       familyValues: currentProfile.familyInfo?.familyValues || 'MODERATE',
       fatherOccupation: currentProfile.familyInfo?.fatherOccupation || '',
       motherOccupation: currentProfile.familyInfo?.motherOccupation || '',
+      brothersCount: currentProfile.familyInfo?.brothersCount ?? 0,
+      sistersCount: currentProfile.familyInfo?.sistersCount ?? 0,
       familyLocation: currentProfile.familyInfo?.familyLocation || '',
       aboutFamily: currentProfile.familyInfo?.aboutFamily || '',
       prefAgeMin: currentProfile.partnerPreferences?.ageRange?.min || 25,
@@ -107,6 +109,7 @@ export default function ProfileEditorPage() {
     e.preventDefault();
     updateCurrentUserProfile({
       fullName: form.fullName,
+      displayName: form.displayName.trim() || form.fullName,
       gender: form.gender as any,
       dateOfBirth: form.dateOfBirth,
       maritalStatus: form.maritalStatus as any,
@@ -138,6 +141,8 @@ export default function ProfileEditorPage() {
         familyValues: form.familyValues as any,
         fatherOccupation: form.fatherOccupation,
         motherOccupation: form.motherOccupation,
+        brothersCount: Number(form.brothersCount) || 0,
+        sistersCount: Number(form.sistersCount) || 0,
         familyLocation: form.familyLocation,
         aboutFamily: form.aboutFamily,
       },
@@ -182,11 +187,6 @@ export default function ProfileEditorPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold font-serif text-foreground">My Matrimonial Dossier</h1>
-            {isAdmin && (
-              <span className="rounded-full bg-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 border border-amber-500/40 uppercase tracking-wider">
-                👑 Super Admin
-              </span>
-            )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Keep your profile accurate to ensure optimal matchmaking compatibility.
@@ -194,15 +194,6 @@ export default function ProfileEditorPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-1.5 rounded-2xl border border-amber-500/50 bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-2.5 text-xs font-bold text-zinc-950 shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition"
-            >
-              <ShieldAlert className="h-4 w-4" /> Open Admin Panel
-            </Link>
-          )}
-
           <button
             onClick={handleSave}
             className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-rose-600 px-6 py-2.5 text-xs font-bold text-white shadow-md shadow-brand-600/20 hover:from-brand-700"
@@ -211,31 +202,6 @@ export default function ProfileEditorPage() {
           </button>
         </div>
       </div>
-
-      {isAdmin && (
-        <div className="rounded-2xl border border-amber-300/80 bg-amber-50/80 p-4 dark:border-amber-900/60 dark:bg-amber-950/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-zinc-950 font-bold shrink-0">
-              <ShieldAlert className="h-5 w-5" />
-            </div>
-            <div>
-              <h4 className="text-xs font-bold text-amber-900 dark:text-amber-200">
-                Super Administrator Controls Available
-              </h4>
-              <p className="text-[11px] text-amber-800/80 dark:text-amber-400">
-                You are logged in as <strong>{currentUser?.email}</strong>. You have full access to User Management, Verification Approvals, and SaaS Analytics.
-              </p>
-            </div>
-          </div>
-
-          <Link
-            href="/admin"
-            className="rounded-xl bg-zinc-950 px-4 py-2 text-xs font-bold text-amber-400 hover:bg-zinc-900 shadow-sm shrink-0 border border-amber-500/40"
-          >
-            Go to Admin Control Room →
-          </Link>
-        </div>
-      )}
 
       {/* Tabs bar */}
       <div className="flex items-center gap-2 overflow-x-auto border-b border-border pb-2">
@@ -277,6 +243,17 @@ export default function ProfileEditorPage() {
               </div>
 
               <div>
+                <label className="text-xs font-semibold text-foreground block mb-1">Public Display Name</label>
+                <input
+                  type="text"
+                  value={form.displayName}
+                  onChange={(e) => updateField('displayName', e.target.value)}
+                  placeholder="Name shown on public cards"
+                  className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
                 <label className="text-xs font-semibold text-foreground block mb-1">Gender</label>
                 <select
                   value={form.gender}
@@ -308,6 +285,7 @@ export default function ProfileEditorPage() {
                   <option value="NEVER_MARRIED">Never Married</option>
                   <option value="DIVORCED">Divorced</option>
                   <option value="WIDOWED">Widowed</option>
+                  <option value="AWAITING_DIVORCE">Awaiting Divorce</option>
                 </select>
               </div>
 
@@ -322,7 +300,10 @@ export default function ProfileEditorPage() {
                   <option value="HINDUISM">Hinduism</option>
                   <option value="SIKHISM">Sikhism</option>
                   <option value="CHRISTIANITY">Christianity</option>
+                  <option value="BUDDHISM">Buddhism</option>
+                  <option value="JAINISM">Jainism</option>
                   <option value="SPIRITUAL">Spiritual</option>
+                  <option value="OTHER">Other</option>
                 </select>
               </div>
 
@@ -332,6 +313,16 @@ export default function ProfileEditorPage() {
                   type="text"
                   value={form.sectOrCommunity}
                   onChange={(e) => updateField('sectOrCommunity', e.target.value)}
+                  className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground block mb-1">Mother Tongue</label>
+                <input
+                  type="text"
+                  value={form.motherTongue}
+                  onChange={(e) => updateField('motherTongue', e.target.value)}
                   className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:outline-none"
                 />
               </div>
@@ -511,6 +502,7 @@ export default function ProfileEditorPage() {
                   <option value="VEGETARIAN">Vegetarian</option>
                   <option value="NON_VEGETARIAN">Non-Vegetarian</option>
                   <option value="EGGETARIAN">Eggetarian</option>
+                  <option value="VEGAN">Vegan</option>
                 </select>
               </div>
 
@@ -523,6 +515,7 @@ export default function ProfileEditorPage() {
                 >
                   <option value="NO">No</option>
                   <option value="OCCASIONALLY">Occasionally</option>
+                  <option value="REGULARLY">Regularly</option>
                 </select>
               </div>
 
@@ -534,7 +527,9 @@ export default function ProfileEditorPage() {
                   className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:outline-none"
                 >
                   <option value="NO">No</option>
+                  <option value="OCCASIONALLY">Occasionally</option>
                   <option value="SOCIALLY">Socially</option>
+                  <option value="REGULARLY">Regularly</option>
                 </select>
               </div>
             </div>
@@ -555,6 +550,7 @@ export default function ProfileEditorPage() {
                 >
                   <option value="NUCLEAR">Nuclear Family</option>
                   <option value="JOINT">Joint Family</option>
+                  <option value="EXTENDED">Extended Family</option>
                 </select>
               </div>
 
@@ -591,6 +587,30 @@ export default function ProfileEditorPage() {
                 />
               </div>
 
+              <div>
+                <label className="text-xs font-semibold text-foreground block mb-1">Number of Brothers</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={form.brothersCount}
+                  onChange={(e) => updateField('brothersCount', Number(e.target.value))}
+                  className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground block mb-1">Number of Sisters</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={form.sistersCount}
+                  onChange={(e) => updateField('sistersCount', Number(e.target.value))}
+                  className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:outline-none"
+                />
+              </div>
+
               <div className="sm:col-span-2">
                 <label className="text-xs font-semibold text-foreground block mb-1">Family Location</label>
                 <input
@@ -598,6 +618,17 @@ export default function ProfileEditorPage() {
                   value={form.familyLocation}
                   onChange={(e) => updateField('familyLocation', e.target.value)}
                   className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs text-foreground focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="text-xs font-semibold text-foreground block mb-1">About Family</label>
+                <textarea
+                  rows={3}
+                  value={form.aboutFamily}
+                  onChange={(e) => updateField('aboutFamily', e.target.value)}
+                  placeholder="Share brief background about your family..."
+                  className="w-full rounded-xl border border-border bg-muted/30 p-3 text-xs text-foreground focus:outline-none"
                 />
               </div>
             </div>

@@ -5,9 +5,7 @@ import {
   Tag,
   Plus,
   CheckCircle2,
-  XCircle,
   Calendar,
-  Percent,
   Copy,
   Check,
   Trash2,
@@ -15,9 +13,6 @@ import {
   Sparkles,
   Zap,
   Clock,
-  ShieldCheck,
-  AlertCircle,
-  Filter,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { Coupon } from '@/lib/types';

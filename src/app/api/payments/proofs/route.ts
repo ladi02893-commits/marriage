@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ADMIN_ROLES, rejectCrossSiteMutation, requireAdmin, requireUser } from '@/lib/api-auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
+import { PUBLIC_PLANS } from '@/lib/public-config';
+
+const ALLOWED_METHODS = ['BANK_TRANSFER', 'JAZZCASH', 'EASYPAISA', 'RAAST', 'SADAPAY', 'NAYAPAY', 'OTHER'];
 
 function mapProof(proof: Record<string, any>) {
   return {
     ...proof,
+    amount: Number(proof.amount ?? 0),
     userId: proof.user_id,
     userName: proof.user_name,
     userEmail: proof.user_email,
@@ -61,7 +65,7 @@ export async function POST(request: NextRequest) {
     const screenshotUrl = typeof body.screenshotUrl === 'string' ? body.screenshotUrl.trim() : '';
     const screenshotKey = typeof body.screenshotKey === 'string' ? body.screenshotKey.trim().slice(0, 500) : null;
     const paymentMethod = typeof body.paymentMethod === 'string' ? body.paymentMethod.toUpperCase() : '';
-    if (!transactionId || !screenshotUrl || !screenshotKey || !['BANK_TRANSFER', 'JAZZCASH', 'EASYPAISA', 'RAAST', 'SADAPAY'].includes(paymentMethod)) {
+    if (!transactionId || !screenshotUrl || !screenshotKey || !ALLOWED_METHODS.includes(paymentMethod)) {
       return NextResponse.json({ success: false, error: 'Complete payment evidence is required.' }, { status: 400 });
     }
     const storageOrigin = new URL(process.env.INSFORGE_URL!).origin;
@@ -71,11 +75,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Payment screenshot must be uploaded through this application.' }, { status: 400 });
     }
 
-    const { data: plan, error: planError } = await insforgeAdmin.database.from('subscription_plans')
+    const candidateSlugs = requestedSlug === 'VIP' || requestedSlug === 'PREMIUM_PLUS' ? ['VIP', 'PREMIUM_PLUS'] : [planSlug];
+    const planQuery = await insforgeAdmin.database.from('subscription_plans')
       .select('slug,name,monthly_price,yearly_price')
-      .eq('slug', planSlug)
+      .in('slug', candidateSlugs)
       .maybeSingle();
-    if (planError) throw planError;
+    if (planQuery.error) throw planQuery.error;
+    let plan = planQuery.data;
+    if (!plan) {
+      const fallbackPlan = PUBLIC_PLANS.find((p) => candidateSlugs.includes(p.slug.toUpperCase()));
+      if (fallbackPlan && fallbackPlan.monthlyPrice > 0) {
+        const dbSlug = fallbackPlan.slug === 'VIP' ? 'PREMIUM_PLUS' : fallbackPlan.slug;
+        const { data: seeded } = await insforgeAdmin.database.from('subscription_plans').upsert([{
+          id: fallbackPlan.id,
+          slug: dbSlug,
+          name: fallbackPlan.name,
+          description: fallbackPlan.description,
+          monthly_price: fallbackPlan.monthlyPrice,
+          yearly_price: fallbackPlan.yearlyPrice,
+          features: fallbackPlan.features,
+          max_interests_per_month: fallbackPlan.connectionsLimit ?? 30,
+          can_view_contact_directly: false,
+          can_message_directly: true,
+          is_featured: Boolean(fallbackPlan.popular),
+        }], { onConflict: 'slug' }).select('slug,name,monthly_price,yearly_price').single();
+        plan = seeded ?? null;
+      }
+    }
     if (!plan || Number(plan.monthly_price) <= 0) {
       return NextResponse.json({ success: false, error: 'Selected plan is not available.' }, { status: 400 });
     }
@@ -138,6 +164,14 @@ export async function PATCH(request: NextRequest) {
     }).eq('id', id).eq('status', 'PENDING').select().maybeSingle();
     if (error) throw error;
     if (!rejected) return NextResponse.json({ success: false, error: 'Pending payment proof not found.' }, { status: 409 });
+    const { error: notifError } = await insforgeAdmin.database.from('notifications').insert([{
+      user_id: rejected.user_id,
+      title: 'Payment proof rejected',
+      description: `Your payment proof (${rejected.transaction_id}) was rejected: ${rejectionReason}`,
+      type: 'PAYMENT_REJECTED',
+      link_url: '/dashboard/subscription',
+    }]);
+    if (notifError) console.error('Payment rejection notification failed:', notifError.message);
     return NextResponse.json({ success: true, data: mapProof(rejected), message: 'Payment proof rejected.' });
   } catch (error) {
     console.error('Payment review failed:', error);

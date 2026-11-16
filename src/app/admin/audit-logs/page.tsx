@@ -60,22 +60,30 @@ export default function AdminAuditLogsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-zinc-800/30">
-                  <td className="py-3.5 px-4 text-zinc-400 font-mono text-[11px]">
-                    {new Date(log.timestamp).toLocaleString()}
+              {filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 px-4 text-center text-xs text-zinc-400">
+                    No administrative audit log entries recorded yet.
                   </td>
-                  <td className="py-3.5 px-4 font-semibold text-white">{log.adminName}</td>
-                  <td className="py-3.5 px-4">
-                    <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-400 border border-amber-500/30">
-                      {log.action}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-zinc-300 font-mono text-[11px]">{log.targetType}</td>
-                  <td className="py-3.5 px-4 text-zinc-300 max-w-sm">{log.details}</td>
-                  <td className="py-3.5 px-4 text-right font-mono text-zinc-500 text-[11px]">{log.ipAddress}</td>
                 </tr>
-              ))}
+              ) : (
+                filteredLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-zinc-800/30">
+                    <td className="py-3.5 px-4 text-zinc-400 font-mono text-[11px]">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-white">{log.adminName}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-mono font-bold text-amber-400 border border-amber-500/30">
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-zinc-300 font-mono text-[11px]">{log.targetType}</td>
+                    <td className="py-3.5 px-4 text-zinc-300 max-w-sm">{log.details}</td>
+                    <td className="py-3.5 px-4 text-right font-mono text-zinc-500 text-[11px]">{log.ipAddress}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -54,9 +54,11 @@ export function CountryCitySelect({
       return;
     }
 
+    if (!selectedCity || selectedCity === 'ALL') {
+      return;
+    }
+
     if (
-      selectedCity &&
-      selectedCity !== 'ALL' &&
       availableCities.length > 0 &&
       !availableCities.includes(selectedCity)
     ) {

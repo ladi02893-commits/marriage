@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   User,
   Compass,
-  Bookmark,
   MessageSquare,
   Bell,
   Crown,
@@ -18,7 +17,6 @@ import {
   LogOut,
   Menu,
   X,
-  ShieldAlert,
   Users,
   CreditCard,
 } from 'lucide-react';
@@ -95,6 +93,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <img
               src={
                 currentUser?.avatarUrl ||
+                currentProfile?.photos?.[0]?.url ||
                 '/avatar-placeholder.svg'
               }
               alt="Avatar"
@@ -159,28 +158,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-border space-y-1.5">
-          {/* Consultant shortcut if VIP */}
-          <Link
-            href="/consultant"
-            className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-gold-300/40 bg-gold-50/40 py-2 text-[11px] font-bold text-gold-900 dark:bg-gold-950/40 dark:text-gold-300 hover:bg-gold-100 transition"
-          >
-            <Crown className="h-3 w-3 text-gold-600" />
-            Senior Consultant Portal
-          </Link>
-
-          {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && (
-            <Link
-              href="/admin"
-              className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-brand-300 bg-brand-50 py-2 text-[11px] font-semibold text-brand-800 shadow-sm transition hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950 dark:text-brand-300"
-            >
-              <ShieldAlert className="h-3.5 w-3.5" />
-              Switch to Admin Panel
-            </Link>
-          )}
-
           <button
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await logout();
               router.push('/login');
             }}
             className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-border py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition"
@@ -244,8 +224,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             <button
-              onClick={() => {
-                logout();
+              onClick={async () => {
+                await logout();
                 router.push('/login');
               }}
               className="flex items-center justify-center gap-1.5 w-full rounded-xl border border-border py-2 text-xs font-medium text-muted-foreground"

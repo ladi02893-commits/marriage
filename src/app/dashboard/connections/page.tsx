@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Heart,
   CheckCircle2,
@@ -21,6 +21,7 @@ import { useAuth } from '@/lib/auth-context';
 import { toast } from 'sonner';
 
 function ConnectionsHubContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab') as 'received' | 'sent' | 'accepted' | 'favorites' | 'blocked' | null;
 
@@ -35,11 +36,19 @@ function ConnectionsHubContent() {
     acceptInterest,
     declineInterest,
     cancelInterest,
+    startOrGetConversation,
     toggleFavorite,
     unblockUser,
     unlockContactDetails,
     isContactUnlocked,
   } = useAuth();
+
+  const handleOpenChat = async (otherUserId: string) => {
+    const convId = await startOrGetConversation(otherUserId);
+    if (convId) {
+      router.push(`/dashboard/messages?conversationId=${encodeURIComponent(convId)}`);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<'received' | 'sent' | 'accepted' | 'favorites' | 'blocked'>(
     tabParam && ['received', 'sent', 'accepted', 'favorites', 'blocked'].includes(tabParam)
@@ -82,7 +91,7 @@ function ConnectionsHubContent() {
   // 5. Blocked Users (Section 22)
   const myBlocked = blockedUsers.filter((b) => b.userId === currentUser?.id);
 
-  const handleUnlockContact = (targetProfileId: string, name: string) => {
+  const handleUnlockContact = (targetProfileId: string) => {
     const res = unlockContactDetails(targetProfileId);
     if (res.success) {
       toast.success(res.message);
@@ -243,7 +252,6 @@ function ConnectionsHubContent() {
                       <button
                         onClick={() => {
                           declineInterest(item.id);
-                          toast.info('Connection interest declined politely.');
                         }}
                         className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
                       >
@@ -261,12 +269,13 @@ function ConnectionsHubContent() {
                   )}
 
                   {item.status === 'ACCEPTED' && (
-                    <Link
-                      href="/dashboard/messages"
+                    <button
+                      type="button"
+                      onClick={() => handleOpenChat(item.senderId)}
                       className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-md flex items-center gap-1.5"
                     >
                       <MessageSquare className="h-3.5 w-3.5" /> Message
-                    </Link>
+                    </button>
                   )}
                 </div>
               </div>
@@ -343,19 +352,19 @@ function ConnectionsHubContent() {
                   </Link>
 
                   {item.status === 'ACCEPTED' && (
-                    <Link
-                      href="/dashboard/messages"
+                    <button
+                      type="button"
+                      onClick={() => handleOpenChat(item.receiverId)}
                       className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-md flex items-center gap-1.5"
                     >
                       <MessageSquare className="h-3.5 w-3.5" /> Message
-                    </Link>
+                    </button>
                   )}
 
                   {item.status === 'PENDING' && (
                     <button
                       onClick={() => {
                         cancelInterest(item.id);
-                        toast.info('Interest request withdrawn.');
                       }}
                       className="rounded-xl border border-border px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
                     >
@@ -396,7 +405,6 @@ function ConnectionsHubContent() {
               const otherName = isMeSender ? item.receiverName : item.senderName;
               const otherPhoto = isMeSender ? item.receiverPhoto : item.senderPhoto;
               const targetProfile = profiles.find((p) => p.id === otherProfileId);
-              const unlocked = isContactUnlocked(otherProfileId) || item.status === 'ACCEPTED';
 
               return (
                 <div
@@ -424,7 +432,7 @@ function ConnectionsHubContent() {
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {targetProfile?.educationCareer?.profession || 'Professional'} • {targetProfile?.city || 'Lahore'}, Pakistan
+                          {targetProfile?.educationCareer?.profession || 'Professional'} • {targetProfile?.city || 'Verified Member'}{targetProfile?.country ? `, ${targetProfile.country}` : ''}
                         </p>
                       </div>
                     </div>
@@ -437,12 +445,13 @@ function ConnectionsHubContent() {
                         <Eye className="h-3.5 w-3.5 inline mr-1" /> Dossier
                       </Link>
 
-                      <Link
-                        href="/dashboard/messages"
+                      <button
+                        type="button"
+                        onClick={() => handleOpenChat(isMeSender ? item.receiverId : item.senderId)}
                         className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white shadow-md flex items-center gap-1.5"
                       >
                         <MessageSquare className="h-3.5 w-3.5" /> Direct Chat
-                      </Link>
+                      </button>
                     </div>
                   </div>
 
@@ -455,7 +464,7 @@ function ConnectionsHubContent() {
                       <div>
                         <span className="text-[10px] text-muted-foreground uppercase font-bold block">Mobile / WhatsApp</span>
                         <strong className="font-mono text-foreground font-bold">
-                          {targetProfile?.phone || '+92 300 8492019'}
+                          {targetProfile?.phone || targetProfile?.whatsappNumber || 'Shared via direct chat'}
                         </strong>
                       </div>
                     </div>
@@ -465,9 +474,9 @@ function ConnectionsHubContent() {
                         <Mail className="h-4 w-4" />
                       </div>
                       <div>
-                        <span className="text-[10px] text-muted-foreground uppercase font-bold block">Email Contact</span>
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold block">Direct Chat Status</span>
                         <strong className="text-foreground truncate block font-mono">
-                          {targetProfile?.userId ? `${targetProfile.userId}@viproyalmatch.pk` : 'confidential@viproyal.pk'}
+                          Unlocked (Accepted Match)
                         </strong>
                       </div>
                     </div>
@@ -541,7 +550,9 @@ function ConnectionsHubContent() {
                       </div>
 
                       <div className="p-4 space-y-2">
-                        <h4 className="text-sm font-bold font-serif text-foreground truncate">{p.fullName}, {p.age}</h4>
+                        <h4 className="text-sm font-bold font-serif text-foreground truncate">
+                          {p.fullName}{p.age && p.privacy?.showAge !== false ? `, ${p.age}` : ''}
+                        </h4>
                         <p className="text-xs text-muted-foreground truncate">
                           {p.educationCareer?.highestDegree} • {p.educationCareer?.profession}
                         </p>
@@ -566,7 +577,7 @@ function ConnectionsHubContent() {
                           </span>
                         ) : (
                           <button
-                            onClick={() => handleUnlockContact(p.id, p.fullName)}
+                            onClick={() => handleUnlockContact(p.id)}
                             className="flex-1 rounded-xl bg-brand-600 hover:bg-brand-700 py-2 text-xs font-bold text-white shadow-sm transition flex items-center justify-center gap-1"
                           >
                             <Lock className="h-3 w-3" /> Unlock (1 Cr)

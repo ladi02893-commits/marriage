@@ -487,17 +487,23 @@ export interface AbuseReport {
   category:
     | 'FAKE_PROFILE'
     | 'INCORRECT_INFORMATION'
+    | 'MISREPRESENTATION'
     | 'HARASSMENT'
     | 'FRAUD'
     | 'INAPPROPRIATE_BEHAVIOUR'
+    | 'INAPPROPRIATE_CONTENT'
     | 'ALREADY_MARRIED'
     | 'SPAM'
+    | 'SCAM'
     | 'OTHER';
   description: string;
   comments?: string;
   evidenceUrl?: string;
   status: 'OPEN' | 'RESOLVED' | 'DISMISSED';
   timestamp: string;
+  createdAt?: string;
+  reporterEmail?: string;
+  reportedUserEmail?: string;
   adminActionTaken?: string;
 }
 

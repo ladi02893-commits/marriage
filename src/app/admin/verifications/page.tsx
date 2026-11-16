@@ -4,7 +4,6 @@ import React from 'react';
 
 
 import { useAuth } from '@/lib/auth-context';
-import { toast } from 'sonner';
 
 export default function AdminVerificationsPage() {
   const { verifications, approveVerification, rejectVerification } = useAuth();
@@ -76,7 +75,6 @@ export default function AdminVerificationsPage() {
                   <button
                     onClick={() => {
                       rejectVerification(v.id, 'Document was blurry or facial match was inconclusive.');
-                      toast.info(`Rejected verification for ${v.userName}`);
                     }}
                     className="rounded-xl border border-rose-800 bg-rose-950/60 px-4 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-900"
                   >

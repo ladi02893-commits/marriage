@@ -14,7 +14,7 @@ export default function PrivacySettingsPage() {
     currentProfile?.privacy?.contactVisibility || 'ONLY_ACCEPTED_INTERESTS'
   );
   const [showAge, setShowAge] = useState(currentProfile?.privacy?.showAge ?? true);
-  const [showIncome, setShowIncome] = useState(currentProfile?.privacy?.showIncome ?? true);
+  const [showIncome, setShowIncome] = useState(currentProfile?.privacy?.showIncome ?? false);
   const [hideProfile, setHideProfile] = useState(
     currentProfile?.privacy?.hideProfileTemporarily ?? false
   );
@@ -74,7 +74,8 @@ export default function PrivacySettingsPage() {
 
           <div className="space-y-2">
             {[
-              { id: 'ALL', label: 'Visible to all members', desc: 'Other signed-in members can view approved photos.' },
+              { id: 'ALL', label: 'Visible to everyone', desc: 'Any visitor viewing public profiles can see approved photos.' },
+              { id: 'REGISTERED_ONLY', label: 'Visible to signed-in members', desc: 'Only signed-in members can view approved photos.' },
               { id: 'ONLY_ACCEPTED_INTERESTS', label: 'Accepted matches only', desc: 'Only accepted matches can view approved photos.' },
               { id: 'NONE', label: 'Hidden from other members', desc: 'Only you and administrators can view your photos.' },
             ].map((opt) => (
@@ -142,24 +143,50 @@ export default function PrivacySettingsPage() {
         </div>
       </div>
 
-      {/* Account Pause / Hide Box */}
+      {/* Account Pause & Attribute Visibility Box */}
       <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
-        <h3 className="text-sm font-bold text-foreground">Temporary Profile Pause</h3>
+        <h3 className="text-sm font-bold text-foreground">Profile Visibility & Attribute Controls</h3>
         <p className="text-xs text-muted-foreground">
-          If you are currently in active discussions or traveling, you can temporarily hide your profile from search results.
+          Control whether sensitive attributes appear on your public profile and pause visibility when needed.
         </p>
 
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={hideProfile}
-            onChange={(e) => setHideProfile(e.target.checked)}
-            className="rounded border-border text-brand-600 focus:ring-brand-500 h-4 w-4"
-          />
-          <span className="text-xs font-semibold text-foreground">
-            Temporarily hide my profile from public & member search directories
-          </span>
-        </label>
+        <div className="space-y-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showAge}
+              onChange={(e) => setShowAge(e.target.checked)}
+              className="rounded border-border text-brand-600 focus:ring-brand-500 h-4 w-4"
+            />
+            <span className="text-xs font-semibold text-foreground">
+              Show my age on my profile card &amp; dossier
+            </span>
+          </label>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showIncome}
+              onChange={(e) => setShowIncome(e.target.checked)}
+              className="rounded border-border text-brand-600 focus:ring-brand-500 h-4 w-4"
+            />
+            <span className="text-xs font-semibold text-foreground">
+              Show my annual/monthly income on my profile
+            </span>
+          </label>
+
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hideProfile}
+              onChange={(e) => setHideProfile(e.target.checked)}
+              className="rounded border-border text-brand-600 focus:ring-brand-500 h-4 w-4"
+            />
+            <span className="text-xs font-semibold text-foreground">
+              Temporarily hide my profile from public &amp; member search directories
+            </span>
+          </label>
+        </div>
       </div>
     </div>
   );

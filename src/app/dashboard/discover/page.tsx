@@ -30,8 +30,8 @@ export default function DiscoverMatchesPage() {
       if (targetOppositeGender && p.gender !== targetOppositeGender) return false;
       if (userGender && p.gender === userGender) return false;
       if (filterReligion !== 'ALL' && p.religion !== filterReligion) return false;
-      if (filterCountry !== 'ALL' && !p.country.toLowerCase().includes(filterCountry.toLowerCase())) return false;
-      if (filterCity !== 'ALL' && !p.city.toLowerCase().includes(filterCity.toLowerCase())) return false;
+      if (filterCountry !== 'ALL' && !(p.country || '').toLowerCase().includes(filterCountry.toLowerCase())) return false;
+      if (filterCity !== 'ALL' && !(p.city || '').toLowerCase().includes(filterCity.toLowerCase())) return false;
       return true;
     })
     .sort((a, b) => {
@@ -71,6 +71,10 @@ export default function DiscoverMatchesPage() {
               <option value="HINDUISM">Hinduism</option>
               <option value="SIKHISM">Sikhism</option>
               <option value="CHRISTIANITY">Christianity</option>
+              <option value="BUDDHISM">Buddhism</option>
+              <option value="JAINISM">Jainism</option>
+              <option value="SPIRITUAL">Spiritual</option>
+              <option value="OTHER">Other</option>
             </select>
           </div>
 
@@ -104,7 +108,11 @@ export default function DiscoverMatchesPage() {
             Try setting filter to 'All Religions' to explore more profiles.
           </p>
           <button
-            onClick={() => setFilterReligion('ALL')}
+            onClick={() => {
+              setFilterReligion('ALL');
+              setFilterCountry('ALL');
+              setFilterCity('ALL');
+            }}
             className="rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white"
           >
             Show All

@@ -8,13 +8,11 @@ import {
   TrendingUp,
   Globe,
   Plus,
-  Trash2,
   Zap,
   Sparkles,
   ShieldCheck,
   Save,
   X,
-  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { SubscriptionPlan } from '@/lib/types';
@@ -23,7 +21,6 @@ import {
   getCurrencyForCountry,
   calculateAnnualPricing,
 } from '@/lib/currency';
-import { toast } from 'sonner';
 
 export default function AdminSubscriptionsPage() {
   const { plans, updatePlan, addPlan } = useAuth();

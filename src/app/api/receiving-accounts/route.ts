@@ -3,6 +3,8 @@ import { ADMIN_ROLES, rejectCrossSiteMutation, requireAdmin } from '@/lib/api-au
 import { getCurrentUserFromCookies } from '@/lib/auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
 
+const ALLOWED_PROVIDERS = ['BANK_TRANSFER', 'JAZZCASH', 'EASYPAISA', 'RAAST', 'SADAPAY', 'NAYAPAY', 'OTHER'];
+
 function mapAccount(account: Record<string, any>) {
   return {
     ...account,
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
     const bankName = typeof body.bankName === 'string' ? body.bankName.trim().slice(0, 120) : '';
     const accountTitle = typeof body.accountTitle === 'string' ? body.accountTitle.trim().slice(0, 120) : '';
     const accountNumber = typeof body.accountNumber === 'string' ? body.accountNumber.trim().slice(0, 80) : '';
-    if (!['BANK_TRANSFER', 'JAZZCASH', 'EASYPAISA', 'RAAST', 'SADAPAY'].includes(provider) || !bankName || !accountTitle || !accountNumber) {
+    if (!ALLOWED_PROVIDERS.includes(provider) || !bankName || !accountTitle || !accountNumber) {
       return NextResponse.json({ success: false, error: 'Complete receiving account details are required.' }, { status: 400 });
     }
     const { data, error } = await insforgeAdmin.database.from('receiving_accounts').insert([{
@@ -69,8 +71,15 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     if (typeof body.id !== 'string') return NextResponse.json({ success: false, error: 'Account ID is required.' }, { status: 400 });
     const update: Record<string, unknown> = {};
+    if (typeof body.provider === 'string') {
+      const normalizedProvider = body.provider.trim().toUpperCase();
+      if (!ALLOWED_PROVIDERS.includes(normalizedProvider)) {
+        return NextResponse.json({ success: false, error: 'Unsupported payment provider.' }, { status: 400 });
+      }
+      update.provider = normalizedProvider;
+    }
     const stringFields: Record<string, string> = {
-      provider: 'provider', bankName: 'bank_name', accountTitle: 'account_title', accountNumber: 'account_number',
+      bankName: 'bank_name', accountTitle: 'account_title', accountNumber: 'account_number',
       iban: 'iban', branchName: 'branch_name', instructions: 'instructions',
     };
     for (const [clientKey, dbKey] of Object.entries(stringFields)) {

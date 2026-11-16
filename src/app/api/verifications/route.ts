@@ -3,9 +3,13 @@ import { ADMIN_ROLES, rejectCrossSiteMutation, requireAdmin, requireUser } from 
 import { insforgeAdmin } from '@/lib/insforge/server';
 
 function mapVerification(item: Record<string, any>) {
+  const user = Array.isArray(item.user) ? item.user[0] : item.user;
   return {
     ...item,
     userId: item.user_id,
+    userName: user?.name ?? item.user_name ?? 'Member',
+    userEmail: user?.email ?? item.user_email ?? '',
+    userProfileIdCode: user?.profile_id_code ?? undefined,
     documentType: item.document_type,
     documentFrontUrl: item.document_front_url,
     documentBackUrl: item.document_back_url,
@@ -38,7 +42,7 @@ export async function GET() {
   const auth = await requireUser();
   if (auth.response) return auth.response;
   try {
-    let query = insforgeAdmin.database.from('verification_requests').select('*,user:users(id,name,email,avatar_url,role)');
+    let query = insforgeAdmin.database.from('verification_requests').select('*,user:users(id,name,email,avatar_url,role,profile_id_code)');
     if (!ADMIN_ROLES.has(auth.user.role)) query = query.eq('user_id', auth.user.id);
     const { data, error } = await query.order('submitted_at', { ascending: false });
     if (error) throw error;
@@ -122,6 +126,12 @@ export async function PATCH(request: NextRequest) {
         insforgeAdmin.database.from('matrimonial_profiles').update({ verification_badge: 'APPROVED', is_identity_verified: true }).eq('user_id', current.user_id),
       ]);
       if (userResult.error || profileResult.error) throw userResult.error ?? profileResult.error;
+    } else {
+      const { error: profileRejectError } = await insforgeAdmin.database
+        .from('matrimonial_profiles')
+        .update({ verification_badge: 'REJECTED', is_identity_verified: false })
+        .eq('user_id', current.user_id);
+      if (profileRejectError) throw profileRejectError;
     }
     const { data: updated, error } = await insforgeAdmin.database.from('verification_requests').update({
       status,

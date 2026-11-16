@@ -30,7 +30,7 @@ import { MatchingService } from '@/lib/matching-service';
 import { toast } from 'sonner';
 import { formatIncomeByCountry } from '@/lib/currency';
 import { AdminUserDossierModal } from '@/components/admin/admin-user-dossier-modal';
-import { User } from '@/lib/types';
+import { QuotaLimitModal } from '@/components/ui/quota-limit-modal';
 
 export default function ProfileDetailPage() {
   const params = useParams();
@@ -99,6 +99,11 @@ export default function ProfileDetailPage() {
     : null;
 
   const handleFavoriteClick = async () => {
+    if (!currentUser) {
+      toast.info('Please sign in to bookmark profiles.');
+      router.push(`/login?returnTo=/profile/${profile.id}`);
+      return;
+    }
     if (isSameGender) {
       toast.error('Opposite gender matching only: You cannot bookmark profiles of the same gender.');
       return;
@@ -112,9 +117,10 @@ export default function ProfileDetailPage() {
     }
   };
 
-  const handleStartChat = () => {
+  const handleStartChat = async () => {
     if (!currentUser) {
       toast.info('Please sign in to message this member.');
+      router.push(`/login?returnTo=/profile/${profile.id}`);
       return;
     }
     if (isSameGender) {
@@ -126,11 +132,18 @@ export default function ProfileDetailPage() {
       setQuotaModalOpen(true);
       return;
     }
-    const convId = startOrGetConversation(profile.userId);
-    router.push('/dashboard/messages');
+    const convId = await startOrGetConversation(profile.userId);
+    if (convId) {
+      router.push(`/dashboard/messages?conversationId=${encodeURIComponent(convId)}`);
+    }
   };
 
   const handleExpressInterest = () => {
+    if (!currentUser) {
+      toast.info('Please sign in to express interest.');
+      router.push(`/login?returnTo=/profile/${profile.id}`);
+      return;
+    }
     if (isSameGender) {
       toast.error('Opposite gender matching only: You cannot send connection requests to profiles of the same gender.');
       return;
@@ -148,6 +161,11 @@ export default function ProfileDetailPage() {
   };
 
   const handleRequestContact = () => {
+    if (!currentUser) {
+      toast.info('Please sign in to request contact details.');
+      router.push(`/login?returnTo=/profile/${profile.id}`);
+      return;
+    }
     if (isSameGender) {
       toast.error('Opposite gender matching only: Contact requests are only permitted for opposite-gender profiles.');
       return;
@@ -278,9 +296,9 @@ export default function ProfileDetailPage() {
 
                 <div className="absolute left-4 top-4 flex flex-wrap gap-2">
                   {profile.verificationBadge === 'APPROVED' && (
-                    <div className="absolute -top-2 -right-2 bg-blue-500 rounded-full p-1 border-[3px] border-zinc-900 shadow-xl" title="Verified Member">
-                      <ShieldCheck className="h-5 w-5 text-white" />
-                    </div>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-white shadow-md">
+                      <ShieldCheck className="h-4 w-4" /> Verified
+                    </span>
                   )}
                   {profile.isFeatured && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-white shadow-md">
@@ -479,7 +497,9 @@ export default function ProfileDetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-6 border-t border-border mt-6 text-xs">
                 <div className="rounded-2xl bg-muted/40 p-3">
                   <span className="text-[11px] text-muted-foreground block">Age</span>
-                  <span className="font-semibold text-foreground">{profile.age} Years</span>
+                  <span className="font-semibold text-foreground">
+                    {profile.age && profile.privacy?.showAge !== false ? `${profile.age} Years` : 'Private'}
+                  </span>
                 </div>
                 <div className="rounded-2xl bg-muted/40 p-3">
                   <span className="text-[11px] text-muted-foreground block">Marital Status</span>
@@ -499,7 +519,7 @@ export default function ProfileDetailPage() {
                 </div>
                 <div className="rounded-2xl bg-muted/40 p-3">
                   <span className="text-[11px] text-muted-foreground block">Height</span>
-                  <span className="font-semibold text-foreground">{profile.lifestyle?.height || "5' 9\""}</span>
+                  <span className="font-semibold text-foreground">{profile.lifestyle?.height || 'Not specified'}</span>
                 </div>
               </div>
             </div>
@@ -545,16 +565,16 @@ export default function ProfileDetailPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground block">Father's Profession</span>
-                  <span className="font-bold text-foreground text-sm">{profile.familyInfo?.fatherOccupation || 'Respected Business / Professional'}</span>
+                  <span className="font-bold text-foreground text-sm">{profile.familyInfo?.fatherOccupation || 'Not specified'}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block">Mother's Status</span>
-                  <span className="font-bold text-foreground text-sm">{profile.familyInfo?.motherOccupation || 'Homemaker'}</span>
+                  <span className="font-bold text-foreground text-sm">{profile.familyInfo?.motherOccupation || 'Not specified'}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground block">Siblings</span>
                   <span className="font-bold text-foreground text-sm">
-                    {profile.familyInfo?.brothersCount ?? 1} Brother(s), {profile.familyInfo?.sistersCount ?? 1} Sister(s)
+                    {profile.familyInfo?.brothersCount ?? 0} Brother(s), {profile.familyInfo?.sistersCount ?? 0} Sister(s)
                   </span>
                 </div>
               </div>
@@ -668,6 +688,12 @@ export default function ProfileDetailPage() {
           profile={profile}
         />
       )}
+
+      <QuotaLimitModal
+        isOpen={quotaModalOpen}
+        onClose={() => setQuotaModalOpen(false)}
+        actionAttempted={quotaAction}
+      />
 
       <Footer />
     </div>

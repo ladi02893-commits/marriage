@@ -73,11 +73,15 @@ export function SendInterestModal({ profile, isOpen, onClose }: SendInterestModa
               <h3 className="text-lg font-bold text-foreground font-serif">Express Interest to {profile.displayName}</h3>
             </div>
             <p className="text-xs text-muted-foreground">
-              {profile.age} yrs • {profile.city}, {profile.country} • {profile.educationCareer?.profession}
+              {profile.age && profile.privacy?.showAge !== false ? `${profile.age} yrs • ` : ''}
+              {profile.city}, {profile.country}
+              {profile.educationCareer?.profession ? ` • ${profile.educationCareer.profession}` : ''}
             </p>
-            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
-              <ShieldCheck className="h-3.5 w-3.5" /> ID Verified Match
-            </div>
+            {(profile.isVerified || profile.verificationBadge === 'APPROVED') && (
+              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-emerald-600 font-medium">
+                <ShieldCheck className="h-3.5 w-3.5" /> ID Verified Match
+              </div>
+            )}
           </div>
         </div>
 

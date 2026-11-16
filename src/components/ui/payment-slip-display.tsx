@@ -40,8 +40,6 @@ export function PaymentSlipDisplay({
   const isEasy = provider.includes('EASY');
   const isBank = provider.includes('BANK') || provider.includes('MEEZAN') || provider.includes('IBFT');
   const isRaast = provider.includes('RAAST');
-  const isSada = provider.includes('SADA');
-  const isNaya = provider.includes('NAYA');
 
   const theme = isJazz
     ? {

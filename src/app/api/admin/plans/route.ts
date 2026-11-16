@@ -103,19 +103,44 @@ export async function PATCH(request: NextRequest) {
       dbPayload.is_featured = Boolean(updates.isFeatured ?? updates.popular);
     }
 
-    let query = insforgeAdmin.database.from('subscription_plans').update(dbPayload);
-    if (id) {
-      query = query.eq('id', id);
-    } else {
-      query = query.eq('slug', slug);
+    if (Object.keys(dbPayload).length === 0) {
+      return NextResponse.json({ success: false, error: 'No valid changes supplied.' }, { status: 400 });
     }
 
-    const { data, error } = await query.select().single();
-    if (error) throw error;
+    let updatedPlan: DbPlan | null = null;
+    if (id) {
+      const { data, error } = await insforgeAdmin.database
+        .from('subscription_plans')
+        .update(dbPayload)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      updatedPlan = (data as unknown as DbPlan) ?? null;
+    }
+
+    if (!updatedPlan && slug) {
+      const normalized = String(slug).trim().toUpperCase();
+      const candidateSlugs = normalized === 'VIP' || normalized === 'PREMIUM_PLUS'
+        ? ['VIP', 'PREMIUM_PLUS']
+        : [normalized];
+      const { data, error } = await insforgeAdmin.database
+        .from('subscription_plans')
+        .update(dbPayload)
+        .in('slug', candidateSlugs)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      updatedPlan = (data as unknown as DbPlan) ?? null;
+    }
+
+    if (!updatedPlan) {
+      return NextResponse.json({ success: false, error: 'Subscription plan not found.' }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,
-      data: mapDbPlanToSubscriptionPlan(data as unknown as DbPlan),
+      data: mapDbPlanToSubscriptionPlan(updatedPlan),
       message: 'Plan updated successfully.',
     });
   } catch (error) {

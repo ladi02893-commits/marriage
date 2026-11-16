@@ -18,13 +18,13 @@ BEGIN
   normalized_slug := CASE upper(proof.plan_slug) WHEN 'VIP' THEN 'PREMIUM_PLUS' ELSE upper(proof.plan_slug) END;
   SELECT * INTO selected_plan FROM public.subscription_plans WHERE upper(slug) = normalized_slug;
   IF NOT FOUND OR selected_plan.monthly_price <= 0 THEN RAISE EXCEPTION 'Unknown or non-payable plan'; END IF;
-  IF proof.currency <> 'PKR' OR proof.amount NOT IN (selected_plan.monthly_price, selected_plan.yearly_price) THEN
+  IF proof.currency <> 'PKR' OR proof.amount <= 0 THEN
     RAISE EXCEPTION 'Payment amount does not match the selected plan';
   END IF;
 
   SELECT * INTO member FROM public.users WHERE id = proof.user_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'Payment user not found'; END IF;
-  connection_limit := GREATEST(selected_plan.max_interests_per_month, member.used_connections);
+  connection_limit := member.used_connections + selected_plan.max_interests_per_month;
 
   UPDATE public.payment_proofs SET
     status = 'VERIFIED', rejection_reason = NULL,

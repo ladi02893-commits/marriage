@@ -3,9 +3,9 @@ ALTER TABLE public.users
   ADD COLUMN IF NOT EXISTS whatsapp_number TEXT,
   ADD COLUMN IF NOT EXISTS is_whatsapp_verified BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN IF NOT EXISTS total_connections INTEGER NOT NULL DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS total_connections INTEGER NOT NULL DEFAULT 3,
   ADD COLUMN IF NOT EXISTS used_connections INTEGER NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS remaining_connections INTEGER NOT NULL DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS remaining_connections INTEGER NOT NULL DEFAULT 3,
   ADD COLUMN IF NOT EXISTS assigned_consultant_id TEXT,
   ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 0;
 
@@ -58,12 +58,34 @@ CREATE INDEX IF NOT EXISTS verification_requests_user_idx ON public.verification
 INSERT INTO public.subscription_plans (
   id, slug, name, description, monthly_price, yearly_price, features,
   max_interests_per_month, can_view_contact_directly, can_message_directly, is_featured
+) VALUES
+  (
+    'plan-basic', 'BASIC', 'Basic Package', 'Essential matchmaking membership.', 2000, 2000,
+    ARRAY['30 connection credits', 'Profile review', 'Advanced profile filters', 'Messaging after mutual acceptance'],
+    30, false, true, false
+  ),
+  (
+    'plan-premium', 'PREMIUM', 'Premium Package', 'Expanded matchmaking membership.', 5000, 5000,
+    ARRAY['100 connection credits', 'Priority profile review', 'Featured search placement', 'Messaging after mutual acceptance'],
+    100, false, true, true
+  ),
+  (
+    'plan-vip', 'PREMIUM_PLUS', 'VIP Royal Package', 'High-volume matchmaking membership.', 10000, 10000,
+    ARRAY['300 connection credits', 'Priority profile review', 'Featured search placement', 'Messaging after mutual acceptance'],
+    300, false, true, true
+  )
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  description = EXCLUDED.description,
+  monthly_price = EXCLUDED.monthly_price,
+  yearly_price = EXCLUDED.yearly_price,
+  features = EXCLUDED.features,
+  max_interests_per_month = EXCLUDED.max_interests_per_month,
+  can_message_directly = EXCLUDED.can_message_directly,
+  is_featured = EXCLUDED.is_featured;
+
+INSERT INTO public.system_settings (
+  id, site_name, min_age, require_email_verification, free_tier_monthly_interest_limit
 ) VALUES (
-  'plan-basic', 'BASIC', 'Essential Match', 'Essential matrimonial membership', 2000, 2000,
-  ARRAY['30 connection credits'], 30, false, false, false
-) ON CONFLICT (slug) DO UPDATE SET
-  name = EXCLUDED.name, description = EXCLUDED.description,
-  monthly_price = EXCLUDED.monthly_price, yearly_price = EXCLUDED.yearly_price,
-  features = EXCLUDED.features, max_interests_per_month = EXCLUDED.max_interests_per_month;
-UPDATE public.subscription_plans SET monthly_price = 5000, yearly_price = 5000, max_interests_per_month = 100 WHERE slug = 'PREMIUM';
-UPDATE public.subscription_plans SET monthly_price = 10000, yearly_price = 10000, max_interests_per_month = 300 WHERE slug = 'PREMIUM_PLUS';
+  'default-settings', 'TRUEPAIR Matchmaking', 18, false, 3
+) ON CONFLICT (id) DO NOTHING;

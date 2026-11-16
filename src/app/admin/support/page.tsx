@@ -8,15 +8,16 @@ import {
   Send,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { SupportTicket, SupportTicketStatus } from '@/lib/types';
-import { toast } from 'sonner';
+import { SupportTicketStatus } from '@/lib/types';
 
 export default function AdminSupportManagementPage() {
   const { tickets, replySupportTicket, updateTicketStatus } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [staffReply, setStaffReply] = useState('');
+
+  const selectedTicket = tickets.find((t) => t.id === selectedTicketId) ?? null;
 
   const filteredTickets = tickets.filter((t) => {
     if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
@@ -24,9 +25,10 @@ export default function AdminSupportManagementPage() {
       const q = searchTerm.toLowerCase();
       const matchSubject = t.subject.toLowerCase().includes(q);
       const matchId = t.id.toLowerCase().includes(q);
+      const matchCode = Boolean(t.ticketCode && t.ticketCode.toLowerCase().includes(q));
       const matchEmail = t.userEmail && t.userEmail.toLowerCase().includes(q);
       const matchProfile = t.relatedProfileId && t.relatedProfileId.toLowerCase().includes(q);
-      if (!matchSubject && !matchId && !matchEmail && !matchProfile) return false;
+      if (!matchSubject && !matchId && !matchCode && !matchEmail && !matchProfile) return false;
     }
     return true;
   });
@@ -37,17 +39,10 @@ export default function AdminSupportManagementPage() {
 
     replySupportTicket(selectedTicket.id, staffReply.trim(), 'AGENT');
     setStaffReply('');
-
-    // update local reference
-    const updated = tickets.find((t) => t.id === selectedTicket.id);
-    if (updated) setSelectedTicket(updated);
   };
 
   const handleStatusChange = (ticketId: string, status: SupportTicketStatus) => {
     updateTicketStatus(ticketId, status);
-    if (selectedTicket?.id === ticketId) {
-      setSelectedTicket((p) => (p ? { ...p, status } : null));
-    }
   };
 
   return (
@@ -103,7 +98,7 @@ export default function AdminSupportManagementPage() {
             filteredTickets.map((t) => (
               <div
                 key={t.id}
-                onClick={() => setSelectedTicket(t)}
+                onClick={() => setSelectedTicketId(t.id)}
                 className={`rounded-2xl border p-4 cursor-pointer transition space-y-2 ${
                   selectedTicket?.id === t.id
                     ? 'border-amber-500 bg-zinc-800/80 shadow-md'
@@ -113,7 +108,7 @@ export default function AdminSupportManagementPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-                      {t.id}
+                      {t.ticketCode || t.id}
                     </span>
                     <h4 className="font-bold text-xs text-white truncate max-w-[200px]">{t.subject}</h4>
                   </div>
@@ -149,7 +144,7 @@ export default function AdminSupportManagementPage() {
               <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-amber-400">{selectedTicket.id}</span>
+                    <span className="font-mono text-xs font-bold text-amber-400">{selectedTicket.ticketCode || selectedTicket.id}</span>
                     <h3 className="font-bold text-sm text-white font-serif">{selectedTicket.subject}</h3>
                   </div>
                   <p className="text-[11px] text-zinc-400 mt-0.5">
@@ -190,7 +185,7 @@ export default function AdminSupportManagementPage() {
                         <strong className={isStaff ? 'text-amber-400' : 'text-white'}>
                           {m.senderName} {isStaff && '(Senior Staff)'}
                         </strong>
-                        <span>{m.timestamp}</span>
+                        <span>{m.timestamp ? new Date(m.timestamp).toLocaleString() : ''}</span>
                       </div>
                       <p className="leading-relaxed">{m.text}</p>
                     </div>

@@ -19,7 +19,6 @@ export default function UserManagementPage() {
     currentUser,
     profiles,
     updateUserStatus,
-    verifyUserBadge,
     switchUser,
     addExtraConnections,
     refundConnectionCredit,
@@ -118,6 +117,7 @@ export default function UserManagementPage() {
             <option value="USER">Members</option>
             <option value="MODERATOR">Moderators</option>
             <option value="ADMIN">Admins</option>
+            <option value="SUPER_ADMIN">Super Admins</option>
           </select>
         </div>
       </div>
@@ -140,8 +140,8 @@ export default function UserManagementPage() {
               {filteredUsers.map((u) => {
                 const prof = profiles.find((p) => p.userId === u.id || p.id === u.profileId);
                 const pId = prof?.profileIdCode || u.profileIdCode || 'ID pending';
-                const total = u.totalConnections || 100;
-                const remaining = u.remainingConnections !== undefined ? u.remainingConnections : 100;
+                const total = u.totalConnections ?? 3;
+                const remaining = u.remainingConnections ?? 3;
 
                 return (
                   <tr key={u.id} className="hover:bg-zinc-800/30 transition">

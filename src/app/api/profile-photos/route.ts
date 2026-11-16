@@ -17,7 +17,9 @@ export async function POST(request: NextRequest) {
     const key = typeof body.key === 'string' ? body.key.trim() : '';
     let urlOrigin = '';
     try { urlOrigin = new URL(url).origin; } catch { /* Invalid URL is rejected below. */ }
-    if (!key.startsWith(`${auth.user.id}/avatars/`) || urlOrigin !== new URL(process.env.INSFORGE_URL!).origin) {
+    const validPrefix =
+      key.startsWith(`${auth.user.id}/avatars/`) || key.startsWith(`${auth.user.id}/profile-photos/`);
+    if (!validPrefix || urlOrigin !== new URL(process.env.INSFORGE_URL!).origin) {
       return NextResponse.json({ success: false, error: 'Upload a photo through your account first.' }, { status: 400 });
     }
     const { data: profile, error: profileError } = await ownProfileId(auth.user.id);
@@ -27,15 +29,19 @@ export async function POST(request: NextRequest) {
       .select('id').eq('profile_id', profile.id);
     if (photoError) throw photoError;
     if ((photos ?? []).length >= 5) return NextResponse.json({ success: false, error: 'A profile can have at most five photos.' }, { status: 409 });
+    const isPrimary = (photos ?? []).length === 0;
     const { data: photo, error } = await insforgeAdmin.database.from('profile_photos').insert([{
       profile_id: profile.id,
       url,
       storage_key: key,
-      is_primary: (photos ?? []).length === 0,
+      is_primary: isPrimary,
       is_approved: false,
       order_num: (photos ?? []).length + 1,
     }]).select().single();
     if (error) throw error;
+    if (isPrimary) {
+      await insforgeAdmin.database.from('users').update({ avatar_url: url }).eq('id', auth.user.id);
+    }
     return NextResponse.json({ success: true, data: photo, message: 'Photo uploaded for moderation.' }, { status: 201 });
   } catch (error) {
     console.error('Profile photo save failed:', error);
@@ -93,9 +99,19 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Photo ID and review decision are required.' }, { status: 400 });
     }
     const { data, error } = await insforgeAdmin.database.from('profile_photos')
-      .update({ is_approved: body.isApproved }).eq('id', body.id).select('id,is_approved').maybeSingle();
+      .update({ is_approved: body.isApproved }).eq('id', body.id).select('id,profile_id,url,is_primary,is_approved').maybeSingle();
     if (error) throw error;
     if (!data) return NextResponse.json({ success: false, error: 'Photo not found.' }, { status: 404 });
+    if (body.isApproved && data.is_primary) {
+      const { data: prof } = await insforgeAdmin.database
+        .from('matrimonial_profiles')
+        .select('user_id')
+        .eq('id', data.profile_id)
+        .maybeSingle();
+      if (prof?.user_id) {
+        await insforgeAdmin.database.from('users').update({ avatar_url: data.url }).eq('id', prof.user_id);
+      }
+    }
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error('Profile photo review failed:', error);

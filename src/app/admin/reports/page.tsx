@@ -47,7 +47,7 @@ export default function AdminReportsPage() {
 
               <div className="text-xs text-zinc-300 space-y-1">
                 <div>Reported by: <strong>{r.reporterName}</strong></div>
-                <div>Submitted At: <strong>{new Date(r.timestamp).toLocaleString()}</strong></div>
+                <div>Submitted At: <strong>{new Date(r.timestamp || r.createdAt || Date.now()).toLocaleString()}</strong></div>
                 <div className="rounded-xl bg-zinc-950 p-3 text-zinc-300 mt-2 italic border border-zinc-800">
                   "{r.description}"
                 </div>

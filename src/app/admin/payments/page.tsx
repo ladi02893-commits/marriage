@@ -506,6 +506,9 @@ export default function AdminPaymentsManagementPage() {
                 <option value="EASYPAISA">Easypaisa</option>
                 <option value="BANK_TRANSFER">Bank Transfer (Meezan/IBFT)</option>
                 <option value="RAAST">Raast Instant ID</option>
+                <option value="SADAPAY">SadaPay</option>
+                <option value="NAYAPAY">NayaPay</option>
+                <option value="OTHER">Other</option>
               </select>
             </div>
           </div>
@@ -717,7 +720,6 @@ export default function AdminPaymentsManagementPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProofs.map((proof) => {
-                const waNumber = proof.userPhone.replace(/[^0-9]/g, '');
                 return (
                   <div
                     key={proof.id}

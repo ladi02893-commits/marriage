@@ -19,12 +19,22 @@ export default function NotificationsCenterPage() {
   const getIcon = (type: string) => {
     switch (type) {
       case 'INTEREST':
+      case 'INTEREST_ACCEPTED':
+      case 'INTEREST_DECLINED':
         return <Heart className="h-5 w-5 text-rose-600" />;
       case 'MESSAGE':
+      case 'SUPPORT_REPLY':
         return <MessageSquare className="h-5 w-5 text-blue-600" />;
       case 'VERIFICATION':
+      case 'PROFILE_APPROVED':
+      case 'PROFILE_CHANGES_REQUESTED':
         return <ShieldCheck className="h-5 w-5 text-emerald-600" />;
       case 'MATCH':
+      case 'PAYMENT_APPROVED':
+      case 'PAYMENT_REJECTED':
+      case 'SUBSCRIPTION':
+      case 'CONSULTANT':
+      case 'CONSULTANT_RECOMMENDATION':
         return <Sparkles className="h-5 w-5 text-gold-600" />;
       default:
         return <Bell className="h-5 w-5 text-brand-600" />;

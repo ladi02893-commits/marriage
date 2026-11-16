@@ -84,10 +84,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (Object.keys(coreUpdate).length > 0) {
-      await insforgeAdmin.database
+      const { error: settingsError } = await insforgeAdmin.database
         .from('system_settings')
-        .update(coreUpdate)
-        .eq('id', 'default-settings');
+        .upsert([{ id: 'default-settings', ...coreUpdate, updated_at: new Date().toISOString() }], { onConflict: 'id' });
+      if (settingsError) throw settingsError;
     }
 
     // 2. Persist extended settings to cms_contents table so nothing is lost
@@ -104,13 +104,14 @@ export async function PATCH(request: NextRequest) {
       ...(freeLimit !== undefined ? { freeTierConnectionsLimit: freeLimit, freeTierMonthlyInterestLimit: freeLimit } : {}),
     };
 
-    await insforgeAdmin.database
+    const { error: cmsError } = await insforgeAdmin.database
       .from('cms_contents')
-      .upsert({
+      .upsert([{
         key: 'system_settings_extended',
         data: updatedExtended,
         updated_at: new Date().toISOString(),
-      });
+      }], { onConflict: 'key' });
+    if (cmsError) throw cmsError;
 
     // 3. Return full merged settings
     const merged: SystemSettings = {

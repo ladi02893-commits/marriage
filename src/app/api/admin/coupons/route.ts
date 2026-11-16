@@ -66,15 +66,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Coupon code is required.' }, { status: 400 });
     }
 
-    const discountPercent = body.discountPercent !== undefined ? Math.min(100, Math.max(1, Number(body.discountPercent))) : null;
-    const fixedDiscount = body.fixedDiscount !== undefined ? Math.max(0, Number(body.fixedDiscount)) : null;
+    const discountPercent =
+      body.discountPercent != null && body.discountPercent !== '' && Number.isFinite(Number(body.discountPercent))
+        ? Math.min(100, Math.max(1, Number(body.discountPercent)))
+        : null;
+    const fixedDiscount =
+      body.fixedDiscount != null && body.fixedDiscount !== '' && Number.isFinite(Number(body.fixedDiscount)) && Number(body.fixedDiscount) > 0
+        ? Number(body.fixedDiscount)
+        : null;
 
     if (discountPercent === null && fixedDiscount === null) {
       return NextResponse.json({ success: false, error: 'Provide a discount percentage or fixed discount.' }, { status: 400 });
     }
 
-    const usageLimit = Math.max(1, Number(body.usageLimit || 100));
-    const expiresAt = body.expiresAt ? new Date(body.expiresAt).toISOString() : new Date(Date.now() + 90 * 86400000).toISOString();
+    const parsedLimit = Number(body.usageLimit ?? 100);
+    const usageLimit = Number.isFinite(parsedLimit) ? Math.max(1, Math.round(parsedLimit)) : 100;
+    let expiresAt = new Date(Date.now() + 90 * 86400000).toISOString();
+    if (body.expiresAt) {
+      const parsedDate = new Date(body.expiresAt);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return NextResponse.json({ success: false, error: 'Invalid expiry date.' }, { status: 400 });
+      }
+      expiresAt = parsedDate.toISOString();
+    }
 
     const { data, error } = await insforgeAdmin.database
       .from('coupons')
@@ -128,19 +142,44 @@ export async function PATCH(request: NextRequest) {
 
     const dbPayload: Partial<DbCoupon> = {};
     if (updates.isActive !== undefined) dbPayload.is_active = Boolean(updates.isActive);
-    if (updates.usageLimit !== undefined) dbPayload.usage_limit = Math.max(1, Number(updates.usageLimit));
-    if (updates.discountPercent !== undefined) dbPayload.discount_percent = Number(updates.discountPercent);
-    if (updates.fixedDiscount !== undefined) dbPayload.fixed_discount = Number(updates.fixedDiscount);
-    if (updates.expiresAt !== undefined) dbPayload.expires_at = new Date(updates.expiresAt).toISOString();
+    if (updates.usageLimit !== undefined && Number.isFinite(Number(updates.usageLimit))) {
+      dbPayload.usage_limit = Math.max(1, Math.round(Number(updates.usageLimit)));
+    }
+    if (updates.discountPercent !== undefined) {
+      dbPayload.discount_percent =
+        updates.discountPercent === null || updates.discountPercent === ''
+          ? null
+          : Math.min(100, Math.max(1, Number(updates.discountPercent)));
+    }
+    if (updates.fixedDiscount !== undefined) {
+      dbPayload.fixed_discount =
+        updates.fixedDiscount === null || updates.fixedDiscount === ''
+          ? null
+          : Math.max(0, Number(updates.fixedDiscount));
+    }
+    if (updates.expiresAt !== undefined) {
+      const parsedDate = new Date(updates.expiresAt);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return NextResponse.json({ success: false, error: 'Invalid expiry date.' }, { status: 400 });
+      }
+      dbPayload.expires_at = parsedDate.toISOString();
+    }
+
+    if (Object.keys(dbPayload).length === 0) {
+      return NextResponse.json({ success: false, error: 'No valid changes provided.' }, { status: 400 });
+    }
 
     const { data, error } = await insforgeAdmin.database
       .from('coupons')
       .update(dbPayload)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) {
+      return NextResponse.json({ success: false, error: 'Coupon not found.' }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,

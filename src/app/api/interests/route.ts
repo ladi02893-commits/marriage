@@ -1,18 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
+import { ADMIN_ROLES, rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
 import { insforgeAdmin } from '@/lib/insforge/server';
 
+const INTEREST_SELECT =
+  '*,sender:users!sender_id(name,avatar_url,profile_id_code,profile:matrimonial_profiles(display_name,photos:profile_photos(url,is_primary,is_approved))),receiver:users!receiver_id(name,avatar_url,profile_id_code,profile:matrimonial_profiles(display_name,photos:profile_photos(url,is_primary,is_approved)))';
+
+function extractPhoto(user: Record<string, any> | undefined): string | null {
+  if (!user) return null;
+  if (typeof user.avatar_url === 'string' && user.avatar_url) return user.avatar_url;
+  const profile = Array.isArray(user.profile) ? user.profile[0] : user.profile;
+  const photos = Array.isArray(profile?.photos) ? profile.photos : [];
+  const primary =
+    photos.find((p: Record<string, any>) => p.is_primary && p.is_approved) ??
+    photos.find((p: Record<string, any>) => p.is_approved) ??
+    photos.find((p: Record<string, any>) => p.is_primary) ??
+    photos[0];
+  return typeof primary?.url === 'string' ? primary.url : null;
+}
+
 function mapInterest(interest: Record<string, any>) {
+  const sender = Array.isArray(interest.sender) ? interest.sender[0] : interest.sender;
+  const receiver = Array.isArray(interest.receiver) ? interest.receiver[0] : interest.receiver;
   return {
     ...interest,
     senderId: interest.sender_id,
     senderProfileId: interest.sender_profile_id,
+    senderProfileIdCode: sender?.profile_id_code ?? undefined,
     receiverId: interest.receiver_id,
     receiverProfileId: interest.receiver_profile_id,
-    senderName: interest.sender?.name ?? 'Unknown',
-    senderPhoto: interest.sender?.avatar_url ?? null,
-    receiverName: interest.receiver?.name ?? 'Unknown',
-    receiverPhoto: interest.receiver?.avatar_url ?? null,
+    receiverProfileIdCode: receiver?.profile_id_code ?? undefined,
+    senderName: sender?.name ?? 'Unknown',
+    senderPhoto: extractPhoto(sender),
+    receiverName: receiver?.name ?? 'Unknown',
+    receiverPhoto: extractPhoto(receiver),
+    createdAt: interest.created_at,
+    updatedAt: interest.updated_at,
   };
 }
 
@@ -20,11 +42,13 @@ export async function GET() {
   const auth = await requireUser();
   if (auth.response) return auth.response;
   try {
-    const { data, error } = await insforgeAdmin.database
+    let query = insforgeAdmin.database
       .from('interest_requests')
-      .select('*,sender:users!sender_id(name,avatar_url),receiver:users!receiver_id(name,avatar_url)')
-      .or(`sender_id.eq.${auth.user.id},receiver_id.eq.${auth.user.id}`)
-      .order('created_at', { ascending: false });
+      .select(INTEREST_SELECT);
+    if (!ADMIN_ROLES.has(auth.user.role)) {
+      query = query.or(`sender_id.eq.${auth.user.id},receiver_id.eq.${auth.user.id}`);
+    }
+    const { data, error } = await query.order('created_at', { ascending: false });
     if (error) throw error;
     return NextResponse.json({ success: true, data: (data ?? []).map(mapInterest), total: data?.length ?? 0 });
   } catch (error) {
@@ -65,8 +89,7 @@ export async function POST(request: NextRequest) {
     const { data: existing, error: existingError } = await insforgeAdmin.database
       .from('interest_requests')
       .select('id,status')
-      .eq('sender_id', auth.user.id)
-      .eq('receiver_id', receiverId)
+      .or(`and(sender_id.eq.${auth.user.id},receiver_id.eq.${receiverId}),and(sender_id.eq.${receiverId},receiver_id.eq.${auth.user.id})`)
       .in('status', ['PENDING', 'ACCEPTED'])
       .maybeSingle();
     if (existingError) throw existingError;
@@ -81,7 +104,7 @@ export async function POST(request: NextRequest) {
       receiver_profile_id: receiverProfile.id,
       message: typeof body.message === 'string' ? body.message.trim().slice(0, 500) : '',
       status: 'PENDING',
-    }]).select().single();
+    }]).select(INTEREST_SELECT).single();
     if (error || !interest) throw error ?? new Error('Interest insert failed.');
 
     const used = Number(auth.user.used_connections ?? 0) + 1;
@@ -136,17 +159,20 @@ export async function PATCH(request: NextRequest) {
     if (!canResolve && !canCancel) return NextResponse.json({ success: false, error: 'You cannot perform this action.' }, { status: 403 });
 
     const { data: updated, error: updateError } = await insforgeAdmin.database
-      .from('interest_requests').update({ status }).eq('id', id).eq('status', 'PENDING').select().single();
+      .from('interest_requests').update({ status }).eq('id', id).eq('status', 'PENDING').select(INTEREST_SELECT).single();
     if (updateError) throw updateError;
-    if (status === 'ACCEPTED') {
+    if (status === 'ACCEPTED' || status === 'DECLINED') {
+      const isAccepted = status === 'ACCEPTED';
       const { error: notificationError } = await insforgeAdmin.database.from('notifications').insert([{
         user_id: interest.sender_id,
-        title: 'Interest accepted',
-        description: `${auth.user.name} accepted your interest request.`,
-        type: 'INTEREST_ACCEPTED',
+        title: isAccepted ? 'Interest accepted' : 'Interest declined',
+        description: isAccepted
+          ? `${auth.user.name} accepted your interest request.`
+          : `${auth.user.name} politely declined your interest request.`,
+        type: isAccepted ? 'INTEREST_ACCEPTED' : 'INTEREST_DECLINED',
         link_url: '/dashboard/connections',
       }]);
-      if (notificationError) console.error('Acceptance notification failed:', notificationError.message);
+      if (notificationError) console.error('Interest status notification failed:', notificationError.message);
     }
     return NextResponse.json({ success: true, data: mapInterest(updated) });
   } catch (error) {
