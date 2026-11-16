@@ -115,6 +115,7 @@ export default function UserManagementPage() {
           >
             <option value="ALL">All Roles</option>
             <option value="USER">Members</option>
+            <option value="BUREAU">Marriage Bureaus</option>
             <option value="MODERATOR">Moderators</option>
             <option value="ADMIN">Admins</option>
             <option value="SUPER_ADMIN">Super Admins</option>

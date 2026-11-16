@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'My Profile Dossier', href: '/dashboard/profile', icon: User },
     { name: 'Find Matches', href: '/search', icon: Compass },
     { name: 'Connections', href: '/dashboard/connections', icon: Users, badge: connectionQuota.remaining > 0 ? `${connectionQuota.remaining}` : '0' },
-    { name: 'My Consultant', href: '/dashboard/consultant', icon: Crown },
+    { name: 'My Marriage Bureau', href: '/dashboard/consultant', icon: Crown },
     { name: 'Secure Messages', href: '/dashboard/messages', icon: MessageSquare },
     { name: 'Notifications', href: '/dashboard/notifications', icon: Bell, badge: unreadCount },
     { name: 'Packages & Payments', href: '/dashboard/subscription', icon: CreditCard },
@@ -52,15 +52,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   React.useEffect(() => {
     if (currentUser && ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
       router.replace('/admin');
+    } else if (currentUser && ['BUREAU', 'CONSULTANT'].includes(currentUser.role)) {
+      router.replace('/bureau');
     }
   }, [currentUser, router]);
 
-  if (currentUser && ['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
+  if (currentUser && ['ADMIN', 'SUPER_ADMIN', 'BUREAU', 'CONSULTANT'].includes(currentUser.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-white">
         <div className="flex items-center gap-3 text-sm font-semibold">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
-          <span>Redirecting to Admin Control Room...</span>
+          <span>Redirecting to your Workspace...</span>
         </div>
       </div>
     );

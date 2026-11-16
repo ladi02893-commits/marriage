@@ -17,7 +17,14 @@ function ageFromBirthDate(value: string | null | undefined): number | undefined 
   return age;
 }
 
-export async function toProfileDto(profile: Row, canSeePrivate: boolean, isOwnerOrAdmin = false) {
+export type BureauMeta = {
+  id?: string | null;
+  name?: string | null;
+  bureauCode?: string | null;
+  createdByBureau?: boolean;
+};
+
+export async function toProfileDto(profile: Row, canSeePrivate: boolean, isOwnerOrAdmin = false, bureauMeta?: BureauMeta) {
   const user = relation(profile.user);
   const privacy = relation(profile.privacySettings);
   const career = relation(profile.educationCareer);
@@ -128,6 +135,10 @@ export async function toProfileDto(profile: Row, canSeePrivate: boolean, isOwner
     isEmailVerified: user.is_email_verified ?? false,
     viewCount: profile.view_count ?? 0,
     likeCount: profile.like_count ?? 0,
+    bureauId: (profile.bureau_id ?? user.bureau_id ?? user.assigned_consultant_id ?? bureauMeta?.id) ?? undefined,
+    bureauName: (profile.bureau_name ?? bureauMeta?.name) ?? undefined,
+    bureauCode: (profile.bureau_code ?? bureauMeta?.bureauCode) ?? undefined,
+    createdByBureau: Boolean(profile.created_by_bureau ?? bureauMeta?.createdByBureau),
     createdAt: profile.created_at,
     updatedAt: profile.updated_at,
   };

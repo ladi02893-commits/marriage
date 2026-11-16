@@ -26,7 +26,9 @@ import { toast } from 'sonner';
 function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { profiles, currentProfile, currentUser, connectionQuota } = useAuth();
+  const { profiles, currentProfile, currentUser, connectionQuota, bureaus } = useAuth();
+  const userBureauId = currentUser?.bureauId || currentProfile?.bureauId || currentUser?.assignedConsultantId;
+  const approvedBureaus = bureaus.filter((b) => b.approvalStatus === 'APPROVED');
 
   // Determine current user's profile and opposite target gender
   const userProfile = useMemo(() => {
@@ -47,10 +49,12 @@ function SearchContent() {
   const initialMaxAge = rawMaxAge && !isNaN(Number(rawMaxAge)) ? Number(rawMaxAge) : '';
   const initialProfileId = searchParams.get('profileId') || '';
   const initialEducation = searchParams.get('education') || 'ALL';
+  const initialBureauScope = searchParams.get('bureauScope') || 'ALL';
 
   // Filter State
   const [searchTerm, setSearchTerm] = useState(searchParams.get('q') || '');
   const [profileIdSearch, setProfileIdSearch] = useState(initialProfileId);
+  const [bureauScope, setBureauScope] = useState<string>(initialBureauScope);
   const [gender, setGender] = useState<string>(initialGender);
   const [minAge, setMinAge] = useState<number | ''>(initialMinAge);
   const [maxAge, setMaxAge] = useState<number | ''>(initialMaxAge);
@@ -80,11 +84,12 @@ function SearchContent() {
     if (city !== 'ALL') count++;
     if (profession !== 'ALL') count++;
     if (education !== 'ALL') count++;
+    if (bureauScope !== 'ALL') count++;
     if (verifiedOnly) count++;
     if (whatsappVerifiedOnly) count++;
     if (profileIdSearch.trim()) count++;
     return count;
-  }, [gender, targetOppositeGender, minAge, maxAge, religion, sect, caste, maritalStatus, country, city, profession, education, verifiedOnly, whatsappVerifiedOnly, profileIdSearch]);
+  }, [gender, targetOppositeGender, minAge, maxAge, religion, sect, caste, maritalStatus, country, city, profession, education, bureauScope, verifiedOnly, whatsappVerifiedOnly, profileIdSearch]);
 
   // Sync opposite gender if user logs in
   React.useEffect(() => {
@@ -134,6 +139,13 @@ function SearchContent() {
 
         // Marital status filter
         if (maritalStatus !== 'ALL' && p.maritalStatus !== maritalStatus) return false;
+
+        // Rishta Scope / Marriage Bureau filter
+        if (bureauScope === 'MY_BUREAU') {
+          if (!userBureauId || (p.bureauId || p.assignedConsultantId) !== userBureauId) return false;
+        } else if (bureauScope !== 'ALL') {
+          if ((p.bureauId || p.assignedConsultantId) !== bureauScope) return false;
+        }
 
         // Country filter
         if (country !== 'ALL' && !(p.country || '').toLowerCase().includes(country.toLowerCase())) return false;
@@ -239,6 +251,8 @@ function SearchContent() {
     city,
     profession,
     education,
+    bureauScope,
+    userBureauId,
     verifiedOnly,
     whatsappVerifiedOnly,
     searchTerm,
@@ -259,6 +273,7 @@ function SearchContent() {
     setCity('ALL');
     setProfession('ALL');
     setEducation('ALL');
+    setBureauScope('ALL');
     setVerifiedOnly(false);
     setWhatsappVerifiedOnly(false);
     setSortBy('COMPATIBILITY');
@@ -370,7 +385,22 @@ function SearchContent() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+              <select
+                value={bureauScope}
+                onChange={(e) => setBureauScope(e.target.value)}
+                aria-label="Rishta Scope"
+                className="w-full sm:w-auto rounded-2xl border border-border bg-white px-3.5 py-2.5 text-xs font-semibold text-foreground focus:border-brand-500 focus:outline-none dark:bg-card shadow-xs cursor-pointer"
+              >
+                <option value="ALL">Scope: All Platform Rishtas</option>
+                {userBureauId && <option value="MY_BUREAU">My Marriage Bureau Only</option>}
+                {approvedBureaus.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    Bureau: {b.name} ({b.city})
+                  </option>
+                ))}
+              </select>
+
               <span className="text-xs font-semibold text-muted-foreground shrink-0 hidden sm:inline">Sort:</span>
               <select
                 value={sortBy}
@@ -393,6 +423,12 @@ function SearchContent() {
           {activeFiltersCount > 0 && (
             <div className="mt-3.5 flex flex-wrap items-center gap-2 pt-3 border-t border-border/60 text-xs">
               <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Active:</span>
+              {bureauScope !== 'ALL' && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
+                  Scope: {bureauScope === 'MY_BUREAU' ? 'My Bureau Only' : approvedBureaus.find((b) => b.id === bureauScope)?.name || bureauScope}
+                  <button onClick={() => setBureauScope('ALL')} className="hover:text-rose-600 cursor-pointer"><X className="h-3 w-3" /></button>
+                </span>
+              )}
               {gender !== 'ALL' && (!targetOppositeGender || gender !== targetOppositeGender) && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-0.5 text-[11px] font-medium text-brand-700 border border-brand-200 dark:bg-brand-950 dark:border-brand-800 dark:text-brand-300">
                   Gender: {gender}

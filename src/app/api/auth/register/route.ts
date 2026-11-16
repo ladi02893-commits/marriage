@@ -11,6 +11,7 @@ import { checkRateLimit } from '@/lib/rate-limit';
 import { toSafeUser } from '@/lib/user-dto';
 import { toProfileDto } from '@/lib/profile-dto';
 import { rejectCrossSiteMutation } from '@/lib/api-auth';
+import { getBureausRegistry, linkUserToBureau } from '@/lib/bureau-store';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BLOCKED_PASSWORDS = new Set(['password', 'password123', 'admin123', '12345678', 'qwerty123']);
@@ -38,11 +39,20 @@ export async function POST(request: NextRequest) {
     const dateOfBirth = text(body.dateOfBirth, 20);
     const country = text(body.country, 80);
     const city = text(body.city, 80);
+    const bureauId = text(body.bureauId, 100);
 
-    const [settingsRes, cmsRes] = await Promise.all([
+    const [settingsRes, cmsRes, bureaus] = await Promise.all([
       insforgeAdmin.database.from('system_settings').select('*').eq('id', 'default-settings').maybeSingle(),
       insforgeAdmin.database.from('cms_contents').select('data').eq('key', 'system_settings_extended').maybeSingle(),
+      getBureausRegistry(),
     ]);
+    const selectedBureau = bureaus.find((b) => b.id === bureauId && b.approvalStatus === 'APPROVED');
+    if (!selectedBureau) {
+      return NextResponse.json(
+        { success: false, error: 'Please select an approved Marriage Bureau for your city.' },
+        { status: 400 },
+      );
+    }
     const dbSettings = settingsRes.data as Record<string, any> | null;
     const extended = (cmsRes.data?.data as Record<string, any> | null) ?? {};
     if (extended.allowNewRegistrations === false) {
@@ -124,6 +134,7 @@ export async function POST(request: NextRequest) {
         avatar_url: null,
         account_status: 'ACTIVE',
         profile_id_code: profileIdCode,
+        assigned_consultant_id: selectedBureau.id,
         total_connections: freeConnections,
         used_connections: 0,
         remaining_connections: freeConnections,
@@ -219,9 +230,11 @@ export async function POST(request: NextRequest) {
     const childError = childResults.find((result) => result.error)?.error;
     if (childError) throw childError;
 
+    await linkUserToBureau(newUser.id, selectedBureau.id, false);
+
     const { data: fullProfile, error: fetchProfileError } = await insforgeAdmin.database
       .from('matrimonial_profiles')
-      .select('*,photos:profile_photos(*),educationCareer:education_careers(*),lifestyle:lifestyles(*),familyInfo:family_infos(*),partnerPreferences:partner_preferences(*),privacySettings:privacy_settings(*),user:users(id,phone,whatsapp_number,profile_id_code,is_verified,is_whatsapp_verified,is_email_verified,account_status)')
+      .select('*,photos:profile_photos(*),educationCareer:education_careers(*),lifestyle:lifestyles(*),familyInfo:family_infos(*),partnerPreferences:partner_preferences(*),privacySettings:privacy_settings(*),user:users(id,phone,whatsapp_number,profile_id_code,is_verified,is_whatsapp_verified,is_email_verified,account_status,assigned_consultant_id)')
       .eq('id', profile.id)
       .single();
     if (fetchProfileError) throw fetchProfileError;
@@ -235,7 +248,12 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       user: toSafeUser({ ...newUser, profile: { id: profile.id, photos: [] } }),
-      profile: await toProfileDto(fullProfile, true, true),
+      profile: await toProfileDto(fullProfile, true, true, {
+        id: selectedBureau.id,
+        name: selectedBureau.name,
+        bureauCode: selectedBureau.bureauCode,
+        createdByBureau: false,
+      }),
       redirectUrl: '/dashboard',
       message: 'Account created. Email and WhatsApp verification are pending.',
     }, { status: 201 });

@@ -1,4 +1,8 @@
-export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'CONSULTANT';
+export type UserRole = 'USER' | 'MODERATOR' | 'ADMIN' | 'SUPER_ADMIN' | 'CONSULTANT' | 'BUREAU';
+
+export type BureauApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
+export type BureauRishtaScope = 'ALL_PLATFORM' | 'BUREAU_PRIORITY';
 
 export type SubscriptionTier = 'FREE' | 'PREMIUM' | 'PREMIUM_PLUS' | 'BASIC' | 'VIP';
 
@@ -42,6 +46,8 @@ export interface User {
   usedConnections?: number;
   remainingConnections?: number;
   assignedConsultantId?: string;
+  bureauId?: string | null;
+  bureauName?: string | null;
 }
 
 export interface ProfilePhoto {
@@ -178,10 +184,40 @@ export interface MatrimonialProfile {
   aiSummary?: string;
   personalityInsights?: string[];
   assignedConsultantId?: string;
+  bureauId?: string | null;
+  bureauName?: string | null;
+  bureauCode?: string | null;
+  createdByBureau?: boolean;
   consultantRecommended?: boolean;
   consultantNote?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface MarriageBureau {
+  id: string;
+  bureauCode: string;
+  ownerUserId?: string;
+  name: string;
+  ownerName: string;
+  email: string;
+  phone: string;
+  whatsappNumber?: string;
+  country: string;
+  stateProvince?: string;
+  city: string;
+  serviceCities?: string[];
+  address: string;
+  registrationNumber?: string;
+  description?: string;
+  specializations?: string[];
+  rishtaScope: BureauRishtaScope;
+  approvalStatus: BureauApprovalStatus;
+  reviewerNotes?: string;
+  isVerified: boolean;
+  clientCount?: number;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 // Connection Transactions Log (Section 81 & 82)

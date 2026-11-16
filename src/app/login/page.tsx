@@ -24,6 +24,8 @@ function LoginContent() {
     if (currentUser) {
       if (['ADMIN', 'SUPER_ADMIN'].includes(currentUser.role)) {
         window.location.href = safeReturnTo.startsWith('/admin') ? safeReturnTo : '/admin';
+      } else if (['BUREAU', 'CONSULTANT'].includes(currentUser.role)) {
+        window.location.href = safeReturnTo.startsWith('/bureau') ? safeReturnTo : '/bureau';
       } else {
         window.location.href = safeReturnTo && !safeReturnTo.startsWith('/admin') ? safeReturnTo : '/dashboard';
       }
@@ -41,8 +43,13 @@ function LoginContent() {
       return;
     }
     toast.success('Signed in successfully.');
-    if (['ADMIN', 'SUPER_ADMIN'].includes(result.user?.role || '')) {
+    const role = result.user?.role || '';
+    if (['ADMIN', 'SUPER_ADMIN'].includes(role)) {
       window.location.href = safeReturnTo.startsWith('/admin') ? safeReturnTo : '/admin';
+      return;
+    }
+    if (['BUREAU', 'CONSULTANT'].includes(role)) {
+      window.location.href = safeReturnTo.startsWith('/bureau') ? safeReturnTo : '/bureau';
       return;
     }
     window.location.href =

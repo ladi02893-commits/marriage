@@ -8,10 +8,14 @@ import { CountryCitySelect } from '@/components/ui/country-city-select';
 import { MatchingService } from '@/lib/matching-service';
 
 export default function DiscoverMatchesPage() {
-  const { profiles, currentProfile, currentUser } = useAuth();
+  const { profiles, currentProfile, currentUser, bureaus } = useAuth();
   const [filterReligion, setFilterReligion] = useState<string>('ALL');
   const [filterCountry, setFilterCountry] = useState<string>('ALL');
   const [filterCity, setFilterCity] = useState<string>('ALL');
+  const [filterBureauScope, setFilterBureauScope] = useState<string>('ALL');
+
+  const userBureauId = currentUser?.bureauId || currentProfile?.bureauId || currentUser?.assignedConsultantId;
+  const approvedBureaus = bureaus.filter((b) => b.approvalStatus === 'APPROVED');
 
   // Determine current user's profile and target opposite gender
   const userProfile = React.useMemo(() => {
@@ -29,6 +33,11 @@ export default function DiscoverMatchesPage() {
       if (userProfile && p.id === userProfile.id) return false;
       if (targetOppositeGender && p.gender !== targetOppositeGender) return false;
       if (userGender && p.gender === userGender) return false;
+      if (filterBureauScope === 'MY_BUREAU') {
+        if (!userBureauId || (p.bureauId || p.assignedConsultantId) !== userBureauId) return false;
+      } else if (filterBureauScope !== 'ALL') {
+        if ((p.bureauId || p.assignedConsultantId) !== filterBureauScope) return false;
+      }
       if (filterReligion !== 'ALL' && p.religion !== filterReligion) return false;
       if (filterCountry !== 'ALL' && !(p.country || '').toLowerCase().includes(filterCountry.toLowerCase())) return false;
       if (filterCity !== 'ALL' && !(p.city || '').toLowerCase().includes(filterCity.toLowerCase())) return false;
@@ -58,7 +67,21 @@ export default function DiscoverMatchesPage() {
 
       {/* Filter Control Bar */}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+          <div>
+            <label className="text-xs font-semibold text-foreground block mb-1">Rishta Scope / Bureau</label>
+            <select
+              value={filterBureauScope}
+              onChange={(e) => setFilterBureauScope(e.target.value)}
+              className="w-full rounded-xl border border-border bg-muted/30 p-2.5 text-xs font-semibold text-foreground focus:outline-none"
+            >
+              <option value="ALL">All Platform Rishtas</option>
+              {userBureauId && <option value="MY_BUREAU">My Marriage Bureau Only</option>}
+              {approvedBureaus.map((b) => (
+                <option key={b.id} value={b.id}>{b.name} ({b.city})</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="text-xs font-semibold text-foreground block mb-1">Filter Religion</label>
             <select
@@ -109,6 +132,7 @@ export default function DiscoverMatchesPage() {
           </p>
           <button
             onClick={() => {
+              setFilterBureauScope('ALL');
               setFilterReligion('ALL');
               setFilterCountry('ALL');
               setFilterCity('ALL');

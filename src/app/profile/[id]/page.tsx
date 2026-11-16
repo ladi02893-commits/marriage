@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Home,
   Lock,
+  Building2,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -303,6 +304,11 @@ export default function ProfileDetailPage() {
                   {profile.isFeatured && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-white shadow-md">
                       <Crown className="h-4 w-4" /> Featured
+                    </span>
+                  )}
+                  {profile.bureauName && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-900/90 backdrop-blur-md px-3 py-1 text-xs font-semibold text-gold-200 shadow-md">
+                      <Building2 className="h-3.5 w-3.5" /> {profile.bureauName}
                     </span>
                   )}
                 </div>

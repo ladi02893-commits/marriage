@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserFromCookies } from './auth';
 
 export const ADMIN_ROLES = new Set(['SUPER_ADMIN', 'ADMIN']);
+export const BUREAU_ROLES = new Set(['BUREAU', 'CONSULTANT']);
 
 export type SessionUser = NonNullable<Awaited<ReturnType<typeof getCurrentUserFromCookies>>>;
 

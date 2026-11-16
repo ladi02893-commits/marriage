@@ -6,6 +6,7 @@ import {
   AbuseReport,
   AdminAuditLog,
   BlockedUser,
+  BureauApprovalStatus,
   ChatMessage,
   CMSContent,
   ConnectionTransaction,
@@ -18,6 +19,7 @@ import {
   FavoriteItem,
   InterestRequest,
   Invoice,
+  MarriageBureau,
   MatrimonialProfile,
   NotificationItem,
   PaymentProof,
@@ -32,7 +34,7 @@ import {
   User,
   VerificationRequest,
 } from './types';
-import { PUBLIC_CMS, PUBLIC_EXTRA_PACKS, PUBLIC_PLANS, PUBLIC_SETTINGS } from './public-config';
+import { PUBLIC_BUREAUS, PUBLIC_CMS, PUBLIC_EXTRA_PACKS, PUBLIC_PLANS, PUBLIC_SETTINGS } from './public-config';
 
 type ApiRecord = Record<string, any>;
 
@@ -125,7 +127,38 @@ function useAuthValue() {
   const [paymentProofs, setPaymentProofs] = useState<PaymentProof[]>([]);
   const [receivingAccounts, setReceivingAccounts] = useState<ReceivingAccount[]>([]);
   const [connectionTransactions] = useState<ConnectionTransaction[]>([]);
-  const [consultants] = useState<Consultant[]>([]);
+  const [bureaus, setBureaus] = useState<MarriageBureau[]>(PUBLIC_BUREAUS);
+  const consultants = useMemo<Consultant[]>(
+    () =>
+      bureaus
+        .filter((b) => b.approvalStatus === 'APPROVED')
+        .map((b) => ({
+          id: b.id,
+          name: b.name,
+          title: `Licensed Marriage Bureau • ${b.city}`,
+          email: b.email,
+          phone: b.phone,
+          whatsappNumber: b.whatsappNumber || b.phone,
+          avatarUrl: '/avatar-placeholder.svg',
+          bio: b.description || `${b.name} located at ${b.address}`,
+          specialization: (b.specializations ?? []).join(', ') || 'Family Matchmaking',
+          assignedClientIds: [],
+          isActive: true,
+        })),
+    [bureaus],
+  );
+  const ownBureau = useMemo<MarriageBureau | null>(
+    () =>
+      currentUser
+        ? bureaus.find(
+            (b) =>
+              b.ownerUserId === currentUser.id ||
+              b.id === currentUser.bureauId ||
+              b.id === currentUser.assignedConsultantId,
+          ) ?? null
+        : null,
+    [bureaus, currentUser],
+  );
   const [consultantRecommendations] = useState<ConsultantRecommendation[]>([]);
   const [consultantNotes] = useState<ConsultantNote[]>([]);
   const [blockedUsers] = useState<BlockedUser[]>([]);
@@ -135,6 +168,7 @@ function useAuthValue() {
   const refreshDatabase = useCallback(async () => {
     const endpoints: Array<[string, (value: unknown) => void]> = [
       ['/api/profiles', (value) => setProfiles(Array.isArray(value) ? value as MatrimonialProfile[] : [])],
+      ['/api/bureaus', (value) => { if (Array.isArray(value)) setBureaus(value as MarriageBureau[]); }],
       ['/api/receiving-accounts', (value) => setReceivingAccounts(Array.isArray(value) ? value as ReceivingAccount[] : [])],
       ['/api/admin/plans', (value) => { if (Array.isArray(value) && value.length > 0) setPlans(value as SubscriptionPlan[]); }],
       ['/api/admin/settings', (value) => { if (value && typeof value === 'object' && !Array.isArray(value)) setSettings(value as SystemSettings); }],
@@ -219,7 +253,7 @@ function useAuthValue() {
   useEffect(() => { void refreshDatabase(); }, [refreshDatabase]);
 
   const connectionQuota = useMemo<ConnectionQuotaInfo>(() => {
-    const privileged = currentUser ? ['SUPER_ADMIN', 'ADMIN'].includes(currentUser.role) : false;
+    const privileged = currentUser ? ['SUPER_ADMIN', 'ADMIN', 'BUREAU', 'CONSULTANT'].includes(currentUser.role) : false;
     const total = privileged ? 99_999 : currentUser?.totalConnections ?? 0;
     const used = privileged ? 0 : currentUser?.usedConnections ?? 0;
     const remaining = privileged ? 99_999 : currentUser?.remainingConnections ?? Math.max(0, total - used);
@@ -258,6 +292,7 @@ function useAuthValue() {
         body: JSON.stringify({
           email: userData.email, password: userData.password, fullName: userData.name ?? profileData.fullName,
           phone: userData.phone, whatsappNumber: userData.whatsappNumber, displayName: profileData.displayName,
+          bureauId: userData.bureauId ?? profileData.bureauId,
           gender: profileData.gender, dateOfBirth: profileData.dateOfBirth, maritalStatus: profileData.maritalStatus,
           religion: profileData.religion, sectOrCommunity: profileData.sectOrCommunity,
           caste: profileData.caste, subClan: profileData.subClan,
@@ -503,9 +538,99 @@ function useAuthValue() {
   return {
     currentUser, currentProfile, users, profiles, interests, favorites, conversations, messages, notifications,
     plans, extraPacks, invoices, verifications, reports, tickets, coupons, cms, auditLogs, settings,
-    paymentProofs, receivingAccounts, connectionTransactions, consultants, consultantRecommendations,
+    paymentProofs, receivingAccounts, connectionTransactions, consultants, bureaus, ownBureau, consultantRecommendations,
     consultantNotes, blockedUsers, connectionQuota, refreshDatabase,
     login, register, logout, switchUser, updateCurrentUserProfile,
+    registerBureau: async (data: Record<string, unknown>) => {
+      try {
+        const result = await apiRequest<{ user: User; bureau: MarriageBureau; redirectUrl: string }>('/api/bureaus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'REGISTER_BUREAU', ...data }),
+        });
+        setCurrentUser(result.user);
+        setCurrentProfile(null);
+        await refreshDatabase();
+        return { success: true, redirectUrl: result.redirectUrl || '/bureau', user: result.user };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Bureau registration failed.' };
+      }
+    },
+    adminCreateBureau: async (data: Record<string, unknown>) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'ADMIN_CREATE_BUREAU', ...data }),
+        });
+        await refreshDatabase();
+        toast.success('Approved Marriage Bureau added.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Could not add Marriage Bureau.');
+        return false;
+      }
+    },
+    updateBureauStatus: async (id: string, approvalStatus: BureauApprovalStatus, reviewerNotes?: string) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, approvalStatus, reviewerNotes }),
+        });
+        await refreshDatabase();
+        toast.success(`Bureau status updated to ${approvalStatus}.`);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Bureau status update failed.');
+        return false;
+      }
+    },
+    updateBureauProfile: async (id: string, data: Partial<MarriageBureau>) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, ...data }),
+        });
+        await refreshDatabase();
+        toast.success('Marriage Bureau details updated.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Bureau update failed.');
+        return false;
+      }
+    },
+    createBureauClient: async (data: Record<string, unknown>) => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'CREATE_CLIENT', ...data }),
+        });
+        await refreshDatabase();
+        toast.success('Client added under your Marriage Bureau and published.');
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Could not create client profile.');
+        return false;
+      }
+    },
+    approveBureauClientProfile: async (profileId: string, approvalStatus: 'APPROVED' | 'CHANGES_REQUESTED') => {
+      try {
+        await apiRequest('/api/bureaus', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'UPDATE_CLIENT_STATUS', profileId, approvalStatus }),
+        });
+        await refreshDatabase();
+        toast.success(`Client profile updated to ${approvalStatus.replaceAll('_', ' ')}.`);
+        return true;
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Could not update client profile.');
+        return false;
+      }
+    },
     updateUserSubscription: async (tier: SubscriptionTier, _days = 365, targetUserId?: string) => {
       const id = targetUserId ?? currentUser?.id;
       if (!id) return false;

@@ -40,6 +40,7 @@ export function toSafeUser(user: DatabaseUser) {
     usedConnections: user.used_connections ?? 0,
     remainingConnections: user.remaining_connections ?? 3,
     assignedConsultantId: user.assigned_consultant_id ?? null,
+    bureauId: (user.bureau_id as string | null) ?? (user.assigned_consultant_id as string | null) ?? null,
     createdAt: user.created_at ?? null,
     lastActive: (user.last_login_at as string | null) ?? (user.updated_at as string | null) ?? (user.created_at as string | null) ?? '',
   };

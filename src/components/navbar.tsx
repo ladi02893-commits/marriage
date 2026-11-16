@@ -17,6 +17,7 @@ import {
   LogOut,
   ChevronDown,
   HelpCircle,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
@@ -33,26 +34,33 @@ export function Navbar() {
   const isAdmin =
     currentUser?.role === 'SUPER_ADMIN' ||
     currentUser?.role === 'ADMIN';
-  const isConsultant = currentUser?.role === 'CONSULTANT';
+  const isBureau = currentUser?.role === 'BUREAU' || currentUser?.role === 'CONSULTANT';
 
   // Guest nav links
   const guestNavLinks = [
     { name: 'Find Matches', href: '/search' },
+    { name: 'Register Bureau', href: '/register/bureau' },
     { name: 'Connection Packages', href: '/pricing' },
-    { name: 'Senior Consultant', href: '/#consultant' },
     { name: 'Success Stories', href: '/stories' },
     { name: 'Safety & Privacy', href: '/safety' },
   ];
 
   // User nav links (Section 74)
-  const userNavLinks = [
-    { name: 'Find Matches', href: '/search' },
-    { name: 'Recommended', href: '/dashboard/discover' },
-    { name: 'Connections', href: '/dashboard/connections' },
-    { name: 'My Consultant', href: '/dashboard/consultant' },
-    { name: 'Packages', href: '/pricing' },
-    { name: 'Helpdesk', href: '/dashboard/support' },
-  ];
+  const userNavLinks = isBureau
+    ? [
+        { name: 'Bureau Portal', href: '/bureau' },
+        { name: 'Find Matches', href: '/search' },
+        { name: 'Success Stories', href: '/stories' },
+        { name: 'Helpdesk', href: '/dashboard/support' },
+      ]
+    : [
+        { name: 'Find Matches', href: '/search' },
+        { name: 'Recommended', href: '/dashboard/discover' },
+        { name: 'Connections', href: '/dashboard/connections' },
+        { name: 'My Marriage Bureau', href: '/dashboard/consultant' },
+        { name: 'Packages', href: '/pricing' },
+        { name: 'Helpdesk', href: '/dashboard/support' },
+      ];
 
   const activeNavLinks = currentUser ? userNavLinks : guestNavLinks;
 
@@ -196,14 +204,14 @@ export function Navbar() {
                 )}
               </div>
 
-              {/* Consultant Portal Link if Consultant */}
-              {(isConsultant || isAdmin) && (
+              {/* Bureau Portal Link */}
+              {isBureau && (
                 <Link
-                  href="/consultant"
+                  href="/bureau"
                   className="flex items-center gap-1.5 rounded-full border border-gold-400 bg-gold-500/10 px-3 py-1.5 text-xs font-bold text-gold-800 dark:text-gold-300 transition hover:bg-gold-500/20"
                 >
-                  <Crown className="h-3.5 w-3.5 text-gold-600" />
-                  Consultant
+                  <Building2 className="h-3.5 w-3.5 text-gold-600" />
+                  Bureau Portal
                 </Link>
               )}
 
@@ -261,38 +269,51 @@ export function Navbar() {
                     </div>
 
                     <div className="space-y-0.5">
-                      <Link
-                        href="/dashboard"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted font-medium transition"
-                      >
-                        <LayoutDashboard className="h-3.5 w-3.5 text-brand-800" />
-                        Dashboard Overview
-                      </Link>
-                      <Link
-                        href="/dashboard/profile"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted font-medium transition"
-                      >
-                        <UserIcon className="h-3.5 w-3.5 text-brand-800" />
-                        My Profile Dossier
-                      </Link>
-                      <Link
-                        href="/dashboard/connections"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted font-medium transition"
-                      >
-                        <Heart className="h-3.5 w-3.5 text-rose-600" />
-                        Connections Hub
-                      </Link>
-                      <Link
-                        href="/dashboard/consultant"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted font-medium transition"
-                      >
-                        <Crown className="h-3.5 w-3.5 text-gold-600" />
-                        My Family Consultant
-                      </Link>
+                      {isBureau ? (
+                        <Link
+                          href="/bureau"
+                          onClick={() => setUserDropdownOpen(false)}
+                          className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted font-medium transition"
+                        >
+                          <Building2 className="h-3.5 w-3.5 text-brand-800" />
+                          Marriage Bureau Portal
+                        </Link>
+                      ) : (
+                        <>
+                          <Link
+                            href="/dashboard"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted font-medium transition"
+                          >
+                            <LayoutDashboard className="h-3.5 w-3.5 text-brand-800" />
+                            Dashboard Overview
+                          </Link>
+                          <Link
+                            href="/dashboard/profile"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted font-medium transition"
+                          >
+                            <UserIcon className="h-3.5 w-3.5 text-brand-800" />
+                            My Profile Dossier
+                          </Link>
+                          <Link
+                            href="/dashboard/connections"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted font-medium transition"
+                          >
+                            <Heart className="h-3.5 w-3.5 text-rose-600" />
+                            Connections Hub
+                          </Link>
+                          <Link
+                            href="/dashboard/consultant"
+                            onClick={() => setUserDropdownOpen(false)}
+                            className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-foreground hover:bg-muted font-medium transition"
+                          >
+                            <Building2 className="h-3.5 w-3.5 text-gold-600" />
+                            My Marriage Bureau
+                          </Link>
+                        </>
+                      )}
                       <Link
                         href="/dashboard/support"
                         onClick={() => setUserDropdownOpen(false)}
@@ -390,11 +411,11 @@ export function Navbar() {
                   <span className="font-mono text-gold-700 font-bold">{currentUser.profileIdCode || 'ID pending'}</span>
                 </div>
                 <Link
-                  href="/dashboard"
+                  href={isAdmin ? '/admin' : isBureau ? '/bureau' : '/dashboard'}
                   onClick={() => setMobileMenuOpen(false)}
                   className="block rounded-xl bg-brand-900 py-3 text-center text-sm font-bold text-white shadow-sm"
                 >
-                  Go to Dashboard
+                  {isAdmin ? 'Go to Admin Panel' : isBureau ? 'Go to Bureau Portal' : 'Go to Dashboard'}
                 </Link>
                 <button
                   onClick={handleSignOut}

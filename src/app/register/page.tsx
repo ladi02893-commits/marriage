@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -15,6 +15,8 @@ import {
   ShieldCheck,
   FileCheck,
   MessageCircle,
+  Building2,
+  MapPin,
 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -24,7 +26,7 @@ import { toast } from 'sonner';
 
 export default function RegisterWizardPage() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { register, bureaus } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
 
   // Form State
@@ -46,10 +48,11 @@ export default function RegisterWizardPage() {
     subClan: '',
     motherTongue: 'Urdu',
     citizenship: 'Pakistani',
-    country: '',
+    country: 'Pakistan',
     province: '',
-    city: '',
+    city: 'Lahore',
     area: '',
+    bureauId: '',
 
     // Step 3: Education & Career
     highestDegree: "Bachelor's Degree",
@@ -113,6 +116,37 @@ export default function RegisterWizardPage() {
     return Math.abs(ageDt.getUTCFullYear() - 1970);
   }, [formData.dateOfBirth]);
 
+  // Approved Marriage Bureaus filtered by selected city
+  const approvedBureaus = useMemo(
+    () => bureaus.filter((b) => b.approvalStatus === 'APPROVED'),
+    [bureaus],
+  );
+
+  const cityMatchingBureaus = useMemo(() => {
+    const selectedCity = formData.city.trim().toLowerCase();
+    if (!selectedCity || selectedCity === 'all') return [];
+    return approvedBureaus.filter((b) => {
+      const mainCity = (b.city || '').trim().toLowerCase();
+      const extraCities = (b.serviceCities ?? []).map((c) => c.trim().toLowerCase());
+      return (
+        mainCity === selectedCity ||
+        mainCity.includes(selectedCity) ||
+        selectedCity.includes(mainCity) ||
+        extraCities.some((c) => c === selectedCity || c.includes(selectedCity))
+      );
+    });
+  }, [approvedBureaus, formData.city]);
+
+  const displayedBureaus = cityMatchingBureaus.length > 0 ? cityMatchingBureaus : approvedBureaus;
+  const selectedBureau = approvedBureaus.find((b) => b.id === formData.bureauId) ?? null;
+
+  useEffect(() => {
+    if (!displayedBureaus.length) return;
+    if (!formData.bureauId || !displayedBureaus.some((b) => b.id === formData.bureauId)) {
+      setFormData((prev) => ({ ...prev, bureauId: displayedBureaus[0].id }));
+    }
+  }, [displayedBureaus, formData.bureauId]);
+
   const updateField = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -128,8 +162,8 @@ export default function RegisterWizardPage() {
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     if (currentStep === 1) {
-      if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.dateOfBirth || !formData.country || !formData.city) {
-        toast.error('Please complete your name, email, mobile, birth date, location, and password.');
+      if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.dateOfBirth || !formData.country || !formData.city || !formData.bureauId) {
+        toast.error('Please complete your name, email, mobile, birth date, location, Marriage Bureau selection, and password.');
         return;
       }
       if (calculatedAge === null || calculatedAge < 18 || calculatedAge > 100) {
@@ -184,8 +218,10 @@ export default function RegisterWizardPage() {
           password: formData.password,
           phone: formData.whatsappNumber || formData.phone,
           whatsappNumber: formData.whatsappNumber || formData.phone,
+          bureauId: formData.bureauId,
         },
         {
+          bureauId: formData.bureauId,
           fullName: formData.fullName,
           displayName: formData.fullName.split(' ')[0] + (formData.fullName.split(' ')[1] ? ' ' + formData.fullName.split(' ')[1][0] + '.' : ''),
           gender: formData.gender as any,
@@ -292,8 +328,17 @@ export default function RegisterWizardPage() {
             Confidential Royal Matchmaking Registration
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground max-w-xl mx-auto">
-            A dignified, connection-based matchmaking platform with profile review and optional identity verification.
+            A dignified, connection-based matchmaking platform with city-based Marriage Bureaus and verified families.
           </p>
+          <div className="pt-2">
+            <Link
+              href="/register/bureau"
+              className="inline-flex items-center gap-1.5 rounded-full border border-gold-400/50 bg-gold-50/70 dark:bg-gold-950/30 px-4 py-1.5 text-xs font-bold text-gold-800 dark:text-gold-300 hover:bg-gold-100/80 transition"
+            >
+              <Building2 className="h-3.5 w-3.5 text-gold-600" />
+              Own a Marriage Bureau (Daftar)? Register your Bureau Office here →
+            </Link>
+          </div>
         </div>
 
         {/* Step Progression Bar */}
@@ -498,6 +543,58 @@ export default function RegisterWizardPage() {
                     cityLabel="City of Residence *"
                     required
                   />
+                </div>
+
+                {/* Mandatory Marriage Bureau Selector (Auto-filtered by City) */}
+                <div className="rounded-2xl border-2 border-brand-500/30 bg-brand-50/30 dark:bg-brand-950/20 p-4 sm:p-5 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Building2 className="h-4 w-4 text-brand-600" />
+                      Select Marriage Bureau (Daftar) for {formData.city || 'Your City'} *
+                    </label>
+                    <span className="text-[11px] font-semibold text-brand-700 dark:text-brand-300">
+                      {cityMatchingBureaus.length > 0
+                        ? `${cityMatchingBureaus.length} approved bureau(s) in ${formData.city}`
+                        : `Showing ${displayedBureaus.length} national/approved bureaus serving your area`}
+                    </span>
+                  </div>
+
+                  <select
+                    required
+                    value={formData.bureauId}
+                    onChange={(e) => updateField('bureauId', e.target.value)}
+                    className="w-full rounded-xl border border-border bg-card p-3 text-xs font-semibold text-foreground focus:border-brand-500 focus:outline-none"
+                  >
+                    {displayedBureaus.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} — {b.city} ({b.bureauCode})
+                      </option>
+                    ))}
+                  </select>
+
+                  {selectedBureau && (
+                    <div className="rounded-xl border border-border bg-card p-3.5 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="font-bold text-foreground flex items-center gap-2">
+                          <span>{selectedBureau.name}</span>
+                          <span className="rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-bold">
+                            Admin Approved • {selectedBureau.bureauCode}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3 text-brand-600 shrink-0" />
+                          <span>{selectedBureau.address} ({selectedBureau.city})</span>
+                        </div>
+                        {selectedBureau.description && (
+                          <p className="text-[11px] text-muted-foreground line-clamp-2">{selectedBureau.description}</p>
+                        )}
+                      </div>
+                      <div className="text-[11px] font-mono text-muted-foreground shrink-0">
+                        <div>Head: {selectedBureau.ownerName}</div>
+                        <div>Tel: {selectedBureau.phone}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -808,6 +905,12 @@ export default function RegisterWizardPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Applicant:</span>
                     <strong className="text-foreground">{formData.fullName} ({calculatedAge ?? '--'} Yrs, {formData.caste})</strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Selected Marriage Bureau:</span>
+                    <strong className="text-brand-700 dark:text-brand-300">
+                      {selectedBureau ? `${selectedBureau.name} (${selectedBureau.city})` : 'Not selected'}
+                    </strong>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">WhatsApp Verified:</span>

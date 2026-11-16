@@ -65,7 +65,11 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       success: true,
       user: toSafeUser(user),
-      redirectUrl: ['SUPER_ADMIN', 'ADMIN'].includes(user.role) ? '/admin' : '/dashboard',
+      redirectUrl: ['SUPER_ADMIN', 'ADMIN'].includes(user.role)
+        ? '/admin'
+        : ['BUREAU', 'CONSULTANT'].includes(user.role)
+        ? '/bureau'
+        : '/dashboard',
     });
     response.cookies.set({
       name: AUTH_COOKIE_NAME,

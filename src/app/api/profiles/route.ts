@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ADMIN_ROLES, rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
+import { ADMIN_ROLES, BUREAU_ROLES, rejectCrossSiteMutation, requireUser } from '@/lib/api-auth';
 import { getCurrentUserFromCookies } from '@/lib/auth';
+import { getBureausRegistry, getUserBureauMap } from '@/lib/bureau-store';
 import { insforgeAdmin } from '@/lib/insforge/server';
 import { toProfileDto } from '@/lib/profile-dto';
 
-const PROFILE_SELECT = '*,photos:profile_photos(*),educationCareer:education_careers(*),lifestyle:lifestyles(*),familyInfo:family_infos(*),partnerPreferences:partner_preferences(*),privacySettings:privacy_settings(*),user:users(id,phone,whatsapp_number,profile_id_code,is_verified,is_whatsapp_verified,is_email_verified,account_status)';
+const PROFILE_SELECT = '*,photos:profile_photos(*),educationCareer:education_careers(*),lifestyle:lifestyles(*),familyInfo:family_infos(*),partnerPreferences:partner_preferences(*),privacySettings:privacy_settings(*),user:users(id,phone,whatsapp_number,profile_id_code,is_verified,is_whatsapp_verified,is_email_verified,account_status,assigned_consultant_id)';
 
 type Row = Record<string, any>;
 
@@ -53,10 +54,20 @@ export async function GET(request: NextRequest) {
     const city = normalizedFilter(params.get('city'));
     const search = normalizedFilter(params.get('search'))?.toLowerCase();
 
+    const [bureaus, userBureauMap] = await Promise.all([
+      getBureausRegistry(),
+      getUserBureauMap(),
+    ]);
+    const bureauById = new Map(bureaus.map((b) => [b.id, b]));
+    const ownBureau =
+      currentUser && BUREAU_ROLES.has(currentUser.role)
+        ? bureaus.find((b) => b.ownerUserId === currentUser.id || b.id === currentUser.assigned_consultant_id)
+        : undefined;
+
     let query = insforgeAdmin.database.from('matrimonial_profiles').select(PROFILE_SELECT);
     if (!currentUser) {
       query = query.eq('approval_status', 'APPROVED');
-    } else if (!isAdmin) {
+    } else if (!isAdmin && !ownBureau) {
       query = query.or(`approval_status.eq.APPROVED,user_id.eq.${currentUser.id}`);
     }
     if (gender) query = query.eq('gender', gender);
@@ -89,10 +100,21 @@ export async function GET(request: NextRequest) {
       ownGender = ownProf?.gender ?? null;
     }
 
+    const resolveBureauId = (profile: Row): string | null =>
+      profile.bureau_id ??
+      userBureauMap[profile.user_id]?.bureauId ??
+      relation(profile.user).assigned_consultant_id ??
+      null;
+
     let visibleProfiles = (profiles ?? []).filter((profile) => {
       const user = relation(profile.user);
       const privacy = relation(profile.privacySettings);
       if (isAdmin || (currentUser && profile.user_id === currentUser.id)) return true;
+      const clientBureauId = resolveBureauId(profile);
+      if (ownBureau && ownBureau.approvalStatus === 'APPROVED' && clientBureauId === ownBureau.id) {
+        return true;
+      }
+      if (profile.approval_status !== 'APPROVED') return false;
       if (user.account_status !== 'ACTIVE' || privacy.hide_profile_temporarily) return false;
       if (!isAdmin && currentUser && (ownGender === 'MALE' || ownGender === 'FEMALE') && profile.gender === ownGender) {
         return false;
@@ -109,11 +131,22 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: await Promise.all(visibleProfiles.map((profile) => toProfileDto(
-        profile,
-        isAdmin || connectedUserIds.has(profile.user_id),
-        isAdmin || (Boolean(currentUser) && profile.user_id === currentUser?.id),
-      ))),
+      data: await Promise.all(visibleProfiles.map((profile) => {
+        const resolvedBureauId = resolveBureauId(profile);
+        const bureauObj = resolvedBureauId ? bureauById.get(resolvedBureauId) : undefined;
+        const isClientOfOwnBureau = Boolean(ownBureau && resolvedBureauId === ownBureau.id);
+        return toProfileDto(
+          profile,
+          isAdmin || isClientOfOwnBureau || connectedUserIds.has(profile.user_id),
+          isAdmin || isClientOfOwnBureau || (Boolean(currentUser) && profile.user_id === currentUser?.id),
+          {
+            id: resolvedBureauId,
+            name: bureauObj?.name ?? null,
+            bureauCode: bureauObj?.bureauCode ?? null,
+            createdByBureau: Boolean(profile.created_by_bureau || userBureauMap[profile.user_id]?.createdByBureau),
+          },
+        );
+      })),
       total: visibleProfiles.length,
     });
   } catch (error) {
@@ -145,7 +178,18 @@ export async function PATCH(request: NextRequest) {
     if (existingError) throw existingError;
     if (!existing) return NextResponse.json({ success: false, error: 'Profile not found.' }, { status: 404 });
     const isAdmin = ADMIN_ROLES.has(auth.user.role);
-    if (existing.user_id !== auth.user.id && !isAdmin) {
+    let isClientBureauManager = false;
+    if (!isAdmin && existing.user_id !== auth.user.id && BUREAU_ROLES.has(auth.user.role)) {
+      const [bureaus, userBureauMap, targetUserRes] = await Promise.all([
+        getBureausRegistry(),
+        getUserBureauMap(),
+        insforgeAdmin.database.from('users').select('assigned_consultant_id').eq('id', existing.user_id).maybeSingle(),
+      ]);
+      const ownBureau = bureaus.find((b) => b.ownerUserId === auth.user.id || b.id === auth.user.assigned_consultant_id);
+      const targetBureauId = userBureauMap[existing.user_id]?.bureauId || targetUserRes.data?.assigned_consultant_id;
+      isClientBureauManager = Boolean(ownBureau && ownBureau.approvalStatus === 'APPROVED' && targetBureauId === ownBureau.id);
+    }
+    if (existing.user_id !== auth.user.id && !isAdmin && !isClientBureauManager) {
       return NextResponse.json({ success: false, error: 'You cannot edit this profile.' }, { status: 403 });
     }
 
@@ -168,8 +212,13 @@ export async function PATCH(request: NextRequest) {
     }
     let approvalChangedTo: string | null = null;
     if (body.approvalStatus !== undefined) {
-      if (!isAdmin) return NextResponse.json({ success: false, error: 'Administrator access required.' }, { status: 403 });
-      if (!['PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED', 'SUSPENDED'].includes(body.approvalStatus)) {
+      if (!isAdmin && !isClientBureauManager) {
+        return NextResponse.json({ success: false, error: 'Administrator or Marriage Bureau access required.' }, { status: 403 });
+      }
+      const allowedStatuses = isAdmin
+        ? ['PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED', 'SUSPENDED']
+        : ['PENDING_APPROVAL', 'APPROVED', 'CHANGES_REQUESTED'];
+      if (!allowedStatuses.includes(body.approvalStatus)) {
         return NextResponse.json({ success: false, error: 'Invalid approval status.' }, { status: 400 });
       }
       profileData.approval_status = body.approvalStatus;

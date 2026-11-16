@@ -17,6 +17,7 @@ import {
   Phone,
   Bookmark,
   MessageCircle,
+  Building2,
 } from 'lucide-react';
 import { MatrimonialProfile } from '@/lib/types';
 import { useAuth } from '@/lib/auth-context';
@@ -239,6 +240,12 @@ export function ProfileCard({ profile, className, showScore = true }: ProfileCar
               <GraduationCap className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <span className="line-clamp-1">{profile.educationCareer?.highestDegree || "Bachelor's Degree"}</span>
             </div>
+            {profile.bureauName && (
+              <div className="flex items-center gap-2 line-clamp-1 text-brand-700 dark:text-brand-300 font-medium">
+                <Building2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="line-clamp-1">{profile.bureauName}</span>
+              </div>
+            )}
           </div>
 
           {/* Bio Snippet */}

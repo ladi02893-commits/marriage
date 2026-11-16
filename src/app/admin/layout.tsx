@@ -19,8 +19,8 @@ import {
   LogOut,
   Menu,
   X,
-  Crown,
   HelpCircle,
+  Building2,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ import { toast } from 'sonner';
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, verifications, reports, paymentProofs, refreshDatabase, logout } = useAuth();
+  const { currentUser, verifications, reports, paymentProofs, bureaus, refreshDatabase, logout } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -69,12 +69,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pendingVerifsCount = verifications.filter((v) => v.status === 'PENDING').length;
   const pendingPaymentsCount = (paymentProofs || []).filter((p) => p.status === 'PENDING').length;
   const openReportsCount = reports.filter((r) => r.status === 'OPEN').length;
+  const pendingBureausCount = (bureaus || []).filter((b) => b.approvalStatus === 'PENDING').length;
 
   const adminLinks = [
     { name: 'Executive Overview', href: '/admin', icon: LayoutDashboard },
+    { name: 'Marriage Bureaus', href: '/admin/consultants', icon: Building2, badge: pendingBureausCount },
     { name: 'Payment Verifications', href: '/admin/payments', icon: CreditCard, badge: pendingPaymentsCount },
     { name: 'User Directory & Credits', href: '/admin/users', icon: Users },
-    { name: 'Senior Consultants', href: '/admin/consultants', icon: Crown },
     { name: 'Helpdesk & Support', href: '/admin/support', icon: HelpCircle },
     { name: 'Profile Approvals', href: '/admin/profiles', icon: UserCheck },
     { name: 'ID Verifications', href: '/admin/verifications', icon: FileCheck, badge: pendingVerifsCount },

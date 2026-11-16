@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
     }
     if (typeof body.role === 'string') {
       if (auth.user.role !== 'SUPER_ADMIN') return NextResponse.json({ success: false, error: 'Only a super administrator can change roles.' }, { status: 403 });
-      if (!['USER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN'].includes(body.role)) return NextResponse.json({ success: false, error: 'Invalid role.' }, { status: 400 });
+      if (!['USER', 'MODERATOR', 'ADMIN', 'SUPER_ADMIN', 'BUREAU'].includes(body.role)) return NextResponse.json({ success: false, error: 'Invalid role.' }, { status: 400 });
       update.role = body.role;
       update.session_version = current.session_version + 1;
     }
