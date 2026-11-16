@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Globe, MapPin, Edit3 } from 'lucide-react';
 import { getAllCountries, getCitiesForCountry, PRIORITY_COUNTRIES } from '@/lib/locations-data';
 
@@ -44,8 +44,8 @@ export function CountryCitySelect({
   const [isCustomCityMode, setIsCustomCityMode] = useState(false);
   const [customCityInput, setCustomCityInput] = useState('');
 
-  const allCountries = getAllCountries();
-  const availableCities = getCitiesForCountry(selectedCountry);
+  const allCountries = useMemo(() => getAllCountries(), []);
+  const availableCities = useMemo(() => getCitiesForCountry(selectedCountry), [selectedCountry]);
 
   // Check if current city is already custom
   useEffect(() => {

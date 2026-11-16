@@ -36,7 +36,6 @@ function ConnectionsHubContent() {
     acceptInterest,
     declineInterest,
     cancelInterest,
-    startOrGetConversation,
     toggleFavorite,
     unblockUser,
     unlockContactDetails,

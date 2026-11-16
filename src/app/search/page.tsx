@@ -125,8 +125,9 @@ function SearchContent() {
         }
 
         // Age filter (only applied when user has selected an age)
-        if (typeof minAge === 'number' && !isNaN(minAge) && minAge > 0 && p.age < minAge) return false;
-        if (typeof maxAge === 'number' && !isNaN(maxAge) && maxAge > 0 && p.age > maxAge) return false;
+        const candidateAge = typeof p.age === 'number' && Number.isFinite(p.age) ? p.age : null;
+        if (typeof minAge === 'number' && !isNaN(minAge) && minAge > 0 && (candidateAge === null || candidateAge < minAge)) return false;
+        if (typeof maxAge === 'number' && !isNaN(maxAge) && maxAge > 0 && (candidateAge === null || candidateAge > maxAge)) return false;
 
         // Religion filter
         if (religion !== 'ALL' && p.religion !== religion) return false;

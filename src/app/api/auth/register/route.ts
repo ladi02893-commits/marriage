@@ -268,7 +268,15 @@ export async function POST(request: NextRequest) {
     const childError = childResults.find((result) => result.error)?.error;
     if (childError) throw childError;
 
-    await linkUserToBureau(newUser.id, '', false, { username: resolvedUsername });
+    const requestedBureauId = text(body.bureauId, 80);
+    const requestedCustomBureauName = text(body.customBureauName, 140);
+    await linkUserToBureau(newUser.id, requestedBureauId, false, {
+      username: resolvedUsername,
+      customBureauName:
+        requestedBureauId === 'custom-bureau' || requestedBureauId === 'CUSTOM'
+          ? requestedCustomBureauName
+          : '',
+    });
 
     const { data: fullProfile, error: fetchProfileError } = await insforgeAdmin.database
       .from('matrimonial_profiles')

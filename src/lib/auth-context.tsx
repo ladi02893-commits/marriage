@@ -267,6 +267,22 @@ function useAuthValue() {
 
   useEffect(() => { void refreshDatabase(); }, [refreshDatabase]);
 
+  const getDocumentSignedUrl = useCallback(
+    async (storageKey: string, bucket = 'verification-documents'): Promise<string | null> => {
+      try {
+        const res = await apiRequest<{ success: boolean; signedUrl: string }>('/api/bureaus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'GET_SIGNED_DOCUMENT_URL', storageKey, bucket }),
+        });
+        return res.signedUrl;
+      } catch {
+        return null;
+      }
+    },
+    []
+  );
+
   const connectionQuota = useMemo<ConnectionQuotaInfo>(() => {
     const privileged = currentUser ? ['SUPER_ADMIN', 'ADMIN', 'BUREAU', 'CONSULTANT'].includes(currentUser.role) : false;
     const total = privileged ? 99_999 : currentUser?.totalConnections ?? 0;
@@ -755,18 +771,7 @@ function useAuthValue() {
         return false;
       }
     },
-    getDocumentSignedUrl: async (storageKey: string, bucket = 'verification-documents'): Promise<string | null> => {
-      try {
-        const res = await apiRequest<{ success: boolean; signedUrl: string }>('/api/bureaus', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'GET_SIGNED_DOCUMENT_URL', storageKey, bucket }),
-        });
-        return res.signedUrl;
-      } catch {
-        return null;
-      }
-    },
+    getDocumentSignedUrl,
     activateBureauSubscription: async (bureauId: string, planSlug: BureauPlanSlug) => {
       try {
         await apiRequest('/api/bureaus', {

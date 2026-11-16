@@ -427,7 +427,7 @@ export default function ProfileDetailPage() {
                     <strong>Contact details:</strong> Available after {profile.displayName} accepts your interest request, unless their privacy settings hide them. One connection credit is used when you send the interest request.
                   </div>
 
-                  {isMutual ? <p className="rounded-xl border border-border p-2 text-xs text-muted-foreground">This member keeps contact details private. Please continue the conversation here.</p> : hasSentInterest ? <p className="rounded-xl border border-border p-2 text-xs text-muted-foreground">Interest sent. Contact details remain hidden until it is accepted.</p> : null}
+                  {isMutual ? <p className="rounded-xl border border-border p-2 text-xs text-muted-foreground">This member keeps direct contact details private. Please contact your assigned Marriage Bureau to coordinate family introductions.</p> : hasSentInterest ? <p className="rounded-xl border border-border p-2 text-xs text-muted-foreground">Interest sent. Contact details remain hidden until it is accepted.</p> : null}
 
                   {!hasSentInterest && (
                     <button

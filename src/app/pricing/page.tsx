@@ -27,7 +27,7 @@ export default function PricingPage() {
               <p className="mt-2 min-h-10 text-sm text-muted-foreground">{plan.description}</p>
               <p className="mt-4 text-3xl font-black text-brand-600">PKR {plan.monthlyPrice.toLocaleString()}</p>
               <p className="mt-1 text-xs text-muted-foreground">One-time package payment</p>
-              <p className="mt-5 text-sm font-semibold">{plan.connectionsLimit ?? plan.connectionLimit ?? 'Specified'} connection credits</p>
+              <p className="mt-5 text-sm font-semibold">{plan.connectionsLimit ?? plan.limits?.connectionsCount ?? 30} connection credits</p>
               <ul className="mt-4 flex-1 list-inside list-disc space-y-2 text-xs text-muted-foreground">
                 {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
               </ul>
